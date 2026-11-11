@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#059669" />
+  <title>Minhas Finanças</title>
+
+  <!-- App instalável (PWA) -->
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Finanças" />
+
+  <!-- Tailwind CSS (CDN — ótimo para uso pessoal) -->
+  <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+  <!-- SheetJS: leitura de .xlsx / .xls / .csv / .ods (usado na tela "Dados") -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased">
+
+  <div class="md:flex min-h-screen">
+    <!-- Menu lateral (computador) -->
+    <aside class="hidden md:flex md:flex-col w-60 shrink-0 bg-white border-r border-slate-200 sticky top-0 h-screen">
+      <div class="flex items-center gap-3 px-5 py-5">
+        <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white grid place-items-center text-xl" aria-hidden="true">💰</div>
+        <span class="font-semibold text-lg">Minhas Finanças</span>
+      </div>
+      <button data-new-lancamento class="btn btn-primary mx-4 mb-4">＋ Novo lançamento</button>
+      <nav class="flex flex-col gap-1 px-3" aria-label="Principal">
+        <a href="#/dashboard" data-nav="/dashboard" class="side-link"><span aria-hidden="true">🏠</span> Início</a>
+        <a href="#/lancamentos" data-nav="/lancamentos" class="side-link"><span aria-hidden="true">📋</span> Lançamentos</a>
+        <a href="#/cartoes" data-nav="/cartoes" data-nav-also="/importar-fatura" class="side-link"><span aria-hidden="true">💳</span> Cartões</a>
+        <a href="#/relatorios" data-nav="/relatorios" class="side-link"><span aria-hidden="true">📊</span> Relatórios</a>
+        <a href="#/orcamento" data-nav="/orcamento" class="side-link"><span aria-hidden="true">🎯</span> Orçamento</a>
+        <a href="#/categorias" data-nav="/categorias" class="side-link"><span aria-hidden="true">🏷️</span> Categorias</a>
+        <a href="#/dados" data-nav="/dados" class="side-link"><span aria-hidden="true">💾</span> Dados e backup</a>
+      </nav>
+      <div class="mt-auto px-3 pb-4 space-y-2">
+        <div id="sync-status-lateral" class="px-3"></div>
+        <button data-bloquear class="side-link w-full"><span aria-hidden="true">🔒</span> Bloquear
+          <span class="ml-auto text-xs text-slate-400 truncate max-w-[6rem]" data-usuario></span></button>
+      </div>
+    </aside>
+
+    <div class="flex-1 min-w-0">
+      <!-- Cabeçalho (celular) -->
+      <header class="md:hidden bg-gradient-to-r from-emerald-600 to-teal-600 text-white">
+        <div class="px-4 py-4 flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-white/20 grid place-items-center text-lg" aria-hidden="true">💰</div>
+          <h1 id="page-title" class="text-lg font-semibold">Minhas Finanças</h1>
+        </div>
+      </header>
+
+      <!-- Cada tela é desenhada aqui pelo roteador -->
+      <main id="view" class="max-w-5xl mx-auto px-4 py-5 md:py-8 pb-28 md:pb-10"></main>
+    </div>
+  </div>
+
+  <!-- Barra inferior (celular) -->
+  <nav class="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white border-t border-slate-200 grid grid-cols-5 pb-[env(safe-area-inset-bottom)]" aria-label="Principal">
+    <a href="#/dashboard" data-nav="/dashboard" class="tab-link"><span aria-hidden="true">🏠</span>Início</a>
+    <a href="#/lancamentos" data-nav="/lancamentos" class="tab-link"><span aria-hidden="true">📋</span>Lançamentos</a>
+    <button data-new-lancamento class="tab-link" aria-label="Novo (lançamento ou compra no cartão)">
+      <span class="w-11 h-11 -mt-5 rounded-full bg-emerald-600 text-white text-2xl grid place-items-center shadow-lg" aria-hidden="true">＋</span>Novo
+    </button>
+    <a href="#/cartoes" data-nav="/cartoes" data-nav-also="/importar-fatura" class="tab-link"><span aria-hidden="true">💳</span>Cartões</a>
+    <a href="#/mais" data-nav="/mais" data-nav-also="/relatorios /orcamento /categorias /dados" class="tab-link"><span aria-hidden="true">☰</span>Mais</a>
+  </nav>
+
+  <div id="modal-root"></div>
+  <!-- Telas de acesso (criar acesso / entrar) por cima de tudo -->
+  <div id="acesso-root" class="hidden"></div>
+  <div id="toast" role="status" aria-live="polite"
+    class="hidden fixed left-1/2 -translate-x-1/2 bottom-24 md:bottom-8 z-50 max-w-[90vw] px-4 py-3 rounded-xl shadow-lg text-sm text-white"></div>
+
+  <!-- Ordem importa: dados → regras → componentes → telas → inicialização -->
+  <script src="js/config.js"></script>
+  <script src="js/seguranca/cofre.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/parsers.js"></script>
+  <script src="js/column-map.js"></script>
+  <script src="js/importer.js"></script>
+  <script src="js/format.js"></script>
+  <script src="js/finance.js"></script>
+  <script src="js/analise.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/router.js"></script>
+  <script src="js/components/lancamento-form.js"></script>
+  <script src="js/components/compra-form.js"></script>
+  <script src="js/components/cartao-form.js"></script>
+  <script src="js/pages/dashboard.js"></script>
+  <script src="js/pages/lancamentos.js"></script>
+  <script src="js/pages/cartoes.js"></script>
+  <script src="js/fatura/leitor.js"></script>
+  <script src="js/fatura/importador.js"></script>
+  <script src="js/pages/importar-fatura.js"></script>
+  <script src="js/components/categoria-form.js"></script>
+  <script src="js/pages/categorias.js"></script>
+  <script src="js/pages/orcamento.js"></script>
+  <script src="js/pages/relatorios.js"></script>
+  <script src="js/pages/mais.js"></script>
+  <script src="js/pages/dados.js"></script>
+  <script src="js/sync/mesclar.js"></script>
+  <script src="js/sync/drive.js"></script>
+  <script src="js/pages/acesso.js"></script>
+  <script src="js/pwa.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
