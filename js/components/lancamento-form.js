@@ -63,7 +63,7 @@ Fin.forms.lancamento = (() => {
             <input name="descricao" class="input" required maxlength="120" value="${esc(v.descricao)}" placeholder="Ex.: Conta de luz" /></label>
 
           <div class="grid grid-cols-2 gap-3">
-            <label class="field"><span id="lbl-valor">Valor previsto (R$) *</span>
+            <label class="field"><span id="lbl-valor">Valor lançado (R$) *</span>
               <input name="valorPrevisto" class="input tabular-nums" inputmode="decimal" required value="${fmt.decimalInput(v.valorPrevisto)}" placeholder="0,00" /></label>
             <label class="field"><span>Categoria *</span>
               <select name="categoria" class="input" required>${categoriaOptions(v.tipo, v.categoria)}</select></label>
@@ -91,24 +91,33 @@ Fin.forms.lancamento = (() => {
             </div>
           </div>`}
 
-          <div class="grid grid-cols-2 gap-3">
-            <label class="field"><span>Status</span>
-              <select name="status" class="input">
-                <option value="aberto" ${!['pago', 'parcial'].includes(v.status) ? 'selected' : ''}>Em aberto</option>
-                <option value="pago" ${v.status === 'pago' ? 'selected' : ''}>Pago / recebido</option>
-                <option value="parcial" ${v.status === 'parcial' ? 'selected' : ''}>Pago parcialmente</option>
-              </select></label>
+          <!-- Pagamento efetivado: separado do valor lançado (o lançado nunca é alterado aqui) -->
+          <section class="rounded-2xl border border-slate-200 p-3 space-y-3" aria-labelledby="pg-titulo">
+            <div class="flex items-center justify-between gap-2">
+              <h3 id="pg-titulo" class="text-sm font-semibold">💸 <span data-pg-titulo>Pagamento</span></h3>
+              <span id="pg-situacao" class="text-xs text-right"></span>
+            </div>
+            <div class="seg seg-3" role="radiogroup" aria-label="Situação do pagamento">
+              <label><input type="radio" name="status" value="aberto" ${!['pago', 'parcial'].includes(v.status) ? 'checked' : ''}><span data-rot="aberto">Em aberto</span></label>
+              <label><input type="radio" name="status" value="pago" ${v.status === 'pago' ? 'checked' : ''}><span data-rot="pago">Pago</span></label>
+              <label><input type="radio" name="status" value="parcial" ${v.status === 'parcial' ? 'checked' : ''}><span>Parcial</span></label>
+            </div>
+            <div id="pago-fields" class="space-y-3">
+              <div class="grid grid-cols-2 gap-3">
+                <label class="field"><span data-rot="data">Data do pagamento</span>
+                  <input name="dataPagamento" type="date" class="input" value="${v.dataPagamento || ''}" /></label>
+                <label class="field"><span data-rot="valor">Valor pago (R$)</span>
+                  <input name="valorPago" class="input tabular-nums" inputmode="decimal" value="${fmt.decimalInput(v.valorPago)}" placeholder="0,00" /></label>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <button type="button" data-usar-lancado class="text-xs font-semibold text-emerald-700 hover:underline">Usar o valor lançado</button>
+                <span id="pg-diff" class="text-xs ml-auto"></span>
+              </div>
+            </div>
             <label class="field"><span>Forma de pagamento</span>
-              <input name="formaPagamento" class="input" list="formas-list" value="${esc(v.formaPagamento)}" placeholder="PIX, Boleto…" />
+              <input name="formaPagamento" class="input" list="formas-list" value="${esc(v.formaPagamento)}" placeholder="PIX, Boleto, Débito…" />
               <datalist id="formas-list">${formas.map((f) => `<option value="${esc(f.nome)}"></option>`).join('')}</datalist></label>
-          </div>
-
-          <div id="pago-fields" class="grid grid-cols-2 gap-3 bg-slate-50 rounded-xl p-3">
-            <label class="field"><span>Valor pago (R$)</span>
-              <input name="valorPago" class="input tabular-nums" inputmode="decimal" value="${fmt.decimalInput(v.valorPago)}" placeholder="0,00" /></label>
-            <label class="field"><span>Data do pagamento</span>
-              <input name="dataPagamento" type="date" class="input" value="${v.dataPagamento || ''}" /></label>
-          </div>
+          </section>
 
           <label class="field"><span>Data do lançamento</span>
             <input name="data" type="date" class="input" value="${v.data || ''}" /></label>
@@ -131,15 +140,73 @@ Fin.forms.lancamento = (() => {
     const el = (name) => form.elements[name];
     let competenciaTocada = !!l;
 
+    const tipoAtual = () => form.querySelector('input[name="tipo"]:checked').value;
+    const dias = (a, b) => Math.round((new Date(`${b}T00:00`) - new Date(`${a}T00:00`)) / 86400000);
+
+    /** Textos de receita/despesa (Pago × Recebido) e situação/diferença ao vivo. */
+    const atualizarPagamento = () => {
+      const rec = tipoAtual() === 'receita';
+      const st = el('status').value;
+      form.querySelector('[data-pg-titulo]').textContent = rec ? 'Recebimento' : 'Pagamento';
+      form.querySelector('[data-rot="aberto"]').textContent = rec ? 'A receber' : 'Em aberto';
+      form.querySelector('[data-rot="pago"]').textContent = rec ? 'Recebido' : 'Pago';
+      form.querySelector('[data-rot="data"]').textContent = rec ? 'Data do recebimento' : 'Data do pagamento';
+      form.querySelector('[data-rot="valor"]').textContent = rec ? 'Valor recebido (R$)' : 'Valor pago (R$)';
+      form.querySelector('#pago-fields').classList.toggle('hidden', st === 'aberto');
+
+      const lancado = P.toNumber(el('valorPrevisto').value);
+      const pago = P.toNumber(el('valorPago').value);
+      const venc = el('vencimento').value;
+      const dpg = el('dataPagamento').value;
+      const sit = form.querySelector('#pg-situacao');
+      const diff = form.querySelector('#pg-diff');
+      sit.innerHTML = '';
+      diff.innerHTML = '';
+
+      if (st === 'aberto') {
+        if (venc) {
+          const d = dias(hoje, venc);
+          sit.innerHTML = d < 0 ? `<span class="text-rose-700 font-medium">! vencido há ${-d} dia${d === -1 ? '' : 's'}</span>`
+            : d === 0 ? '<span class="text-amber-800 font-medium">vence hoje</span>'
+            : `<span class="text-slate-500">vence em ${d} dia${d === 1 ? '' : 's'}</span>`;
+        }
+        return;
+      }
+      if (venc && dpg) {
+        const atraso = dias(venc, dpg);
+        sit.innerHTML = atraso > 0 ? `<span class="text-amber-800 font-medium">◷ ${rec ? 'recebido' : 'pago'} ${atraso} dia${atraso === 1 ? '' : 's'} após o vencimento</span>`
+          : `<span class="text-emerald-800">✓ ${rec ? 'recebido' : 'pago'} em dia</span>`;
+      }
+      if (lancado == null || pago == null) return;
+      const dif = Math.round((pago - lancado) * 100) / 100;
+      if (st === 'parcial') {
+        diff.innerHTML = pago < lancado ? `<span class="text-amber-800">Falta ${fmt.brl(lancado - pago)}</span>`
+          : '<span class="text-rose-700">Valor ≥ lançado: marque “Pago”</span>';
+      } else if (Math.abs(dif) < 0.01) {
+        diff.innerHTML = '<span class="text-emerald-800">✓ igual ao lançado</span>';
+      } else if (dif > 0) {
+        diff.innerHTML = `<span class="text-amber-800">＋${fmt.brl(dif)} ${rec ? 'a mais' : 'a mais (juros/multa)'}</span>`;
+      } else {
+        diff.innerHTML = `<span class="text-emerald-800">−${fmt.brl(-dif)} ${rec ? 'a menos' : '(desconto)'}</span>`;
+      }
+    };
+
     const syncPago = () => {
       const st = el('status').value;
-      form.querySelector('#pago-fields').classList.toggle('hidden', st === 'aberto');
       if (st !== 'aberto') {
         if (!el('valorPago').value && st === 'pago') el('valorPago').value = el('valorPrevisto').value;
         if (!el('dataPagamento').value) el('dataPagamento').value = hoje;
       }
+      atualizarPagamento();
     };
     syncPago();
+    form.addEventListener('input', (e) => {
+      if (['valorPrevisto', 'valorPago', 'dataPagamento', 'vencimento'].includes(e.target.name)) atualizarPagamento();
+    });
+    form.querySelector('[data-usar-lancado]').addEventListener('click', () => {
+      el('valorPago').value = el('valorPrevisto').value;
+      atualizarPagamento();
+    });
 
     // Repetição (só em lançamento novo): mostra quantidade de meses e um resumo.
     const syncRepeticao = () => {
@@ -147,7 +214,7 @@ Fin.forms.lancamento = (() => {
       const modo = el('repeticao').value;
       const n = Math.max(2, Math.min(120, Number(el('vezes').value) || 2));
       form.querySelector('#rep-box').classList.toggle('hidden', modo === 'nao');
-      form.querySelector('#lbl-valor').textContent = modo === 'parcelado' ? 'Valor total (R$) *' : 'Valor previsto (R$) *';
+      form.querySelector('#lbl-valor').textContent = modo === 'parcelado' ? 'Valor total (R$) *' : 'Valor lançado (R$) *';
       const valor = P.toNumber(el('valorPrevisto').value);
       const ini = el('competencia').value || (el('vencimento').value || '').slice(0, 7);
       const resumo = form.querySelector('#rep-resumo');
@@ -164,8 +231,9 @@ Fin.forms.lancamento = (() => {
     form.addEventListener('change', (e) => {
       const n = e.target.name;
       if (['repeticao', 'vencimento', 'competencia'].includes(n)) setTimeout(syncRepeticao);
-      if (n === 'tipo') el('categoria').innerHTML = categoriaOptions(e.target.value, el('categoria').value);
+      if (n === 'tipo') { el('categoria').innerHTML = categoriaOptions(e.target.value, el('categoria').value); atualizarPagamento(); }
       if (n === 'status') syncPago();
+      if (n === 'vencimento' || n === 'dataPagamento') atualizarPagamento();
       if (n === 'competencia') competenciaTocada = true;
       if (n === 'vencimento' && !competenciaTocada && e.target.value) el('competencia').value = e.target.value.slice(0, 7);
       if (n === 'categoria' && e.target.value === NOVA) novaCategoria(el('categoria'), form.querySelector('input[name="tipo"]:checked').value);
@@ -201,6 +269,9 @@ Fin.forms.lancamento = (() => {
       if (!categoria || categoria === NOVA) problemas.push('a categoria');
       if (!vencimento) problemas.push('o vencimento');
       if (status !== 'aberto' && (valorPago === null || valorPago <= 0)) problemas.push('o valor pago');
+      if (status === 'parcial' && valorPago != null && valorPrevisto != null && valorPago >= valorPrevisto) {
+        problemas.push('um valor pago menor que o lançado (ou marque “Pago”)');
+      }
       const repeticao = el('repeticao')?.value || 'nao';
       const vezes = Number(el('vezes')?.value);
       if (repeticao !== 'nao' && !(vezes >= 2 && vezes <= 120)) problemas.push('a quantidade de meses (2 a 120)');

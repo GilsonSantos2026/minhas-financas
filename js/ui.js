@@ -78,6 +78,23 @@ Fin.ui = (() => {
       <span aria-hidden="true">${icon}</span>${label}</button>`;
   }
 
+  /**
+   * Linha curta com o pagamento efetivado de um lançamento (abaixo do valor lançado):
+   * "pago R$ 220,83 · 05/05 · +R$ 4,89", "pago R$ 1.000,00 de R$ 1.738,82", etc.
+   */
+  function pagamentoLinha(l) {
+    const c = Fin.finance.conciliar(l);
+    const rec = l.tipo === 'receita';
+    if (c.situacao === 'pendente' || c.situacao === 'atrasado') return '';
+    const data = l.dataPagamento ? ` · ${fmt.date(l.dataPagamento).slice(0, 5)}` : '';
+    if (c.situacao === 'parcial') {
+      return `<div class="text-[11px] text-amber-800 tabular-nums">${rec ? 'recebido' : 'pago'} ${fmt.brl(c.pago)}${data} · falta ${fmt.brl(c.falta)}</div>`;
+    }
+    const dif = c.situacao === 'maior' ? ` <span class="text-amber-800">+${fmt.brl(c.diferenca)}</span>`
+      : c.situacao === 'menor' ? ` <span class="text-emerald-800">−${fmt.brl(-c.diferenca)}</span>` : '';
+    return `<div class="text-[11px] text-slate-500 tabular-nums">${rec ? 'recebido' : 'pago'} ${fmt.brl(c.pago)}${data}${dif}</div>`;
+  }
+
   /** Bolinha com o emoji da categoria (ou a inicial). */
   function catIcon(icone, nome, tipo) {
     const bg = tipo === 'receita' ? 'bg-emerald-50' : 'bg-slate-100';
@@ -95,5 +112,5 @@ Fin.ui = (() => {
       </div>`;
   }
 
-  return { toast, openModal, closeModal, monthNav, statusPill, catIcon, emptyState };
+  return { toast, openModal, closeModal, monthNav, statusPill, pagamentoLinha, catIcon, emptyState };
 })();

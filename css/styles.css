@@ -46,6 +46,11 @@
 .seg label:first-child input:checked + span { background: #fff; color: #be123c; box-shadow: 0 1px 2px rgb(0 0 0 / 0.08); }
 .seg label:last-child input:checked + span { background: #fff; color: #047857; box-shadow: 0 1px 2px rgb(0 0 0 / 0.08); }
 .seg input:focus-visible + span { outline: 2px solid #10b981; }
+/* Seletor de 3 opções (situação do pagamento): neutro, com "Pago" em verde */
+.seg.seg-3 { grid-template-columns: repeat(3, 1fr); }
+.seg.seg-3 label input:checked + span { background: #fff; color: #334155; box-shadow: 0 1px 2px rgb(0 0 0 / 0.08); }
+.seg.seg-3 label:nth-child(2) input:checked + span { color: #047857; }
+.seg.seg-3 label:nth-child(3) input:checked + span { color: #92400e; }
 
 /* Etiqueta de status (ícone + texto) */
 .pill {

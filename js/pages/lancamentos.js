@@ -54,9 +54,10 @@ Fin.pages.lancamentos = (() => {
           <div class="text-sm font-medium truncate">${esc(l.descricao || l.categoria)}</div>
           <div class="text-xs text-slate-500 truncate">${sub}</div>
         </div>
-        <div class="text-right shrink-0 flex flex-col items-end gap-1">
-          <div class="text-sm font-semibold tabular-nums ${rec ? 'text-emerald-700' : 'text-slate-800'}">${rec ? '+' : '−'} ${fmt.brl(F.valor(l))}</div>
-          ${Fin.ui.statusPill(l)}
+        <div class="text-right shrink-0 flex flex-col items-end gap-0.5">
+          <div class="text-sm font-semibold tabular-nums ${rec ? 'text-emerald-700' : 'text-slate-800'}" title="Valor lançado">${rec ? '+' : '−'} ${fmt.brl(l.valorPrevisto ?? F.valor(l))}</div>
+          ${Fin.ui.pagamentoLinha(l)}
+          <div class="mt-0.5">${Fin.ui.statusPill(l)}</div>
         </div>
       </li>`;
   }
@@ -94,6 +95,8 @@ Fin.pages.lancamentos = (() => {
       <div class="space-y-4">
         ${Fin.ui.monthNav(ym)}
         <div id="lanc-resumo" class="grid grid-cols-3 gap-2"></div>
+        <a href="#/conciliacao" class="flex items-center justify-between bg-white rounded-2xl shadow-sm px-4 py-2.5 text-sm hover:bg-slate-50">
+          <span><span aria-hidden="true">⚖️</span> Conciliar lançado × pago do mês</span><span class="text-slate-300" aria-hidden="true">›</span></a>
 
         <div class="bg-white rounded-2xl shadow-sm p-3 space-y-2">
           <input id="f-busca" type="search" class="input" placeholder="Buscar descrição, categoria, observação…"

@@ -457,7 +457,74 @@ Fin.finance = (() => {
     return Math.round((soma / n) * 100) / 100;
   }
 
+  /* ================= Conciliação: lançado × pago efetivamente ================= */
+
+  const diasEntre = (a, b) => Math.round((new Date(`${b}T00:00`) - new Date(`${a}T00:00`)) / 86400000);
+
+  /**
+   * Compara o valor LANÇADO com o PAGAMENTO EFETIVADO de um lançamento.
+   * situacao: 'ok' (pago igual) | 'maior' (pago a mais: juros/multa) | 'menor' (pago a menos: desconto)
+   *           | 'parcial' | 'atrasado' (não pago e vencido) | 'pendente' (não pago, a vencer)
+   */
+  function conciliar(l) {
+    const lancado = l.valorPrevisto ?? l.valorPago ?? 0;
+    const st = statusEfetivo(l);
+    const pago = st === 'pago' ? (l.valorPago || lancado) : st === 'parcial' ? (l.valorPago || 0) : 0;
+    const venc = dataRef(l);
+    const pagou = st === 'pago' || st === 'parcial';
+    const diferenca = st === 'pago' ? Math.round((pago - lancado) * 100) / 100 : 0;
+    let situacao;
+    if (st === 'pago') situacao = Math.abs(diferenca) < 0.01 ? 'ok' : diferenca > 0 ? 'maior' : 'menor';
+    else situacao = st === 'parcial' ? 'parcial' : st === 'atrasado' ? 'atrasado' : 'pendente';
+    const diasAtraso = pagou
+      ? (l.dataPagamento && venc ? Math.max(0, diasEntre(venc, l.dataPagamento)) : 0)
+      : (st === 'atrasado' && venc ? Math.max(0, diasEntre(venc, fmt.todayISO())) : 0);
+    return {
+      lancado, pago, diferenca, situacao, diasAtraso,
+      falta: st === 'pago' ? 0 : Math.max(0, Math.round((lancado - pago) * 100) / 100),
+      pagoComAtraso: pagou && diasAtraso > 0,
+      semDataPagamento: pagou && !l.dataPagamento,
+    };
+  }
+
+  /** Conciliação de um período: itens + totais. tipo: 'despesa' | 'receita' | '' (todos). */
+  function conciliacaoPeriodo(ini, fim, tipo = 'despesa') {
+    const itens = lancamentos()
+      .filter((l) => (!tipo || l.tipo === tipo) && competencia(l) >= ini && competencia(l) <= fim)
+      .map((l) => ({ l, c: conciliar(l) }))
+      .sort((a, b) => (dataRef(a.l) || '').localeCompare(dataRef(b.l) || ''));
+    const t = { lancado: 0, pago: 0, acrescimos: 0, descontos: 0, pendente: 0, qtd: itens.length, porSituacao: {}, pagosComAtraso: 0, semData: 0 };
+    for (const { c } of itens) {
+      t.lancado += c.lancado;
+      t.pago += c.pago;
+      if (c.diferenca > 0) t.acrescimos += c.diferenca;
+      if (c.diferenca < 0) t.descontos += -c.diferenca;
+      t.pendente += c.falta;
+      t.porSituacao[c.situacao] = (t.porSituacao[c.situacao] || 0) + 1;
+      if (c.pagoComAtraso) t.pagosComAtraso++;
+      if (c.semDataPagamento) t.semData++;
+    }
+    const conciliados = (t.porSituacao.ok || 0) + (t.porSituacao.maior || 0) + (t.porSituacao.menor || 0);
+    t.percentualPago = t.qtd ? conciliados / t.qtd : 0;
+    return { itens, totais: t };
+  }
+
+  /** Faturas do mês: compras do cartão × pagamento lançado × pago. */
+  function conciliacaoFaturas(ym) {
+    return cartoes().map((cfg) => {
+      const compras = soma(comprasDaFatura(cfg.nome, ym));
+      const pag = pagamentoDaFatura(cfg, ym);
+      const c = pag ? conciliar(pag) : null;
+      return {
+        cartao: cfg.nome, compras, pagamento: pag, lancado: c ? c.lancado : 0, pago: c ? c.pago : 0,
+        situacao: c ? c.situacao : null,
+        difComprasLancado: pag ? Math.round((compras - c.lancado) * 100) / 100 : null,
+      };
+    }).filter((f) => f.compras || f.pagamento);
+  }
+
   return {
+    conciliar, conciliacaoPeriodo, conciliacaoFaturas,
     criarRepetidos, atualizarProximos, excluirLancamento, usosCategoria, moverCategoria, orcamento, mediaGasto,
     lancamentos, dataRef, competencia, valor, statusEfetivo, isPago, doMes, resumo,
     porCategoria, porCategoriaDetalhada, historico, contasAbertas, faturas, mesInicial, categorias, formasPagamento, togglePago,
