@@ -9,7 +9,7 @@
  * Ao publicar uma versão nova do app, troque VERSAO: o app mostra "Nova versão disponível".
  * Os DADOS não passam por aqui (ficam no LocalStorage do navegador).
  */
-const VERSAO = '2026-11-11.2';
+const VERSAO = '2026-11-11.3';
 const CACHE_APP = `financas-app-${VERSAO}`;
 const CACHE_CDN = 'financas-cdn-v1';
 
