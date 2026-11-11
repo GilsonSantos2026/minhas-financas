@@ -9,7 +9,7 @@
  * Ao publicar uma versão nova do app, troque VERSAO: o app mostra "Nova versão disponível".
  * Os DADOS não passam por aqui (ficam no LocalStorage do navegador).
  */
-const VERSAO = '2026-11-11.4';
+const VERSAO = '2026-11-11.5';
 const CACHE_APP = `financas-app-${VERSAO}`;
 const CACHE_CDN = 'financas-cdn-v1';
 
@@ -63,6 +63,8 @@ async function redePrimeiro(req) {
   try {
     const controle = new AbortController();
     const timer = setTimeout(() => controle.abort(), 4000); // rede lenta → usa o cache
+    // "no-cache": confirma com o servidor se há versão nova (o GitHub Pages deixa o
+    // navegador reaproveitar arquivos por até 10 min, o que atrasaria as atualizações).
     const resp = await fetch(req, { signal: controle.signal, cache: 'no-cache' });
     clearTimeout(timer);
     if (resp.ok) cache.put(req, resp.clone());
