@@ -11,5 +11,5 @@
 window.Fin = window.Fin || {};
 
 Fin.config = {
-  googleClientId: '',
+  googleClientId: '542708707263-b7sdeqbudurcqdjrr21773ev9r4u1qrj.apps.googleusercontent.com',
 };
