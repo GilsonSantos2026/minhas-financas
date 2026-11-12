@@ -77,11 +77,40 @@ Fin.pages.lancamentos = (() => {
         if (!grupos.has(k)) grupos.set(k, []);
         grupos.get(k).push(l);
       });
-    return [...grupos.entries()].map(([dia, itens]) => `
-      <section>
-        <h3 class="text-xs font-medium text-slate-500 uppercase tracking-wide px-1 mb-1.5">${fmt.dayLabel(dia)}</h3>
-        <ul class="bg-white rounded-2xl shadow-sm divide-y divide-slate-100 overflow-hidden">${itens.map(itemHTML).join('')}</ul>
-      </section>`).join('');
+    return [...grupos.entries()].map(([dia, itens]) => {
+      const d = diaInfo(dia);
+      return `
+      <section class="${d.secao}"${d.hoje ? ' data-hoje' : ''}>
+        <h3 class="text-xs font-medium uppercase tracking-wide mb-1.5 flex items-center gap-2 ${d.titulo}">
+          ${d.icone ? `<span aria-hidden="true">${d.icone}</span>` : ''}<span>${fmt.dayLabel(dia)}</span>
+          ${d.etiqueta ? `<span class="ml-auto normal-case tracking-normal text-[11px] font-semibold px-2 py-0.5 rounded-full ${d.etiquetaCls}">${d.etiqueta}</span>` : ''}
+        </h3>
+        <ul class="bg-white rounded-2xl shadow-sm divide-y divide-slate-100 overflow-hidden ${d.lista}">${itens.map(itemHTML).join('')}</ul>
+      </section>`;
+    }).join('');
+  }
+
+  /** Destaque do cabeçalho conforme a distância do dia até hoje. */
+  function diaInfo(iso) {
+    const base = { secao: '', titulo: 'text-slate-500 px-1', lista: '', icone: '', etiqueta: '', etiquetaCls: '', hoje: false };
+    if (!iso) return base;
+    const [y, m, dd] = iso.split('-').map(Number);
+    const agora = new Date();
+    const hoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+    const diff = Math.round((new Date(y, m - 1, dd) - hoje) / 86400000);
+    if (diff === 0) return { ...base, hoje: true, icone: '📅',
+      titulo: 'text-[13px] text-white bg-blue-600 rounded-lg px-3 py-2 shadow-sm',
+      lista: 'ring-2 ring-blue-500',
+      etiqueta: 'Hoje', etiquetaCls: 'bg-white text-blue-700' };
+    if (diff === -1) return { ...base, icone: '⚠️',
+      titulo: 'text-rose-700 bg-rose-50 border-l-4 border-rose-600 px-3 py-1.5',
+      lista: 'ring-1 ring-rose-200',
+      etiqueta: 'Ontem', etiquetaCls: 'bg-rose-600 text-white' };
+    if (diff === 1) return { ...base, icone: '⏰',
+      titulo: 'text-amber-800 bg-amber-50 border-l-4 border-amber-500 px-3 py-1.5',
+      etiqueta: 'Amanhã', etiquetaCls: 'bg-amber-500 text-white' };
+    if (diff < -1) return { ...base, secao: 'opacity-60', titulo: 'text-slate-400 px-1' };
+    return { ...base, etiqueta: `em ${diff} dias`, etiquetaCls: 'text-slate-400 font-normal' };
   }
 
   function render(view, { signal }) {
