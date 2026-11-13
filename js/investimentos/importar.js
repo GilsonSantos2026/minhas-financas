@@ -281,6 +281,64 @@ Fin.importarInv = (() => {
     return { ...r, diffs, contaNomad: nomad.id };
   }
 
+  /* ---------------- Notas de negociação da Rico ---------------- */
+
+  const chaveEsp = (e) => N(e).replace(/\s+/g, ' ').trim();
+
+  /** Descobre o ticker de cada negócio: nota → nome já confirmado → mesma operação no app → prefixo. */
+  function resolverRico(notas, est) {
+    const rico = conta(est, 'Rico', { tipo: 'corretora', moeda: 'BRL', icone: '🏦' });
+    const memoria = Fin.inv.config('ricoNomes')?.mapa || {};
+    const ativosRico = est.ativos.filter((a) => a.conta === rico.id);
+    const tickerDe = (id) => est.ativos.find((a) => a.id === id)?.ticker;
+    const linhas = [];
+    notas.forEach((n, ni) => {
+      for (const g of n.negocios) {
+        let ticker = g.ticker;
+        let como = ticker ? 'nota' : null;
+        if (!ticker && g.especificacao && memoria[chaveEsp(g.especificacao)]) { ticker = memoria[chaveEsp(g.especificacao)]; como = 'lembrado'; }
+        if (!ticker) {
+          const cands = new Set(est.movs.filter((m) => !m.substituido && m.conta === rico.id && m.data === n.data && m.tipo === g.tipo && Math.abs((m.preco || 0) - g.preco) < 0.006).map((m) => tickerDe(m.ativo)));
+          if (cands.size === 1) { ticker = [...cands][0]; como = 'app'; }
+        }
+        if (!ticker) {
+          const palavras = (g.especificacao || '').split(' ').filter((w) => /^[A-Z]{4}$/.test(w));
+          const achado = ativosRico.find((a) => palavras.some((w) => a.ticker.startsWith(w)));
+          if (achado) { ticker = achado.ticker; como = 'prefixo'; }
+        }
+        linhas.push({ ni, g, ticker, como });
+      }
+    });
+    return { rico: rico.id, linhas, pendentes: linhas.filter((l) => !l.ticker).length };
+  }
+
+  /** Grava (na cópia) as operações das notas: soma por dia/ativo/tipo, rateia as taxas e substitui as do Investidor 10. */
+  function aplicarRico(est, notas, res) {
+    const r = { novos: 0, substituidos: 0, jaExistiam: 0, taxas: 0 };
+    const ja = new Set(est.movs.map((m) => m.ext).filter(Boolean));
+    const grupos = new Map();
+    for (const l of res.linhas) {
+      const n = notas[l.ni];
+      const totalNota = n.negocios.reduce((s, g) => s + g.valor, 0) || 1;
+      const k = `${n.numero}|${n.data}|${l.ticker}|${l.g.tipo}`;
+      const gr = grupos.get(k) || { n, ticker: l.ticker, tipo: l.g.tipo, qtd: 0, valor: 0, taxas: 0 };
+      gr.qtd += l.g.qtd; gr.valor += l.g.valor; gr.taxas += n.taxas * (l.g.valor / totalNota);
+      grupos.set(k, gr);
+    }
+    for (const gr of grupos.values()) {
+      const ext = `nota:${gr.n.numero}:${gr.ticker}:${gr.tipo}`;
+      if (ja.has(ext)) { r.jaExistiam++; continue; }
+      const a = ativo(est, res.rico, gr.ticker, Fin.inv.sugerirClasse(gr.ticker, { moeda: 'BRL' }), 'BRL');
+      for (const m of est.movs) {
+        if (!m.substituido && m.ativo === a.id && m.tipo === gr.tipo && m.data === gr.n.data && m.origem !== 'nota') { m.substituido = true; r.substituidos++; }
+      }
+      const taxas = Math.round(gr.taxas * 100) / 100;
+      est.movs.push({ id: S.uid(), criadoEm: agora(), conta: res.rico, ativo: a.id, tipo: gr.tipo, data: gr.n.data, qtd: gr.qtd, preco: Math.round((gr.valor / gr.qtd) * 1e6) / 1e6, taxas, origem: 'nota', ext, obs: `Nota ${gr.n.numero}` });
+      r.novos++; r.taxas += taxas;
+    }
+    return r;
+  }
+
   /* ---------------- Gravar ---------------- */
 
   function aplicar(est, ajustes = [], correcoes = []) {
@@ -325,6 +383,10 @@ Fin.importarInv = (() => {
             <input type="file" name="i10" accept=".json,application/json" class="input"></label>
           <label class="field"><span>Extratos mensais da Nomad (PDF — pode escolher vários)</span>
             <input type="file" name="nomad" accept="application/pdf,.pdf" multiple class="input"></label>
+          <label class="field"><span>Notas de negociação da Rico (PDF — pode escolher várias)</span>
+            <input type="file" name="rico" accept="application/pdf,.pdf" multiple class="input"></label>
+          <label class="field"><span>Senha dos PDFs da Rico</span>
+            <input type="password" name="senhaRico" class="input" autocomplete="off" placeholder="Só se escolher notas da Rico — não fica guardada"></label>
           <p class="text-xs text-slate-500">Nada é gravado antes da conferência. Os arquivos são lidos neste aparelho e não vão para nenhum servidor.
             Reimportar não duplica.</p>
           <p data-status class="text-sm text-slate-600"></p>
@@ -348,7 +410,8 @@ Fin.importarInv = (() => {
       if (plano) return gravar();
       const fI10 = form.elements.i10.files[0];
       const fNomad = [...form.elements.nomad.files];
-      if (!fI10 && !fNomad.length) return erro('Escolha o arquivo do Investidor 10 e/ou os extratos da Nomad.');
+      const fRico = [...form.elements.rico.files];
+      if (!fI10 && !fNomad.length && !fRico.length) return erro('Escolha o arquivo do Investidor 10, os extratos da Nomad e/ou as notas da Rico.');
       const ok = form.querySelector('[data-ok]');
       ok.disabled = true;
       try {
@@ -369,6 +432,16 @@ Fin.importarInv = (() => {
           res.nomad = await planoNomad(extratos, est, status);
           // Com os extratos, a Nomad é conferida por eles (não pelo Investidor 10).
           if (res.i10) res.i10.diffs = res.i10.diffs.filter((d) => contaDoAtivo(est, d.ativo) !== res.nomad.contaNomad);
+        }
+        if (fRico.length) {
+          const senha = form.elements.senhaRico.value;
+          const notas = [];
+          for (const [i, f] of fRico.entries()) {
+            status(`Lendo nota ${i + 1} de ${fRico.length}: ${f.name}…`);
+            notas.push(await Fin.rico.ler(f, senha));
+          }
+          notas.sort((a, b) => a.data.localeCompare(b.data));
+          res.rico = { notas, ...resolverRico(notas, est) };
         }
         plano = { est, res };
         status('');
@@ -416,6 +489,23 @@ Fin.importarInv = (() => {
           </div>
           <p class="text-xs text-slate-500">Quantidade no app × carteira do último extrato. Marcados = lançar um <b>ajuste</b> para igualar (sem lucro/prejuízo).</p>
           ${tabDiffs(res.nomad.diffs, 'nomad', 'No extrato')}</section>` : ''}
+        ${res.rico ? `<section class="space-y-2"><h3 class="font-semibold">Notas da Rico</h3>
+          <div class="text-sm bg-slate-50 rounded-xl p-3 space-y-0.5">
+            ${lin('Notas', `${res.rico.notas.length} (${fmt.date(res.rico.notas[0].data)} a ${fmt.date(res.rico.notas[res.rico.notas.length - 1].data)})`)}
+            ${lin('Negócios', res.rico.linhas.length)}
+            ${lin('Taxas (rateadas no preço médio)', fmt.brl(res.rico.notas.reduce((s, n) => s + n.taxas, 0)))}
+            <div class="text-slate-600">As operações do mesmo dia e ativo que vieram do Investidor 10 (sem taxas) serão trocadas pelas da nota.</div>
+          </div>
+          <div class="table-wrap max-h-72 overflow-auto border border-slate-100 rounded-lg"><table class="w-full"><thead><tr>
+            <th>Data</th><th>C/V</th><th>Na nota</th><th class="text-right">Qtd × preço</th><th>Ativo</th></tr></thead>
+            <tbody>${res.rico.linhas.map((l, i) => `<tr>
+              <td class="tabular-nums">${fmt.date(res.rico.notas[l.ni].data).slice(0, 5)}</td><td>${l.g.tipo === 'compra' ? 'C' : 'V'}</td>
+              <td class="!whitespace-normal text-[12px]">${esc(l.g.especificacao || '(sem nome no PDF)')}</td>
+              <td class="num">${fmt.qtd(l.g.qtd)} × ${fmt.brl(l.g.preco)}</td>
+              <td><input data-rico="${i}" class="input !py-1 !w-28 uppercase ${l.ticker ? '' : '!border-amber-500'}" value="${esc(l.ticker || '')}" placeholder="TICKER" aria-label="Ticker"
+                list="rico-tickers"><span class="block text-[11px] text-slate-400">${{ nota: 'da nota', lembrado: 'lembrado', app: 'pela operação no app', prefixo: 'pelo nome' }[l.como] || '! informe'}</span></td></tr>`).join('')}</tbody></table></div>
+          <datalist id="rico-tickers">${[...new Set(plano.est.ativos.filter((a) => a.conta === res.rico.rico).map((a) => a.ticker))].sort().map((t) => `<option value="${esc(t)}"></option>`).join('')}</datalist>
+          ${res.rico.pendentes ? `<p class="text-sm text-amber-800">! ${res.rico.pendentes} negócio(s) sem ativo identificado — informe o ticker (o app lembra nas próximas notas).</p>` : ''}</section>` : ''}
         <p data-erro class="hidden text-sm text-rose-700 bg-rose-50 rounded-lg px-3 py-2" role="alert"></p>`;
     }
 
@@ -425,13 +515,30 @@ Fin.importarInv = (() => {
         const [origem, i] = c.dataset.ajuste.split(':');
         return origem === 'nomad' ? { ...res.nomad.diffs[Number(i)], data: res.nomad.ultimo.fim } : { ...res.i10.diffs[Number(i)] };
       });
+      if (res.rico) {
+        const vazios = [];
+        form.querySelectorAll('[data-rico]').forEach((inp) => {
+          const t = inp.value.trim().toUpperCase().replace(/F$/, '');
+          const l = res.rico.linhas[Number(inp.dataset.rico)];
+          if (!/^[A-Z]{4}\d{1,2}[A-Z]?$/.test(t)) vazios.push(l.g.especificacao || `${l.g.qtd} × ${l.g.preco}`);
+          else { if (l.ticker !== t) l.como = 'usuario'; l.ticker = t; }
+        });
+        if (vazios.length) return erro(`Informe o ticker de: ${vazios.slice(0, 3).join(', ')}${vazios.length > 3 ? '…' : ''}`);
+        res.rico.resultado = aplicarRico(est, res.rico.notas, res.rico);
+      }
       try {
         aplicar(est, ajustes, res.nomad?.correcoes || []);
+        if (res.rico) { // lembra os nomes → ticker para as próximas notas
+          const mapa = { ...(Fin.inv.config('ricoNomes')?.mapa || {}) };
+          for (const l of res.rico.linhas) if (l.g.especificacao && !l.g.ticker) mapa[chaveEsp(l.g.especificacao)] = l.ticker;
+          Fin.inv.salvarConfig('ricoNomes', { mapa });
+        }
       } catch (e) {
         return erro(e.message || String(e));
       }
       Fin.ui.closeModal();
-      Fin.ui.toast(`Importação concluída${ajustes.length ? ` · ${ajustes.length} ajuste(s)` : ''}.`);
+      const rr = res.rico?.resultado;
+      Fin.ui.toast(`Importação concluída${ajustes.length ? ` · ${ajustes.length} ajuste(s)` : ''}${rr ? ` · notas: ${rr.novos} operação(ões), ${rr.substituidos} trocada(s), taxas ${fmt.brl(rr.taxas)}` : ''}.`);
       Fin.state.invAba = 'resumo';
       Fin.router.refresh();
     }
@@ -439,5 +546,5 @@ Fin.importarInv = (() => {
 
   const contaDoAtivo = (est, id) => est.ativos.find((a) => a.id === id)?.conta || null;
 
-  return { abrir, planoI10, planoNomad, aplicar, base, quantidades, contaDoAtivo };
+  return { abrir, planoI10, planoNomad, aplicar, base, quantidades, contaDoAtivo, resolverRico, aplicarRico };
 })();
