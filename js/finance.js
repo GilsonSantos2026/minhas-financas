@@ -42,12 +42,24 @@ Fin.finance = (() => {
     return list.filter((l) => competencia(l) === ym);
   }
 
+  /**
+   * Aporte em investimento = despesa cuja categoria está marcada como "investimento".
+   * Não conta como gasto (o dinheiro continua seu, só mudou de lugar): fica fora das
+   * despesas, do "a pagar" e dos gráficos por categoria; aparece como "Investido no mês".
+   */
+  const catsInvestimento = () => new Set(S.list('categorias').filter((c) => c.tipo === 'despesa' && c.investimento).map((c) => c.nome));
+  const ehAporte = (l, cats = catsInvestimento()) => l.tipo === 'despesa' && cats.has(l.categoria);
+  const aportesDoMes = (ym) => { const cats = catsInvestimento(); return doMes(ym).filter((l) => ehAporte(l, cats)); };
+
   function resumo(ym, list = doMes(ym)) {
-    const r = { receitas: 0, recebido: 0, despesas: 0, pago: 0, aPagar: 0, qtdAPagar: 0, atrasadas: 0, qtd: list.length };
+    const r = { receitas: 0, recebido: 0, despesas: 0, pago: 0, aPagar: 0, qtdAPagar: 0, atrasadas: 0, aportes: 0, qtd: list.length };
+    const cats = catsInvestimento();
     for (const l of list) {
       const v = valor(l);
       const st = statusEfetivo(l);
-      if (l.tipo === 'receita') {
+      if (cats.size && ehAporte(l, cats)) {
+        r.aportes += v;
+      } else if (l.tipo === 'receita') {
         r.receitas += v;
         if (st === 'pago') r.recebido += v;
         else if (st === 'parcial') r.recebido += l.valorPago || 0;
@@ -71,8 +83,9 @@ Fin.finance = (() => {
   /** Totais por categoria no mês, do maior para o menor. */
   function porCategoria(ym, tipo = 'despesa') {
     const map = new Map();
+    const cats = catsInvestimento();
     for (const l of doMes(ym)) {
-      if (l.tipo !== tipo) continue;
+      if (l.tipo !== tipo || ehAporte(l, cats)) continue;
       const cur = map.get(l.categoria) || { categoria: l.categoria, icone: l.categoriaIcone, total: 0, qtd: 0 };
       cur.total += valor(l);
       cur.qtd++;
@@ -88,15 +101,16 @@ Fin.finance = (() => {
     for (let i = n - 1; i >= 0; i--) {
       const m = fmt.addMonths(ym, -i);
       const r = resumo(m, doMes(m, all));
-      out.push({ ym: m, receitas: r.receitas, despesas: r.despesas, saldo: r.saldo });
+      out.push({ ym: m, receitas: r.receitas, despesas: r.despesas, saldo: r.saldo, aportes: r.aportes });
     }
     return out;
   }
 
   /** Despesas ainda não pagas do mês, por vencimento. */
   function contasAbertas(ym) {
+    const cats = catsInvestimento();
     return doMes(ym)
-      .filter((l) => l.tipo === 'despesa' && !isPago(l))
+      .filter((l) => l.tipo === 'despesa' && !isPago(l) && !ehAporte(l, cats))
       .sort((a, b) => (dataRef(a) || '').localeCompare(dataRef(b) || ''));
   }
 
@@ -526,7 +540,7 @@ Fin.finance = (() => {
   return {
     conciliar, conciliacaoPeriodo, conciliacaoFaturas,
     criarRepetidos, atualizarProximos, excluirLancamento, usosCategoria, moverCategoria, orcamento, mediaGasto,
-    lancamentos, dataRef, competencia, valor, statusEfetivo, isPago, doMes, resumo,
+    lancamentos, dataRef, competencia, valor, statusEfetivo, isPago, doMes, resumo, ehAporte, aportesDoMes, catsInvestimento,
     porCategoria, porCategoriaDetalhada, historico, contasAbertas, faturas, mesInicial, categorias, formasPagamento, togglePago,
     isPagamentoFatura, faturaDaCompra, vencimentoFatura, inferirConfig, cartoes, cartao, comprasDaFatura, soma,
     pagamentoDaFatura, limiteUsado, faturaPorCategoria, sincronizarPagamento, criarCompra,

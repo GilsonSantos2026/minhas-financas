@@ -11,7 +11,15 @@ Fin.fmt = (() => {
   const DIAS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
   const pad = (n) => String(n).padStart(2, '0');
 
+  const usdF = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'USD' });
+  const qtdF = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 8 });
+  const pctF = new Intl.NumberFormat('pt-BR', { style: 'percent', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
   const brl = (v) => brlF.format(v || 0);
+  /** Valor na moeda indicada: "R$ 1,00" ou "US$ 1,00". */
+  const moeda = (v, m = 'BRL') => (m === 'USD' ? usdF : brlF).format(v || 0);
+  const qtd = (v) => qtdF.format(v || 0);
+  const pct = (v) => (v == null || !isFinite(v) ? '—' : pctF.format(v));
   const compact = (v) => compactF.format(v || 0);
 
   /** Valor para campo de formulário: 1234.5 → "1234,50". */
@@ -68,5 +76,5 @@ Fin.fmt = (() => {
   const esc = (v) =>
     String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-  return { brl, compact, decimalInput, date, dayLabel, monthLong, monthShort, addMonths, addMonthsISO, todayISO, currentYM, esc };
+  return { brl, moeda, qtd, pct, compact, decimalInput, date, dayLabel, monthLong, monthShort, addMonths, addMonthsISO, todayISO, currentYM, esc };
 })();

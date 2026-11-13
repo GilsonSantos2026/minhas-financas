@@ -6,6 +6,7 @@ Fin.pages = Fin.pages || {};
 
 Fin.pages.mais = (() => {
   const ITENS = [
+    ['#/investimentos', '💼', 'Investimentos', 'Patrimônio, ativos, proventos, rentabilidade e metas'],
     ['#/conciliacao', '⚖️', 'Conciliação', 'Lançado × pago: diferenças, pendências e atrasos'],
     ['#/planilha', '📑', 'Planilha', 'Todos os lançamentos em tabela, com filtros, para conferência'],
     ['#/relatorios', '📊', 'Relatórios', 'Evolução, categorias, comparativos e exportação'],

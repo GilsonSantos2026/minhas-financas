@@ -26,7 +26,11 @@ Fin.pages.dashboard = (() => {
       <div class="text-sm text-slate-500 mt-2">
         Realizado até agora: <span class="font-medium text-slate-700">${fmt.brl(r.saldoRealizado)}</span>
         <span class="text-slate-400">(recebido ${fmt.brl(r.recebido)} − pago ${fmt.brl(r.pago)})</span>
-      </div>`);
+      </div>
+      ${r.aportes > 0 ? `<div class="text-sm text-slate-500 mt-1"><span aria-hidden="true">📈</span> Investido no mês: <span class="font-medium text-emerald-700">${fmt.brl(r.aportes)}</span>
+        <span class="text-slate-400">(não entra nas despesas)</span></div>` : ''}
+      ${Fin.inv?.temDados() ? `<a href="#/investimentos" class="inline-flex items-center gap-1 text-sm text-emerald-700 font-medium hover:underline mt-2">
+        <span aria-hidden="true">💼</span> Patrimônio investido: ${fmt.brl(Fin.inv.resumo().patrimonio)} →</a>` : ''}`);
   }
 
   function contasHTML(contas, ym) {

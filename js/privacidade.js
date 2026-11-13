@@ -12,8 +12,8 @@
 window.Fin = window.Fin || {};
 
 Fin.privacidade = (() => {
-  const RE = /-?\s?R\$\s?-?[\d.]+,\d{2}/;
-  const RE_G = /-?\s?R\$\s?-?[\d.]+,\d{2}/g;
+  const RE = /-?\s?(?:US|R)\$\s?-?[\d.]+,\d{2}/; // R$ e US$
+  const RE_G = /-?\s?(?:US|R)\$\s?-?[\d.]+,\d{2}/g;
   const IGNORAR = new Set(['SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT', 'OPTION', 'SELECT', 'CODE', 'TITLE']);
 
   function marcarTexto(no) {

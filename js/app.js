@@ -14,6 +14,7 @@ window.Fin = window.Fin || {};
   Fin.router.register('/relatorios', Fin.pages.relatorios);
   Fin.router.register('/conciliacao', Fin.pages.conciliacao);
   Fin.router.register('/planilha', Fin.pages.planilha);
+  Fin.router.register('/investimentos', Fin.pages.investimentos);
   Fin.router.register('/orcamento', Fin.pages.orcamento);
   Fin.router.register('/categorias', Fin.pages.categorias);
   Fin.router.register('/mais', Fin.pages.mais);

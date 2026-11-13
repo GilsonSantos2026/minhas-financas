@@ -234,7 +234,7 @@ Fin.drive = (() => {
     await Fin.cofre.adotarEnvelope(arq.conta, usuario, senha);
     localStorage.setItem('fin:cofre', arq.dados); // já está cifrado com a mesma chave
     await S.abrirCofre();
-    ['lancamentos', 'cartaoCompras', 'categorias', 'cartoes', 'meta', 'excluidos'].forEach((k) => localStorage.removeItem(`fin:${k}`));
+    [...S.COLLECTIONS, 'meta', 'excluidos'].forEach((k) => localStorage.removeItem(`fin:${k}`));
     S.setPref('driveConectado', true);
     S.setPref('driveVersao', arq._versao);
     S.setPref('driveSujo', false);

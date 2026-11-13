@@ -10,6 +10,8 @@
  *            Bloqueado, nada pode ser lido.
  *
  * Coleções: lancamentos, cartaoCompras, categorias, cartoes  (+ meta e excluidos)
+ *           investimentos: invContas, invAtivos, invMovs, invMetas, invHist, invConfig
+ *           (a importação da planilha não mexe nelas; backup antigo sem elas também não)
  *
  * Para a sincronização entre aparelhos, toda gravação de coleção:
  * - carimba "_mod" (data/hora) nos registros que mudaram;
@@ -19,7 +21,9 @@ window.Fin = window.Fin || {};
 
 Fin.storage = (() => {
   const PREFIX = 'fin:';
-  const COLLECTIONS = ['lancamentos', 'cartaoCompras', 'categorias', 'cartoes'];
+  const BASICAS = ['lancamentos', 'cartaoCompras', 'categorias', 'cartoes'];
+  const INVEST = ['invContas', 'invAtivos', 'invMovs', 'invMetas', 'invHist', 'invConfig'];
+  const COLLECTIONS = [...BASICAS, ...INVEST];
   const DADOS = new Set([...COLLECTIONS, 'meta', 'excluidos']); // o que é cifrado e sincronizado
   const SCHEMA_VERSION = 1;
 
@@ -225,21 +229,24 @@ Fin.storage = (() => {
       versao: SCHEMA_VERSION,
       importadoEm: new Date().toISOString(),
       arquivo: info.arquivo,
-      contagens: Object.fromEntries(COLLECTIONS.map((k) => [k, (data[k] || []).length])),
+      contagens: Object.fromEntries(BASICAS.map((k) => [k, (data[k] || []).length])),
     });
   }
+
+  /** Coleções a gravar: as básicas sempre; as de investimentos só se vierem nos dados. */
+  const aGravar = (data) => COLLECTIONS.filter((k) => BASICAS.includes(k) || Array.isArray(data[k]));
 
   /** Grava todas as coleções + meta; no modo plano desfaz tudo se algo falhar. */
   function gravarTudo(data, meta) {
     if (modo === 'cofre') {
-      COLLECTIONS.forEach((k) => set(k, data[k] || []));
+      aGravar(data).forEach((k) => set(k, data[k] || []));
       set('meta', meta);
       return;
     }
     const keys = [...COLLECTIONS, 'meta', 'excluidos'];
     const snapshot = Object.fromEntries(keys.map((k) => [k, localStorage.getItem(PREFIX + k)]));
     try {
-      COLLECTIONS.forEach((k) => set(k, data[k] || []));
+      aGravar(data).forEach((k) => set(k, data[k] || []));
       set('meta', meta);
     } catch (err) {
       cache.clear();
@@ -322,7 +329,7 @@ Fin.storage = (() => {
     }
     const dados = {};
     for (const k of COLLECTIONS) {
-      if (fonte[k] === undefined) { dados[k] = []; continue; } // backups antigos não tinham "cartoes"
+      if (fonte[k] === undefined) { if (BASICAS.includes(k)) dados[k] = []; continue; } // backups antigos não tinham "cartoes" nem investimentos
       if (!Array.isArray(fonte[k])) throw new Error(`Backup corrompido: “${k}” não é uma lista.`);
       dados[k] = fonte[k];
     }
@@ -332,7 +339,7 @@ Fin.storage = (() => {
       meta: fonte.meta || null,
       exportadoEm: obj.exportadoEm || null,
       cifrado: !!obj.cifrado,
-      contagens: Object.fromEntries(COLLECTIONS.map((k) => [k, dados[k].length])),
+      contagens: Object.fromEntries(COLLECTIONS.filter((k) => dados[k]).map((k) => [k, dados[k].length])),
     };
   }
 

@@ -34,13 +34,13 @@ Fin.analise = (() => {
     return meses(ini, fim).map((ym) => {
       const r = F.resumo(ym);
       acumulado += r.saldo;
-      return { ym, receitas: r.receitas, despesas: r.despesas, saldo: r.saldo, acumulado };
+      return { ym, receitas: r.receitas, despesas: r.despesas, saldo: r.saldo, aportes: r.aportes, acumulado };
     });
   }
 
   function totais(ini, fim) {
     const ev = evolucao(ini, fim);
-    const t = ev.reduce((s, m) => ({ receitas: s.receitas + m.receitas, despesas: s.despesas + m.despesas }), { receitas: 0, despesas: 0 });
+    const t = ev.reduce((s, m) => ({ receitas: s.receitas + m.receitas, despesas: s.despesas + m.despesas, aportes: s.aportes + (m.aportes || 0) }), { receitas: 0, despesas: 0, aportes: 0 });
     const n = ev.length || 1;
     const saldo = t.receitas - t.despesas;
     return {
@@ -120,8 +120,9 @@ Fin.analise = (() => {
   /** Como as despesas foram pagas (forma de pagamento dos lançamentos). */
   function porForma(ini, fim) {
     const map = new Map();
+    const cats = F.catsInvestimento();
     for (const l of F.lancamentos()) {
-      if (l.tipo !== 'despesa' || !noPeriodo(F.competencia(l), ini, fim)) continue;
+      if (l.tipo !== 'despesa' || !noPeriodo(F.competencia(l), ini, fim) || F.ehAporte(l, cats)) continue;
       const k = l.formaPagamento || 'Não informado';
       const cur = map.get(k) || { label: k, icone: l.formaPagamentoIcone, total: 0 };
       cur.total += F.valor(l);
@@ -136,8 +137,9 @@ Fin.analise = (() => {
    */
   function itens(ini, fim, { tipo = 'despesa', detalhar = true, categoria = null } = {}) {
     const out = [];
+    const cats = F.catsInvestimento();
     for (const l of F.lancamentos()) {
-      if (l.tipo !== tipo || !noPeriodo(F.competencia(l), ini, fim)) continue;
+      if (l.tipo !== tipo || !noPeriodo(F.competencia(l), ini, fim) || F.ehAporte(l, cats)) continue;
       if (tipo === 'despesa' && detalhar && F.isPagamentoFatura(l)) continue;
       out.push({ data: F.dataRef(l), descricao: l.descricao || l.categoria, categoria: l.categoria, icone: l.categoriaIcone, valor: F.valor(l), origem: l.formaPagamento || 'Lançamento', id: l.id, tipoItem: 'lancamento' });
     }

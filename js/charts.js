@@ -51,9 +51,12 @@ Fin.charts = (() => {
     const m = { t: 10, r: 6, b: 26, l: 46 };
     const iw = W - m.l - m.r;
     const ih = H - m.t - m.b;
-    const n = opts.series.length;
+    // stacked: uma barra por mês com as séries empilhadas (valores negativos viram 0)
+    const empilhar = !!opts.stacked;
+    const n = empilhar ? 1 : opts.series.length;
+    const somaPos = (d) => opts.series.reduce((s, x) => s + Math.max(0, d[x.key] || 0), 0);
     // Topo do eixo em degraus "redondos" (ex.: 0 / 500 / 1.000 / 1.500 / 2.000)
-    const maiorValor = Math.max(0, ...data.flatMap((d) => opts.series.map((s) => d[s.key])));
+    const maiorValor = Math.max(0, ...data.flatMap((d) => (empilhar ? [somaPos(d)] : opts.series.map((s) => d[s.key]))));
     const passoY = niceMax(maiorValor / 4 || 0.25);
     const max = Math.max(passoY, Math.ceil(maiorValor / passoY) * passoY);
     const nTicksY = Math.round(max / passoY);
@@ -81,12 +84,28 @@ Fin.charts = (() => {
     data.forEach((d, i) => {
       const cx = m.l + band * i + band / 2;
       let x = cx - (n * bw + (n - 1) * gap) / 2;
-      opts.series.forEach((s) => {
-        const v = d[s.key];
-        const h = (v / max) * ih;
-        if (h > 0.5) svg += `<path d="${barPath(x, y(v), bw, h)}" fill="${s.color}"/>`;
-        x += bw + gap;
-      });
+      if (empilhar) {
+        let base = 0;
+        const vis = opts.series.filter((s) => (d[s.key] || 0) > 0);
+        vis.forEach((s, k) => {
+          const v = d[s.key];
+          const h = (v / max) * ih;
+          const topo = y(base + v);
+          if (h > 0.5) {
+            svg += k === vis.length - 1
+              ? `<path d="${barPath(x, topo, bw, h)}" fill="${s.color}"/>`
+              : `<rect x="${x}" y="${topo}" width="${bw}" height="${h}" fill="${s.color}"/>`;
+          }
+          base += v;
+        });
+      } else {
+        opts.series.forEach((s) => {
+          const v = d[s.key];
+          const h = (v / max) * ih;
+          if (h > 0.5) svg += `<path d="${barPath(x, y(v), bw, h)}" fill="${s.color}"/>`;
+          x += bw + gap;
+        });
+      }
       const sel = d.ym === opts.selected;
       const ultimo = i === data.length - 1;
       // mostra a cada "passo"; o último mês sempre aparece (e o vizinho anterior some para não encostar)
@@ -108,8 +127,9 @@ Fin.charts = (() => {
       const d = data[i];
       tip.innerHTML = `
         <div class="font-semibold mb-1">${fmt.monthLong(d.ym)}</div>
-        ${opts.series.map((s) => `<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-sm" style="background:${s.color}"></span>${s.label}<span class="ml-auto pl-3 tabular-nums">${fmt.brl(d[s.key])}</span></div>`).join('')}
-        ${d.saldo !== undefined ? `<div class="flex gap-2 border-t border-slate-200 mt-1 pt-1">Saldo<span class="ml-auto pl-3 tabular-nums font-medium">${fmt.brl(d.saldo)}</span></div>` : ''}`;
+        ${opts.series.map((s) => (d[s.key] == null ? '' : `<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-sm" style="background:${s.color}"></span>${s.label}<span class="ml-auto pl-3 tabular-nums">${fmt.brl(d[s.key])}</span></div>`)).join('')}
+        ${d.saldo != null ? `<div class="flex gap-2 border-t border-slate-200 mt-1 pt-1">${opts.totalLabel || 'Saldo'}<span class="ml-auto pl-3 tabular-nums font-medium">${fmt.brl(d.saldo)}</span></div>` : ''}
+        ${d.extra ? `<div class="text-slate-500 mt-0.5">${d.extra}</div>` : ''}`;
       tip.classList.remove('hidden');
       const cx = m.l + band * i + band / 2;
       const tw = tip.offsetWidth;

@@ -80,7 +80,7 @@ Fin.pages.relatorios = (() => {
         ${kpi('Receitas', fmt.brl(a.receitas), n > 1 ? `média ${fmt.brl(a.mediaReceitas)}/mês` : '&nbsp;', delta(c.delta.receitas, true))}
         ${kpi('Despesas', fmt.brl(a.despesas), n > 1 ? `média ${fmt.brl(a.mediaDespesas)}/mês` : '&nbsp;', delta(c.delta.despesas, false))}
         ${kpi('Saldo', `<span class="${a.saldo < 0 ? 'text-rose-700' : ''}">${fmt.brl(a.saldo)}</span>`, a.saldo < 0 ? 'gastou mais do que recebeu' : 'sobrou no período', delta(c.delta.saldo, true))}
-        ${kpi('Taxa de poupança', a.poupanca == null ? '—' : `<span class="${a.poupanca < 0 ? 'text-rose-700' : ''}">${pct(a.poupanca)}</span>`, 'da receita que sobrou', delta(c.delta.poupanca, true, true))}
+        ${kpi('Taxa de poupança', a.poupanca == null ? '—' : `<span class="${a.poupanca < 0 ? 'text-rose-700' : ''}">${pct(a.poupanca)}</span>`, a.aportes > 0 ? `inclui ${fmt.brl(a.aportes)} investidos` : 'da receita que sobrou', delta(c.delta.poupanca, true, true))}
       </div>`;
   }
 

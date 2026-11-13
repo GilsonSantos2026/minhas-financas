@@ -126,6 +126,7 @@
 .table-wrap th { text-align: left; font-weight: 600; color: #64748b; white-space: nowrap; padding: 0.5rem 0.75rem; background: #f8fafc; }
 .table-wrap td { padding: 0.5rem 0.75rem; border-top: 1px solid #f1f5f9; white-space: nowrap; }
 .table-wrap td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.table-wrap th.text-right { text-align: right; }
 
 /* Planilha de conferência: cabeçalho e rodapé fixos dentro da área com rolagem */
 .planilha { -webkit-overflow-scrolling: touch; }
