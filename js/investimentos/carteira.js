@@ -63,6 +63,7 @@ Fin.inv = (() => {
     aporte: { nome: 'Aporte', icone: '➕', ativo: false },
     resgate: { nome: 'Resgate', icone: '➖', ativo: false },
     saldo: { nome: 'Saldo atualizado', icone: '🧾', ativo: false },
+    ajuste: { nome: 'Ajuste de quantidade', icone: '⚖️', ativo: true },
   };
 
   /* ---------------- Acesso aos dados ---------------- */
@@ -72,7 +73,9 @@ Fin.inv = (() => {
   const conta = (id) => S.list('invContas').find((c) => c.id === id) || null;
   const ativos = () => S.list('invAtivos');
   const ativo = (id) => ativos().find((a) => a.id === id) || null;
-  const movs = () => S.list('invMovs');
+  // Operações "substituídas" (do Investidor 10, trocadas pelas do extrato da Nomad) ficam guardadas só
+  // para a reimportação não duplicar; não entram em nenhum cálculo nem na lista.
+  const movs = () => S.list('invMovs').filter((m) => !m.substituido);
   const metas = () => S.list('invMetas');
   const temDados = () => S.list('invContas').length > 0;
 
@@ -85,8 +88,11 @@ Fin.inv = (() => {
   const dolarAtual = () => Fin.cotacoes.dolar()?.valor || null;
   const moedaDe = (a, c = conta(a?.conta)) => a?.moeda || c?.moeda || 'BRL';
 
-  /** Câmbio de uma operação (R$ por unidade da moeda). */
-  const cambioMov = (m, moeda) => (moeda === 'USD' ? Number(m.cambio) || dolarAtual() || 0 : 1);
+  /**
+   * Câmbio de uma operação (R$ por unidade da moeda). Provento importado do Investidor 10
+   * já vem em reais (moedaValor 'BRL').
+   */
+  const cambioMov = (m, moeda) => (m.moedaValor === 'BRL' ? 1 : moeda === 'USD' ? Number(m.cambio) || dolarAtual() || 0 : 1);
 
   /** Classe sugerida para um ticker novo. */
   function sugerirClasse(ticker, c) {
@@ -121,6 +127,7 @@ Fin.inv = (() => {
       const c = cMap.get(a.conta);
       out.set(a.id, { ativo: a, conta: c, moeda: moedaDe(a, c), classe: a.classe, qtd: 0, custo: 0, custoBRL: 0, realizado: 0, proventos: 0, ops: 0 });
     }
+    const conversoes = new Map(); // conversão/incorporação: o custo do ativo antigo passa para o novo
     for (const m of ordenar(movs())) {
       if (!m.ativo || (m.data || '') > limite) continue;
       const p = out.get(m.ativo);
@@ -133,6 +140,12 @@ Fin.inv = (() => {
       switch (m.tipo) {
         case 'inicial':
         case 'compra': {
+          const herdado = m.conv && conversoes.get(m.conv);
+          if (herdado) {
+            conversoes.delete(m.conv);
+            p.qtd += q; p.custo += herdado.custo; p.custoBRL += herdado.custoBRL;
+            break;
+          }
           const tot = q * pr + tx;
           p.qtd += q; p.custo += tot; p.custoBRL += tot * cb;
           break;
@@ -142,9 +155,24 @@ Fin.inv = (() => {
           const qq = Math.min(q, p.qtd);
           const pm = p.custo / p.qtd;
           const pmB = p.custoBRL / p.qtd;
-          p.realizado += (qq * pr - tx) * cb - pmB * qq;
+          if (m.conv) conversoes.set(m.conv, { custo: pm * qq, custoBRL: pmB * qq });
+          else p.realizado += (qq * pr - tx) * cb - pmB * qq;
           p.custo -= pm * qq; p.custoBRL -= pmB * qq; p.qtd -= qq;
-          if (p.qtd < 1e-9) { p.qtd = 0; p.custo = 0; p.custoBRL = 0; }
+          // Sobra mínima depois de vender (extrato arredonda a 5 casas): considera zerado.
+          if (p.qtd < 0.0001) { p.qtd = 0; p.custo = 0; p.custoBRL = 0; }
+          break;
+        }
+        case 'ajuste': { // corrige a quantidade sem lucro/prejuízo: entra/sai pelo preço médio
+          if (q < 0 && p.qtd > 0) {
+            const qq = Math.min(-q, p.qtd);
+            const f = qq / p.qtd;
+            p.custo -= p.custo * f; p.custoBRL -= p.custoBRL * f; p.qtd -= qq;
+            if (p.qtd < 1e-9) { p.qtd = 0; p.custo = 0; p.custoBRL = 0; }
+          } else if (q > 0) {
+            const pmU = p.qtd > 0 ? p.custo / p.qtd : pr;
+            const pmB = p.qtd > 0 ? p.custoBRL / p.qtd : pr * cb;
+            p.qtd += q; p.custo += pmU * q; p.custoBRL += pmB * q;
+          }
           break;
         }
         case 'desdobramento': if (m.fator > 0) p.qtd *= m.fator; break;
@@ -199,7 +227,7 @@ Fin.inv = (() => {
     for (const m of movs()) {
       if (m.tipo !== 'provento') continue;
       const a = aMap.get(m.ativo);
-      const moeda = moedaDe(a);
+      const moeda = m.moedaValor || moedaDe(a);
       const valorBRL = (Number(m.valor) || 0) * cambioMov(m, moeda);
       lista.push({ mov: m, ativo: a, moeda, valorMoeda: Number(m.valor) || 0, valor: valorBRL, data: m.data, futuro: (m.data || '') > hoje });
     }
@@ -258,7 +286,7 @@ Fin.inv = (() => {
     const aMap = new Map(ativos().map((a) => [a.id, a]));
     const cMap = new Map(S.list('invContas').map((c) => [c.id, c]));
     for (const m of movs()) {
-      if (!m.data) continue;
+      if (!m.data || m.conv) continue; // conversões não são aporte nem resgate
       const k = m.data.slice(0, 7);
       const f = out[k] || (out[k] = { entra: 0, sai: 0 });
       const a = aMap.get(m.ativo);
@@ -302,7 +330,9 @@ Fin.inv = (() => {
       const f = fl[m]?.liquido ?? (foto?.manual && anterior?.aplicado != null ? aplicado - anterior.aplicado : 0);
       const pv = prov[m] || 0;
       let rent = null;
-      if (patrimonio != null && anterior?.patrimonio != null) {
+      // Mês importado do Investidor 10 (e não corrigido pelos extratos): vale a rentabilidade calculada por ele.
+      if (foto?.rentI10 != null && foto.fonte === 'i10' && m !== atual) rent = foto.rentI10;
+      else if (patrimonio != null && anterior?.patrimonio != null) {
         const base = anterior.patrimonio + f / 2;
         if (base > 0) rent = (patrimonio - anterior.patrimonio - f + pv) / base;
       }
@@ -403,13 +433,13 @@ Fin.inv = (() => {
 
   /** Remove o ativo e todas as suas operações. */
   function excluirAtivo(id) {
-    S.set('invMovs', movs().filter((m) => m.ativo !== id));
+    S.set('invMovs', S.list('invMovs').filter((m) => m.ativo !== id));
     S.remove('invAtivos', id);
   }
 
   function excluirConta(id) {
     const ids = new Set(ativos().filter((a) => a.conta === id).map((a) => a.id));
-    S.set('invMovs', movs().filter((m) => m.conta !== id && !ids.has(m.ativo)));
+    S.set('invMovs', S.list('invMovs').filter((m) => m.conta !== id && !ids.has(m.ativo)));
     S.set('invAtivos', ativos().filter((a) => a.conta !== id));
     S.remove('invContas', id);
   }

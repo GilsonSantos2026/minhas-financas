@@ -420,7 +420,7 @@ Fin.forms.inv = (() => {
         if (!(a.preco > 0)) S.upsert('invAtivos', { id: a.id, preco: i.preco, precoEm: data });
         novos.push({ id: S.uid(), criadoEm: new Date().toISOString(), conta: cId, ativo: a.id, tipo: 'inicial', data, qtd: i.qtd, preco: i.preco, taxas: 0, cambio, origem: 'carga' });
       }
-      S.set('invMovs', [...I().movs(), ...novos]);
+      S.set('invMovs', [...S.list('invMovs'), ...novos]);
       concluir(`${novos.length} ativos carregados. Confira a classe de cada um em Ativos.`);
     });
   }

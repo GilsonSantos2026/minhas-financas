@@ -62,6 +62,29 @@ Fin.cotacoes = (() => {
     return v;
   }
 
+  /**
+   * PTAX de venda de um período inteiro numa consulta só (para importações).
+   * Devolve uma função data → valor que usa o último dia útil anterior quando precisa.
+   */
+  async function ptaxSerie(iniISO, fimISO) {
+    const ini = new Date(`${iniISO}T12:00:00`);
+    ini.setDate(ini.getDate() - 10);
+    const url = 'https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoDolarPeriodo(dataInicial=@i,dataFinalCotacao=@f)'
+      + `?@i='${mdY(ini.toISOString().slice(0, 10))}'&@f='${mdY(fimISO)}'&$format=json&$select=cotacaoVenda,dataHoraCotacao&$top=100000`;
+    const r = await fetch(url, { cache: 'no-store' });
+    if (!r.ok) throw new Error(`PTAX: HTTP ${r.status}`);
+    const lista = ((await r.json()).value || []).map((v) => [v.dataHoraCotacao.slice(0, 10), v.cotacaoVenda]).sort((a, b) => a[0].localeCompare(b[0]));
+    if (!lista.length) throw new Error('PTAX indisponível');
+    const dias = lista.map((x) => x[0]);
+    return (iso) => {
+      let lo = 0;
+      let hi = dias.length - 1;
+      let achado = 0;
+      while (lo <= hi) { const mid = (lo + hi) >> 1; if (dias[mid] <= iso) { achado = mid; lo = mid + 1; } else hi = mid - 1; }
+      return lista[achado][1];
+    };
+  }
+
   /** "há 2 min", "há 3 h", "em 12/11". */
   function idade(iso) {
     if (!iso) return '';
@@ -72,5 +95,5 @@ Fin.cotacoes = (() => {
     return `em ${Fin.fmt.date(iso.slice(0, 10)).slice(0, 5)}`;
   }
 
-  return { dolar, atualizarDolar, ptax, idade };
+  return { dolar, atualizarDolar, ptax, ptaxSerie, idade };
 })();

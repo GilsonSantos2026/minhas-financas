@@ -9,7 +9,7 @@
  * Ao publicar uma versão nova do app, troque VERSAO: o app mostra "Nova versão disponível".
  * Os DADOS não passam por aqui (ficam no LocalStorage do navegador).
  */
-const VERSAO = '2026-11-13.2';
+const VERSAO = '2026-11-13.3';
 const CACHE_APP = `financas-app-${VERSAO}`;
 const CACHE_CDN = 'financas-cdn-v1';
 
@@ -22,7 +22,7 @@ const ARQUIVOS_APP = [
   './js/components/lancamento-form.js', './js/components/compra-form.js', './js/components/cartao-form.js', './js/components/categoria-form.js',
   './js/pages/dashboard.js', './js/pages/lancamentos.js', './js/pages/cartoes.js', './js/pages/importar-fatura.js',
   './js/pages/categorias.js', './js/pages/orcamento.js', './js/pages/relatorios.js', './js/pages/conciliacao.js', './js/pages/planilha.js', './js/pages/investimentos.js',
-  './js/investimentos/cotacoes.js', './js/investimentos/carteira.js', './js/investimentos/formularios.js', './js/pages/mais.js', './js/pages/dados.js',
+  './js/investimentos/cotacoes.js', './js/investimentos/carteira.js', './js/investimentos/formularios.js', './js/investimentos/nomad.js', './js/investimentos/importar.js', './js/pages/mais.js', './js/pages/dados.js',
   './js/fatura/leitor.js', './js/fatura/importador.js',
 ];
 

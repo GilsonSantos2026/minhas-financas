@@ -39,6 +39,7 @@ Fin.pages.investimentos = (() => {
       <div class="flex flex-wrap items-center gap-2">
         <h2 class="text-xl font-semibold mr-auto hidden md:block">Investimentos</h2>
         <span data-dolar>${dolarChip()}</span>
+        <button data-act="importar" class="btn btn-ghost !py-1.5 bg-white shadow-sm">📥 Importar</button>
         <button data-act="precos" class="btn btn-ghost !py-1.5 bg-white shadow-sm">🏷️ Preços</button>
         <button data-act="novo-mov" class="btn btn-primary !py-1.5">＋ Movimentação</button>
       </div>
@@ -261,7 +262,7 @@ Fin.pages.investimentos = (() => {
       const bg = v >= 0 ? `rgba(12,163,12,${0.08 + a * 0.3})` : `rgba(208,59,59,${0.08 + a * 0.3})`;
       return `<td class="num" style="background:${bg}">${v < 0 ? '−' : ''}${fmt.pct(Math.abs(v))}</td>`;
     };
-    const fotos = Fin.storage.list('invHist').filter((h) => h.informado).sort((a, b) => b.id.localeCompare(a.id));
+    const fotos = Fin.storage.list('invHist').filter((h) => h.informado && !h.fonte).sort((a, b) => b.id.localeCompare(a.id));
     return `
       <div class="grid grid-cols-2 lg:grid-cols-3 gap-3">
         ${tile('Acumulada', total != null ? `<span class="${sinal(total)}">${pctS(total)}</span>` : '—', 'desde o 1º mês com histórico')}
@@ -319,7 +320,7 @@ Fin.pages.investimentos = (() => {
           const semValor = m.tipo === 'desdobramento' || m.tipo === 'grupamento';
           return `<tr data-mov="${m.id}" class="cursor-pointer hover:bg-emerald-50/60">
             <td class="tabular-nums">${fmt.date(m.data)}</td>
-            <td>${t.icone} ${t.nome}${m.origem === 'nota' ? ' <span class="text-[11px] text-slate-400">nota</span>' : ''}</td>
+            <td>${t.icone} ${t.nome}${{ nota: 'nota', i10: 'Investidor 10', nomad: 'extrato Nomad' }[m.origem] ? ` <span class="text-[11px] text-slate-400">${{ nota: 'nota', i10: 'Investidor 10', nomad: 'extrato Nomad' }[m.origem]}</span>` : ''}</td>
             <td><span class="font-medium">${esc(a?.ticker || c?.nome || '—')}</span>${a ? ` <span class="text-[11px] text-slate-400">${esc(c?.nome || '')}</span>` : ''}</td>
             <td class="num">${semValor ? `1 → ${fmt.qtd(m.fator)}` : m.qtd != null ? fmt.qtd(m.qtd) : ''}</td>
             <td class="num">${m.preco != null ? fmt.moeda(m.preco, moeda) : ''}</td>
@@ -366,7 +367,8 @@ Fin.pages.investimentos = (() => {
           <li>O dólar é atualizado sozinho; o custo em dólar usa a PTAX do dia da compra.</li>
         </ul>
         <div class="flex flex-wrap gap-2 mt-4">
-          <button data-act="comecar" class="btn btn-primary">Começar com Rico, Nomad e Reserva</button>
+          <button data-act="importar" class="btn btn-primary">📥 Importar (Investidor 10 / extratos Nomad)</button>
+          <button data-act="comecar" class="btn btn-ghost">Começar com Rico, Nomad e Reserva</button>
           <button data-act="nova-conta" class="btn btn-ghost">Criar outra conta</button>
         </div>`)}
     </div>`;
@@ -381,6 +383,7 @@ Fin.pages.investimentos = (() => {
         const act = e.target.closest('[data-act]')?.dataset.act;
         if (act === 'comecar') { I().criarContasPadrao(); Fin.ui.toast('Contas criadas: Rico, Nomad e Reserva de emergência.'); Fin.router.refresh(); }
         if (act === 'nova-conta') FI().conta();
+        if (act === 'importar') Fin.importarInv.abrir();
       }, { signal });
       return;
     }
@@ -453,6 +456,7 @@ Fin.pages.investimentos = (() => {
       if (act === 'novo-mov') FI().mov();
       else if (act === 'novo-provento') FI().mov({ tipo: 'provento', conta: I().contas().find((c) => c.tipo === 'corretora')?.id });
       else if (act === 'precos') FI().precos();
+      else if (act === 'importar') Fin.importarInv.abrir();
       else if (act === 'carga') FI().carga();
       else if (act === 'nova-conta') FI().conta();
       else if (act === 'nova-meta') FI().meta();
