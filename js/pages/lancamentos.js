@@ -1,5 +1,8 @@
 /**
- * pages/lancamentos.js — Lista do mês, agrupada por dia, com busca e filtros.
+ * pages/lancamentos.js — Lista de lançamentos com busca e filtros.
+ * Período: Mês (agrupado por dia) ou 12 meses / Futuros / Tudo (agrupado por mês).
+ * Com uma busca ativa em vários meses, mostra a "conferência mês a mês": em quais
+ * meses o lançamento existe e em quais está faltando.
  * Tocar em um item abre o formulário; tocar no status alterna pago/aberto.
  */
 window.Fin = window.Fin || {};
@@ -11,7 +14,8 @@ Fin.pages.lancamentos = (() => {
   const F = Fin.finance;
 
   // Filtros ficam guardados enquanto o app está aberto (sobrevivem à troca de tela).
-  const filtros = { busca: '', tipo: '', status: '', categoria: '' };
+  const filtros = { busca: '', tipo: '', status: '', categoria: '', periodo: 'mes' };
+  const multiMes = () => filtros.periodo !== 'mes';
 
   function aplicar(lista) {
     const q = Fin.parsers.normalize(filtros.busca);
@@ -40,12 +44,13 @@ Fin.pages.lancamentos = (() => {
     return item('Receitas', r.receitas, 'text-emerald-700') + item('Despesas', r.despesas, 'text-rose-700') + item('Saldo', r.saldo, r.saldo < 0 ? 'text-rose-700' : '');
   }
 
-  function itemHTML(l) {
+  function itemHTML(l, mostrarData = false) {
     const rec = l.tipo === 'receita';
     const rep = l.grupo && l.parcela
       ? (l.recorrencia === 'fixo' ? `🔁 ${l.parcela.atual}/${l.parcela.total}` : `${l.parcela.atual}/${l.parcela.total}`)
       : null;
-    const sub = [rep, l.categoria, l.formaPagamento].filter(Boolean).map(esc).join(' · ');
+    const data = mostrarData && F.dataRef(l) ? fmt.date(F.dataRef(l)).slice(0, 5) : null;
+    const sub = [data, rep, l.categoria, l.formaPagamento].filter(Boolean).map(esc).join(' · ');
     return `
       <li class="lanc-item flex items-center gap-3 px-3 sm:px-4 py-3" data-edit="${l.id}" role="button" tabindex="0"
           aria-label="Editar ${esc(l.descricao || l.categoria)}">
@@ -62,13 +67,82 @@ Fin.pages.lancamentos = (() => {
       </li>`;
   }
 
+  /** Vários meses: agrupa por mês de competência, com quantidade e total lançado. */
+  function listaPorMesHTML(lista) {
+    const grupos = new Map();
+    [...lista]
+      .sort((a, b) => F.competencia(a).localeCompare(F.competencia(b)) || (F.dataRef(a) || '').localeCompare(F.dataRef(b) || ''))
+      .forEach((l) => {
+        const k = F.competencia(l);
+        if (!grupos.has(k)) grupos.set(k, []);
+        grupos.get(k).push(l);
+      });
+    const atual = fmt.currentYM();
+    return [...grupos.entries()].map(([ym, itens]) => {
+      const desp = itens.filter((l) => l.tipo === 'despesa').reduce((s, l) => s + (l.valorPrevisto ?? F.valor(l)), 0);
+      const rec = itens.filter((l) => l.tipo === 'receita').reduce((s, l) => s + (l.valorPrevisto ?? F.valor(l)), 0);
+      return `
+      <section data-mes="${ym}">
+        <h3 class="text-xs font-medium uppercase tracking-wide mb-1.5 px-1 flex flex-wrap items-center gap-x-2 ${ym === atual ? 'text-blue-700' : 'text-slate-500'}">
+          <span>${fmt.monthLong(ym)}${ym === atual ? ' · mês atual' : ''}</span>
+          <span class="ml-auto normal-case tracking-normal text-[11px] font-normal text-slate-500">${itens.length} ${itens.length === 1 ? 'lançamento' : 'lançamentos'}
+            ${desp ? ` · desp. ${fmt.brl(desp)}` : ''}${rec ? ` · rec. ${fmt.brl(rec)}` : ''}</span>
+        </h3>
+        <ul class="bg-white rounded-2xl shadow-sm divide-y divide-slate-100 overflow-hidden">${itens.map((l) => itemHTML(l, true)).join('')}</ul>
+      </section>`;
+    }).join('');
+  }
+
+  /**
+   * Conferência mês a mês (busca ativa em vários meses): um quadrinho por mês com quantidade
+   * e valor lançado; meses SEM lançamento ficam em destaque (provável esquecimento).
+   */
+  function coberturaHTML(lista, todos) {
+    const meses = Fin.periodo.meses(filtros.periodo, Fin.state.mes, todos);
+    if (meses.length < 2) return '';
+    const porMes = new Map();
+    lista.forEach((l) => {
+      const k = F.competencia(l);
+      const cur = porMes.get(k) || { qtd: 0, total: 0 };
+      cur.qtd++;
+      cur.total += l.valorPrevisto ?? F.valor(l);
+      porMes.set(k, cur);
+    });
+    const faltando = meses.filter((m) => !porMes.has(m));
+    const atual = fmt.currentYM();
+    const celulas = meses.map((m) => {
+      const c = porMes.get(m);
+      return c
+        ? `<button data-ir-mes="${m}" class="rounded-xl border border-emerald-200 bg-emerald-50 px-2 py-1.5 text-left hover:bg-emerald-100 ${m === atual ? 'ring-2 ring-blue-400' : ''}" title="${fmt.monthLong(m)}: ${c.qtd} lançamento(s)">
+            <div class="text-[11px] text-emerald-800 font-semibold">✓ ${fmt.monthShort(m)}</div>
+            <div class="text-[11px] tabular-nums text-slate-700">${fmt.brl(c.total)}</div>
+            ${c.qtd > 1 ? `<div class="text-[10px] text-amber-800">${c.qtd} lançamentos</div>` : ''}
+          </button>`
+        : `<button data-ir-mes="${m}" class="rounded-xl border border-dashed border-amber-400 bg-amber-50 px-2 py-1.5 text-left hover:bg-amber-100 ${m === atual ? 'ring-2 ring-blue-400' : ''}" title="${fmt.monthLong(m)}: sem lançamento">
+            <div class="text-[11px] text-amber-900 font-semibold">! ${fmt.monthShort(m)}</div>
+            <div class="text-[11px] text-amber-800">sem lançamento</div>
+          </button>`;
+    }).join('');
+    return `
+      <section class="bg-white rounded-2xl shadow-sm p-4">
+        <div class="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 class="font-semibold">Conferência mês a mês</h2>
+          <span class="text-xs ${faltando.length ? 'text-amber-800 font-medium' : 'text-emerald-800'}">
+            ${faltando.length ? `! ${faltando.length} de ${meses.length} meses sem lançamento` : `✓ presente nos ${meses.length} meses`}</span>
+        </div>
+        <p class="text-xs text-slate-500 mt-0.5 mb-3">“${esc(filtros.busca || filtros.categoria)}” · ${Fin.periodo.rotulo(filtros.periodo, Fin.state.mes).toLowerCase()} · toque num mês para abri-lo.</p>
+        <div class="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">${celulas}</div>
+      </section>`;
+  }
+
   function listaHTML(lista) {
     if (!lista.length) {
       const temFiltro = filtros.busca || filtros.tipo || filtros.status || filtros.categoria;
-      return Fin.ui.emptyState('🔎', temFiltro ? 'Nada encontrado' : 'Nenhum lançamento neste mês',
-        temFiltro ? 'Tente mudar a busca ou os filtros.' : 'Use o botão “＋” para adicionar.',
+      return Fin.ui.emptyState('🔎', temFiltro ? 'Nada encontrado' : multiMes() ? 'Nenhum lançamento no período' : 'Nenhum lançamento neste mês',
+        temFiltro ? 'Tente mudar a busca, o período ou os filtros.' : 'Use o botão “＋” para adicionar.',
         temFiltro ? '<button data-limpar class="btn btn-ghost">Limpar filtros</button>' : '');
     }
+    if (multiMes()) return listaPorMesHTML(lista);
     const grupos = new Map();
     [...lista]
       .sort((a, b) => (F.dataRef(a) || '').localeCompare(F.dataRef(b) || '') || (a.descricao || '').localeCompare(b.descricao || ''))
@@ -115,20 +189,30 @@ Fin.pages.lancamentos = (() => {
 
   function render(view, { signal }) {
     const ym = Fin.state.mes;
-    const doMes = F.doMes(ym);
-    const cats = [...new Set(doMes.map((l) => l.categoria))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    const todos = F.lancamentos();
+    const base = multiMes() ? Fin.periodo.filtrar(todos, filtros.periodo, ym) : F.doMes(ym);
+    const cats = [...new Set(base.map((l) => l.categoria))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
     if (filtros.categoria && !cats.includes(filtros.categoria)) filtros.categoria = '';
     const opt = (v, label, cur) => `<option value="${esc(v)}" ${v === cur ? 'selected' : ''}>${esc(label)}</option>`;
 
     view.innerHTML = `
       <div class="space-y-4">
-        ${Fin.ui.monthNav(ym)}
+        ${multiMes()
+          ? `<div class="bg-white rounded-2xl shadow-sm px-4 py-3 flex items-center justify-between gap-3">
+               <div><div class="font-semibold">${Fin.periodo.rotulo(filtros.periodo, ym)}</div>
+               <div class="text-xs text-slate-500">pelo mês de competência</div></div>
+               <button data-periodo="mes" class="text-xs font-semibold text-emerald-700 hover:underline shrink-0">Ver por mês</button>
+             </div>`
+          : Fin.ui.monthNav(ym)}
         <div id="lanc-resumo" class="grid grid-cols-3 gap-2"></div>
-        <a href="#/conciliacao" class="flex items-center justify-between bg-white rounded-2xl shadow-sm px-4 py-2.5 text-sm hover:bg-slate-50">
-          <span><span aria-hidden="true">⚖️</span> Conciliar lançado × pago do mês</span><span class="text-slate-300" aria-hidden="true">›</span></a>
+        ${multiMes() ? '' : `<a href="#/conciliacao" class="flex items-center justify-between bg-white rounded-2xl shadow-sm px-4 py-2.5 text-sm hover:bg-slate-50">
+          <span><span aria-hidden="true">⚖️</span> Conciliar lançado × pago do mês</span><span class="text-slate-300" aria-hidden="true">›</span></a>`}
 
         <div class="bg-white rounded-2xl shadow-sm p-3 space-y-2">
-          <input id="f-busca" type="search" class="input" placeholder="Buscar descrição, categoria, observação…"
+          <div class="chips flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Período da busca">
+            ${Fin.periodo.chips(filtros.periodo)}
+          </div>
+          <input id="f-busca" type="search" class="input" placeholder="${multiMes() ? 'Buscar em todo o período (ex.: aluguel)…' : 'Buscar descrição, categoria, observação…'}"
                  value="${esc(filtros.busca)}" aria-label="Buscar lançamentos" />
           <div class="grid grid-cols-3 gap-2">
             <select id="f-tipo" class="input" aria-label="Filtrar por tipo">
@@ -143,15 +227,17 @@ Fin.pages.lancamentos = (() => {
           </div>
         </div>
 
+        <div id="lanc-cobertura"></div>
         <div id="lanc-lista" class="space-y-4"></div>
         <p id="lanc-contagem" class="text-center text-xs text-slate-400"></p>
       </div>`;
 
     const draw = () => {
-      const lista = aplicar(doMes);
+      const lista = aplicar(base);
       view.querySelector('#lanc-resumo').innerHTML = resumoHTML(lista);
+      view.querySelector('#lanc-cobertura').innerHTML = multiMes() && (filtros.busca.trim() || filtros.categoria) ? coberturaHTML(lista, todos) : '';
       view.querySelector('#lanc-lista').innerHTML = listaHTML(lista);
-      view.querySelector('#lanc-contagem').textContent = lista.length ? `${lista.length} de ${doMes.length} lançamentos` : '';
+      view.querySelector('#lanc-contagem').textContent = lista.length ? `${lista.length} de ${base.length} lançamentos` : '';
     };
 
     view.querySelector('#f-busca').addEventListener('input', (e) => { filtros.busca = e.target.value; draw(); });
@@ -162,6 +248,21 @@ Fin.pages.lancamentos = (() => {
       if (e.target.closest('[data-limpar]')) {
         Object.assign(filtros, { busca: '', tipo: '', status: '', categoria: '' });
         Fin.router.render();
+        return;
+      }
+      const p = e.target.closest('[data-periodo]');
+      if (p) {
+        filtros.periodo = p.dataset.periodo;
+        Fin.router.render();
+        setTimeout(() => view.querySelector('#f-busca')?.focus(), 0);
+        return;
+      }
+      const mes = e.target.closest('[data-ir-mes]');
+      if (mes) {
+        Fin.state.mes = mes.dataset.irMes;
+        filtros.periodo = 'mes';
+        Fin.router.render();
+        window.scrollTo(0, 0);
       }
     }, { signal });
     draw();

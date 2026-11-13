@@ -84,6 +84,14 @@
 .chip:hover { background: #f8fafc; }
 .chip.is-active { background: #047857; color: #fff; }
 
+/* Ocultar valores (botão "olho"): desfoca tudo que é dinheiro */
+.vlr { transition: filter 0.15s; }
+.ocultar-valores .vlr { filter: blur(0.5em); user-select: none; } /* proporcional ao tamanho da letra */
+.ocultar-valores svg text.vlr { filter: blur(3px); }
+.olho-fechado { display: none; }
+.ocultar-valores .olho-aberto { display: none; }
+.ocultar-valores .olho-fechado { display: inline; }
+
 /* Barras horizontais: nome | barra | valor */
 .hbar-row { display: grid; grid-template-columns: minmax(0, 8rem) minmax(0, 1fr) auto; align-items: center; gap: 0.75rem; }
 @media (min-width: 640px) { .hbar-row { grid-template-columns: minmax(0, 11rem) minmax(0, 1fr) auto; } }
@@ -118,6 +126,20 @@
 .table-wrap th { text-align: left; font-weight: 600; color: #64748b; white-space: nowrap; padding: 0.5rem 0.75rem; background: #f8fafc; }
 .table-wrap td { padding: 0.5rem 0.75rem; border-top: 1px solid #f1f5f9; white-space: nowrap; }
 .table-wrap td.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Planilha de conferência: cabeçalho e rodapé fixos dentro da área com rolagem */
+.planilha { -webkit-overflow-scrolling: touch; }
+.planilha table { border-collapse: separate; border-spacing: 0; }
+.planilha th { text-align: left; color: #475569; padding: 0.5rem 0.625rem; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
+.planilha th.num { text-align: right; }
+.planilha td { padding: 0.4rem 0.625rem; border-bottom: 1px solid #f1f5f9; white-space: nowrap; vertical-align: top; }
+.planilha td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.planilha tfoot td { border-top: 1px solid #cbd5e1; border-bottom: 0; padding-top: 0.5rem; padding-bottom: 0.5rem; }
+.planilha th:first-child, .planilha td:first-child { position: sticky; left: 0; background: inherit; }
+.planilha thead th:first-child, .planilha tfoot td:first-child { background: #f1f5f9; z-index: 1; }
+.planilha tbody tr { background: #fff; }
+.planilha tbody tr.bg-slate-50\/60 { background: #f8fafc; }
+.planilha tbody tr:hover { background: #ecfdf5; }
 
 details > summary { list-style: none; cursor: pointer; }
 details > summary::-webkit-details-marker { display: none; }

@@ -73,7 +73,7 @@ Fin.charts = (() => {
     Array.from({ length: nTicksY + 1 }, (_, k) => k * passoY).forEach((v) => {
       const yy = Math.round(y(v)) + 0.5;
       svg += `<line x1="${m.l}" x2="${W - m.r}" y1="${yy}" y2="${yy}" stroke="${v === 0 ? C.axis : C.grid}" stroke-width="1"/>`;
-      svg += `<text x="${m.l - 8}" y="${yy + 4}" text-anchor="end" font-size="11" fill="${C.muted}" style="font-variant-numeric:tabular-nums">${fmt.compact(v)}</text>`;
+      svg += `<text x="${m.l - 8}" y="${yy + 4}" text-anchor="end" font-size="11" fill="${C.muted}" class="vlr" style="font-variant-numeric:tabular-nums">${fmt.compact(v)}</text>`;
     });
 
     // barras (rótulos de mês espaçados quando não cabem todos — ex.: 12 meses no celular)
@@ -171,7 +171,7 @@ Fin.charts = (() => {
       const yy = Math.round(y(v)) + 0.5;
       const zero = Math.abs(v) < 1e-9;
       svg += `<line x1="${m.l}" x2="${W - m.r}" y1="${yy}" y2="${yy}" stroke="${zero ? C.axis : C.grid}" stroke-width="1"/>`;
-      svg += `<text x="${m.l - 8}" y="${yy + 4}" text-anchor="end" font-size="11" fill="${C.muted}" style="font-variant-numeric:tabular-nums">${fmt.compact(v)}</text>`;
+      svg += `<text x="${m.l - 8}" y="${yy + 4}" text-anchor="end" font-size="11" fill="${C.muted}" class="vlr" style="font-variant-numeric:tabular-nums">${fmt.compact(v)}</text>`;
     }
     const passoX = Math.max(1, Math.ceil(data.length / Math.max(1, Math.floor(iw / 42))));
     data.forEach((d, i) => {

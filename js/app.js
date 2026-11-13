@@ -13,6 +13,7 @@ window.Fin = window.Fin || {};
   Fin.router.register('/importar-fatura', Fin.pages.importarFatura);
   Fin.router.register('/relatorios', Fin.pages.relatorios);
   Fin.router.register('/conciliacao', Fin.pages.conciliacao);
+  Fin.router.register('/planilha', Fin.pages.planilha);
   Fin.router.register('/orcamento', Fin.pages.orcamento);
   Fin.router.register('/categorias', Fin.pages.categorias);
   Fin.router.register('/mais', Fin.pages.mais);
@@ -74,10 +75,15 @@ window.Fin = window.Fin || {};
     }
   });
 
-  // Botão "Bloquear" (menu lateral e "Mais").
+  // Botão "Bloquear" (menu lateral e "Mais") e botão "olho" (ocultar valores).
   document.addEventListener('click', (e) => {
     if (e.target.closest('[data-bloquear]')) Fin.acesso.bloquear();
+    if (e.target.closest('[data-ocultar]')) {
+      const on = Fin.privacidade.alternar();
+      Fin.ui.toast(on ? 'Valores ocultos.' : 'Valores visíveis.');
+    }
   });
+  Fin.privacidade.iniciar();
 
   /* ---------------- Início: só depois de entrar com usuário e senha ---------------- */
 
