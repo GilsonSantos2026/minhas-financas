@@ -56,6 +56,7 @@ Fin.pages.investimentos = (() => {
     const ult = hist.length ? hist[hist.length - 1] : null;
     return `
       ${r.semCotacao ? `<p class="text-sm bg-amber-50 text-amber-900 rounded-xl px-3 py-2"><span aria-hidden="true">!</span> ${r.semCotacao} ativo(s) sem preço — usando o preço médio. <button data-act="precos" class="underline font-medium">Atualizar preços</button></p>` : ''}
+      ${!Fin.cotacoes.temChaves() && r.abertas.length ? `<p class="text-sm bg-sky-50 text-sky-900 rounded-xl px-3 py-2"><span aria-hidden="true">ⓘ</span> Preços informados à mão. <button data-act="chaves" class="underline font-medium">Ligar cotações automáticas</button> (brapi para B3, Finnhub para EUA).</p>` : ''}
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
         ${tile('Patrimônio total', fmt.brl(r.patrimonio), `<span class="${sinal(r.variacao)}">${pctS(r.variacao)}</span> sobre o aplicado`)}
         ${tile('Valor aplicado', fmt.brl(r.investido), 'custo do que você tem hoje')}
@@ -457,6 +458,7 @@ Fin.pages.investimentos = (() => {
       else if (act === 'novo-provento') FI().mov({ tipo: 'provento', conta: I().contas().find((c) => c.tipo === 'corretora')?.id });
       else if (act === 'precos') FI().precos();
       else if (act === 'importar') Fin.importarInv.abrir();
+      else if (act === 'chaves') FI().cotacoes();
       else if (act === 'carga') FI().carga();
       else if (act === 'nova-conta') FI().conta();
       else if (act === 'nova-meta') FI().meta();
@@ -484,6 +486,16 @@ Fin.pages.investimentos = (() => {
     }
     const d = Fin.cotacoes.dolar();
     if (!d || Date.now() - new Date(d.buscadoEm || d.em) > 60000) atualizarDolar();
+
+    // Preços dos ativos: busca sozinho (se houver chaves) quando a última busca tem mais de 30 min.
+    const ult = Fin.storage.prefs().cotacoesUltima;
+    if (Fin.cotacoes.temChaves() && (!ult || Date.now() - new Date(ult) > 30 * 60 * 1000)) {
+      Fin.cotacoes.atualizarPrecos().then((res) => {
+        if (signal.aborted || !res.atualizados) return;
+        if (!document.querySelector('#modal-root .modal-panel')) Fin.router.refresh();
+        if (res.falhas.length) console.warn('[cotações]', res.falhas);
+      }).catch((e) => console.warn('[cotações]', e));
+    }
     const timer = setInterval(() => { if (document.visibilityState === 'visible') atualizarDolar(); }, 60000);
     signal.addEventListener('abort', () => clearInterval(timer));
   }

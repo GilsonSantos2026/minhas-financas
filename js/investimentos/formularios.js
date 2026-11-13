@@ -349,7 +349,12 @@ Fin.forms.inv = (() => {
     const pos = I().posicoes().filter((p) => p.qtd > 0).sort((a, b) => (a.conta?.nome || '').localeCompare(b.conta?.nome || '') || a.ativo.ticker.localeCompare(b.ativo.ticker));
     if (!pos.length) return Fin.ui.toast('Nenhum ativo em carteira ainda.', 'error');
     const { form, el } = modal('Atualizar preços', `
-      <p class="text-sm text-slate-500">Preço atual de cada ativo (fechamento do dia anterior serve). Campo vazio = mantém o preço guardado.</p>
+      <div class="flex flex-wrap items-center gap-2 bg-emerald-50 rounded-xl p-3 text-sm">
+        <span class="flex-1 min-w-[12rem]">${Fin.cotacoes.temChaves() ? 'Cotações automáticas ligadas.' : 'Ligue as cotações automáticas (brapi para B3, Finnhub para EUA).'}</span>
+        <button type="button" data-auto class="btn btn-primary !py-1.5">${Fin.cotacoes.temChaves() ? '↻ Atualizar agora' : 'Configurar'}</button>
+        <button type="button" data-chaves class="text-emerald-700 font-medium hover:underline">⚙️ Chaves</button>
+      </div>
+      <p class="text-sm text-slate-500">Ou informe à mão o preço atual de cada ativo (fechamento do dia anterior serve). Campo vazio = mantém o preço guardado.</p>
       <label class="field"><span>Data dos preços</span><input name="data" type="date" class="input" value="${fmt.todayISO()}"></label>
       <ul class="divide-y divide-slate-100">${pos.map((p) => `
         <li class="flex items-center gap-3 py-2">
@@ -360,6 +365,8 @@ Fin.forms.inv = (() => {
           <span class="text-xs text-slate-500">${p.moeda === 'USD' ? 'US$' : 'R$'}</span>
           <input data-preco="${p.ativo.id}" class="input !w-28 tabular-nums text-right" inputmode="decimal" aria-label="Preço de ${esc(p.ativo.ticker)}">
         </li>`).join('')}</ul>`, { salvar: 'Salvar preços' });
+    form.querySelector('[data-auto]').addEventListener('click', () => { Fin.ui.closeModal(); atualizarAgora(); });
+    form.querySelector('[data-chaves]').addEventListener('click', () => { Fin.ui.closeModal(); cotacoes(); });
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       const data = el('data').value || fmt.todayISO();
@@ -534,5 +541,48 @@ Fin.forms.inv = (() => {
     });
   }
 
-  return { conta, mov, ativo, precos, carga, meta, alocacao, foto, num };
+  /* ---------------- Chaves das cotações automáticas ---------------- */
+
+  function cotacoes() {
+    const c = I().config('cotacoes') || {};
+    const estado = (v) => (v ? '<span class="text-emerald-700">✓ configurada</span>' : '<span class="text-slate-500">○ não configurada</span>');
+    const { form, el, erro } = modal('Cotações automáticas', `
+      <p class="text-sm text-slate-600">Com as chaves, o app busca sozinho o preço dos ativos ao abrir Investimentos (no máximo a cada 30 min por ativo).
+        Elas ficam <b>cifradas</b> neste aparelho e no seu Drive, e vão só para o serviço de cotação.</p>
+      <label class="field"><span>B3 (ações, FIIs, ETFs, BDRs) — token da <b>brapi.dev</b> ${estado(c.brapiToken)}</span>
+        <input name="brapi" type="password" class="input font-mono" autocomplete="off" spellcheck="false" placeholder="${c.brapiToken ? 'manter o atual' : 'cole aqui o token'}"></label>
+      <p class="text-xs text-slate-500 -mt-2">brapi.dev → Dashboard → API Keys / Tokens. Grátis: 15 mil consultas/mês, preço com até 30 min de atraso.</p>
+      <label class="field"><span>EUA (Nomad) — chave da <b>Finnhub</b> ${estado(c.finnhubKey)}</span>
+        <input name="finnhub" type="password" class="input font-mono" autocomplete="off" spellcheck="false" placeholder="${c.finnhubKey ? 'manter a atual' : 'cole aqui a chave (opcional)'}"></label>
+      <p class="text-xs text-slate-500 -mt-2">finnhub.io → criar conta grátis → Dashboard → API key. Grátis: 60 consultas/min.</p>
+      <div class="flex flex-wrap gap-3 text-sm">
+        ${c.brapiToken ? '<label class="inline-flex items-center gap-2"><input type="checkbox" name="tirarBrapi" class="accent-rose-600"> Remover token da brapi</label>' : ''}
+        ${c.finnhubKey ? '<label class="inline-flex items-center gap-2"><input type="checkbox" name="tirarFinnhub" class="accent-rose-600"> Remover chave da Finnhub</label>' : ''}
+      </div>`, { salvar: 'Salvar e atualizar preços' });
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const novo = { ...c };
+      const b = el('brapi').value.trim();
+      const f = el('finnhub').value.trim();
+      if (b) { if (!/^[A-Za-z0-9_\-.]{8,200}$/.test(b)) return erro('O token da brapi parece incompleto.'); novo.brapiToken = b; }
+      if (f) { if (!/^[A-Za-z0-9_\-.]{8,200}$/.test(f)) return erro('A chave da Finnhub parece incompleta.'); novo.finnhubKey = f; }
+      if (el('tirarBrapi')?.checked) delete novo.brapiToken;
+      if (el('tirarFinnhub')?.checked) delete novo.finnhubKey;
+      I().salvarConfig('cotacoes', { brapiToken: novo.brapiToken || null, finnhubKey: novo.finnhubKey || null });
+      Fin.ui.closeModal();
+      await atualizarAgora();
+    });
+  }
+
+  /** Busca os preços agora e mostra o resultado. */
+  async function atualizarAgora() {
+    if (!Fin.cotacoes.temChaves()) { cotacoes(); return; }
+    Fin.ui.toast('Buscando cotações…');
+    const r = await Fin.cotacoes.atualizarPrecos({ forcar: true, onProgress: (t) => Fin.ui.toast(t) });
+    const faltam = [r.semChave.b3 ? `${r.semChave.b3} da B3 sem token` : '', r.semChave.eua ? `${r.semChave.eua} dos EUA sem chave da Finnhub` : ''].filter(Boolean).join(' · ');
+    Fin.ui.toast(`${r.atualizados} preço(s) atualizado(s)${r.falhas.length ? ` · ${r.falhas.length} falha(s): ${r.falhas.slice(0, 2).join('; ')}` : ''}${faltam ? ` · ${faltam}` : ''}`, r.falhas.length && !r.atualizados ? 'error' : 'ok');
+    Fin.router.refresh();
+  }
+
+  return { conta, mov, ativo, precos, carga, meta, alocacao, foto, num, cotacoes, atualizarAgora };
 })();

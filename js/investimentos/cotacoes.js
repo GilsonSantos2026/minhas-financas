@@ -85,6 +85,93 @@ Fin.cotacoes = (() => {
     };
   }
 
+  /* ---------------- Preços dos ativos (Etapa 2) ----------------
+   * B3 (ações, FIIs, ETFs, BDRs): brapi.dev — token do usuário; plano grátis = 1 ativo por consulta,
+   *   15 mil consultas/mês, atraso de ~30 min.
+   * EUA (stocks, REITs, ETFs na Nomad): Finnhub — chave do usuário; grátis = 60 consultas/min.
+   * As chaves ficam em invConfig 'cotacoes' (cifradas no aparelho e no Drive), nunca no código.
+   * Cada ativo é consultado no máximo a cada 30 min (a não ser no "Atualizar agora").
+   */
+  const INTERVALO_MS = 30 * 60 * 1000;
+  const chaves = () => Fin.inv.config('cotacoes') || {};
+  const temChaves = () => { const c = chaves(); return !!(c.brapiToken || c.finnhubKey); };
+  const espera = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  async function precoBrapi(ticker, token) {
+    const url = `https://brapi.dev/api/quote/${encodeURIComponent(ticker)}`;
+    let r;
+    try {
+      r = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
+    } catch {
+      r = await fetch(`${url}?token=${encodeURIComponent(token)}`, { cache: 'no-store' }); // se o cabeçalho for barrado
+    }
+    if (r.status === 401 || r.status === 403) throw Object.assign(new Error('token da brapi recusado'), { fatal: true });
+    if (r.status === 429) throw Object.assign(new Error('limite da brapi atingido'), { fatal: true });
+    if (!r.ok) throw new Error(`brapi HTTP ${r.status}`);
+    const q = (await r.json()).results?.[0];
+    if (!(q?.regularMarketPrice > 0)) throw new Error('sem cotação');
+    return { preco: q.regularMarketPrice, hora: q.regularMarketTime ? new Date(q.regularMarketTime).toISOString() : new Date().toISOString() };
+  }
+
+  async function precoFinnhub(ticker, key) {
+    const r = await fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(ticker)}&token=${encodeURIComponent(key)}`, { cache: 'no-store' });
+    if (r.status === 401 || r.status === 403) throw Object.assign(new Error('chave da Finnhub recusada'), { fatal: true });
+    if (r.status === 429) throw Object.assign(new Error('limite da Finnhub atingido'), { fatal: true });
+    if (!r.ok) throw new Error(`Finnhub HTTP ${r.status}`);
+    const q = await r.json();
+    const preco = q.c > 0 ? q.c : q.pc;
+    if (!(preco > 0)) throw new Error('sem cotação');
+    return { preco, hora: q.t ? new Date(q.t * 1000).toISOString() : new Date().toISOString() };
+  }
+
+  let rodando = null;
+  /**
+   * Atualiza os preços dos ativos em carteira. Devolve { atualizados, falhas[], pulados, semChave }.
+   * forcar = ignora o intervalo de 30 min.
+   */
+  function atualizarPrecos({ forcar = false, onProgress } = {}) {
+    if (rodando) return rodando;
+    rodando = (async () => {
+      const c = chaves();
+      const pos = Fin.inv.posicoes().filter((p) => p.qtd > 0 && p.classe !== 'cripto');
+      const res = { atualizados: 0, falhas: [], pulados: 0, semChave: { b3: 0, eua: 0 } };
+      const novos = new Map();
+      const agora = Date.now();
+      const fila = pos.filter((p) => {
+        if (!forcar && p.ativo.precoHora && agora - new Date(p.ativo.precoHora) < INTERVALO_MS) { res.pulados++; return false; }
+        const eua = p.moeda === 'USD';
+        if (eua && !c.finnhubKey) { res.semChave.eua++; return false; }
+        if (!eua && !c.brapiToken) { res.semChave.b3++; return false; }
+        return true;
+      });
+      const parado = { b3: false, eua: false };
+      for (const [i, p] of fila.entries()) {
+        const eua = p.moeda === 'USD';
+        if (parado[eua ? 'eua' : 'b3']) continue;
+        onProgress?.(`Cotação ${i + 1} de ${fila.length}: ${p.ativo.ticker}`);
+        try {
+          const q = eua ? await precoFinnhub(p.ativo.ticker, c.finnhubKey) : await precoBrapi(p.ativo.ticker, c.brapiToken);
+          novos.set(p.ativo.id, q);
+          res.atualizados++;
+        } catch (e) {
+          res.falhas.push(`${p.ativo.ticker}: ${e.message}`);
+          if (e.fatal) parado[eua ? 'eua' : 'b3'] = true;
+        }
+        if (eua) await espera(1100); // Finnhub: 60/min
+      }
+      if (novos.size) {
+        const hoje = Fin.fmt.todayISO();
+        S.set('invAtivos', S.list('invAtivos').map((a) => {
+          const q = novos.get(a.id);
+          return q ? { ...a, preco: q.preco, precoEm: q.hora.slice(0, 10) <= hoje ? q.hora.slice(0, 10) : hoje, precoHora: new Date().toISOString(), precoFonte: a.moeda === 'USD' ? 'Finnhub' : 'brapi' } : a;
+        }));
+      }
+      S.setPref('cotacoesUltima', new Date().toISOString());
+      return res;
+    })().finally(() => { rodando = null; });
+    return rodando;
+  }
+
   /** "há 2 min", "há 3 h", "em 12/11". */
   function idade(iso) {
     if (!iso) return '';
@@ -95,5 +182,5 @@ Fin.cotacoes = (() => {
     return `em ${Fin.fmt.date(iso.slice(0, 10)).slice(0, 5)}`;
   }
 
-  return { dolar, atualizarDolar, ptax, ptaxSerie, idade };
+  return { dolar, atualizarDolar, ptax, ptaxSerie, idade, atualizarPrecos, temChaves, chaves };
 })();
