@@ -7,7 +7,7 @@
  * Com a classe "ocultar-valores" no <html>, o CSS desfoca tudo que tem ".vlr".
  *
  * Campos de formulário não são desfocados (quem está editando precisa ver o que digita).
- * A escolha fica salva nas preferências do aparelho.
+ * Toda abertura do app começa com os valores ocultos.
  */
 window.Fin = window.Fin || {};
 
@@ -65,10 +65,10 @@ Fin.privacidade = (() => {
     return on;
   }
 
+  /** Ao abrir o app os valores começam sempre ocultos; o olho mostra durante o uso. */
   function iniciar() {
-    let on = false;
-    try { on = !!Fin.storage.prefs().ocultarValores; } catch { on = false; }
-    aplicar(on);
+    aplicar(true);
+    try { Fin.storage.setPref('ocultarValores', true); } catch { /* bloqueado: vale só nesta sessão */ }
     marcar(document.body);
     new MutationObserver((muts) => {
       for (const m of muts) {

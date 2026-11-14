@@ -94,13 +94,13 @@ window.Fin = window.Fin || {};
     document.querySelectorAll('[data-usuario]').forEach((el) => (el.textContent = Fin.cofre.usuario() || ''));
     if (!iniciado) {
       iniciado = true;
-      // Sem dados ainda → começa pela tela de importação.
-      Fin.router.start(() => (Fin.storage.hasData() ? '/dashboard' : '/dados'));
-      // Atalho do ícone instalado ("Novo lançamento"): #/lancamentos?novo=1
-      if (/[?&]novo=1/.test(location.hash)) {
-        history.replaceState(null, '', location.hash.replace(/[?&]novo=1/, ''));
-        Fin.forms.lancamento.open();
-      }
+      // Toda abertura começa no Início (sem dados ainda → tela de importação),
+      // mesmo que o endereço guardado aponte para outra tela.
+      const novo = /[?&]novo=1/.test(location.hash); // atalho do ícone: "Novo lançamento"
+      const inicio = Fin.storage.hasData() ? '/dashboard' : '/dados';
+      history.replaceState(null, '', `${location.pathname}${location.search}#${inicio}`);
+      Fin.router.start(() => inicio);
+      if (novo) Fin.forms.lancamento.open();
     } else {
       Fin.router.render();
     }
