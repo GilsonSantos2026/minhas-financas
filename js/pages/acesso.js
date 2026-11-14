@@ -293,6 +293,7 @@ Fin.acesso = (() => {
     Fin.ui.closeModal();
     await Fin.storage.fecharCofre();
     document.getElementById('view').innerHTML = '';
+    window.dispatchEvent(new CustomEvent('fin:bloqueado'));
     telaEntrar();
   }
 

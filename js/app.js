@@ -85,6 +85,7 @@ window.Fin = window.Fin || {};
     }
   });
   Fin.privacidade.iniciar();
+  Fin.avisos.iniciar(); // sininho e botão "Atualizar" do topo
 
   /* ---------------- Início: só depois de entrar com usuário e senha ---------------- */
 
@@ -105,6 +106,7 @@ window.Fin = window.Fin || {};
       Fin.router.render();
     }
     Fin.drive?.aposDesbloquear();
+    window.dispatchEvent(new CustomEvent('fin:desbloqueado'));
   }
 
   // Dados chegaram de outro aparelho (sincronização) → redesenha a tela atual.

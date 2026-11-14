@@ -1,6 +1,6 @@
 /**
  * pwa.js — Recursos de "app instalado": service worker (offline), botão de instalar,
- * aviso de nova versão e proteção do armazenamento contra limpeza automática.
+ * versão nova (o aviso é o botão "Atualizar" do topo, em avisos.js) e proteção do armazenamento contra limpeza automática.
  *
  * Observação: o navegador só permite service worker em endereços http(s)
  * (ex.: GitHub Pages ou localhost). Abrindo o index.html direto do disco (file://),
@@ -42,23 +42,53 @@ Fin.pwa = (() => {
     return outcome === 'accepted';
   }
 
-  function barraAtualizacao() {
-    if (document.getElementById('pwa-update')) return;
-    const bar = document.createElement('div');
-    bar.id = 'pwa-update';
-    bar.setAttribute('role', 'status');
-    bar.className = 'fixed left-1/2 -translate-x-1/2 bottom-24 md:bottom-6 z-50 w-[min(92vw,26rem)] bg-slate-900 text-white rounded-xl shadow-lg px-4 py-3 flex items-center gap-3 text-sm';
-    bar.innerHTML = '<span class="flex-1">Nova versão do app disponível.</span><button class="font-semibold text-emerald-300 hover:underline">Atualizar</button>';
-    bar.querySelector('button').addEventListener('click', () => st.novaVersao?.postMessage('SKIP_WAITING'));
-    document.body.appendChild(bar);
+  let reg = null;
+
+  /** Ativa a versão nova (o app recarrega sozinho). O aviso fica no botão "Atualizar" do topo. */
+  function atualizar() {
+    if (!st.novaVersao) return false;
+    st.novaVersao.postMessage('SKIP_WAITING');
+    return true;
+  }
+
+  /** Procura versão nova agora. Resolve true se encontrou (fica esperando em "Atualizar"). */
+  async function procurar() {
+    if (!reg) return false;
+    await reg.update();
+    if (reg.installing) {
+      await new Promise((res) => {
+        const w = reg.installing;
+        const fim = () => { if (['installed', 'activated', 'redundant'].includes(w.state)) res(); };
+        w.addEventListener('statechange', fim);
+        setTimeout(res, 15000);
+      });
+    }
+    return !!st.novaVersao;
+  }
+
+  /** Versão do app em uso (pergunta ao service worker ativo). */
+  function versao() {
+    const sw = navigator.serviceWorker?.controller;
+    if (!sw) return Promise.resolve(null);
+    return new Promise((res) => {
+      const canal = new MessageChannel();
+      canal.port1.onmessage = (e) => res(e.data || null);
+      sw.postMessage('VERSAO', [canal.port2]);
+      setTimeout(() => res(null), 2000);
+    });
   }
 
   async function registrar() {
     if (!st.suportado) return;
     try {
-      const reg = await navigator.serviceWorker.register('sw.js');
+      reg = await navigator.serviceWorker.register('sw.js');
       st.registrado = true;
-      const esperando = (w) => { st.novaVersao = w; barraAtualizacao(); avisar(); };
+      const esperando = (w) => {
+        const primeira = !st.novaVersao;
+        st.novaVersao = w;
+        if (primeira) Fin.ui?.toast('Nova versão disponível — toque em Atualizar no topo.');
+        avisar();
+      };
       if (reg.waiting && navigator.serviceWorker.controller) esperando(reg.waiting);
       reg.addEventListener('updatefound', () => {
         const w = reg.installing;
@@ -91,5 +121,5 @@ Fin.pwa = (() => {
     return { protegido };
   }
 
-  return { estado: st, instalado, ios, podeInstalar, instalar, registrar, proteger, armazenamento };
+  return { estado: st, instalado, ios, podeInstalar, instalar, registrar, proteger, armazenamento, atualizar, procurar, versao };
 })();
