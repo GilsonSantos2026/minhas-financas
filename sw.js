@@ -9,14 +9,14 @@
  * Ao publicar uma versão nova do app, troque VERSAO: o app mostra "Nova versão disponível".
  * Os DADOS não passam por aqui (ficam no LocalStorage do navegador).
  */
-const VERSAO = '2026-11-15.3';
+const VERSAO = '2026-11-15.4';
 const CACHE_APP = `financas-app-${VERSAO}`;
 const CACHE_CDN = 'financas-cdn-v1';
 
 const ARQUIVOS_APP = [
   './', './index.html', './manifest.webmanifest', './css/styles.css',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/apple-touch-icon.png', './icons/favicon-32.png',
-  './js/config.js', './js/seguranca/cofre.js', './js/sync/mesclar.js', './js/sync/drive.js', './js/pages/acesso.js',
+  './js/config.js', './js/icones.js', './js/seguranca/cofre.js', './js/sync/mesclar.js', './js/sync/drive.js', './js/pages/acesso.js',
   './js/storage.js', './js/parsers.js', './js/column-map.js', './js/importer.js', './js/format.js', './js/finance.js',
   './js/periodo.js', './js/analise.js', './js/ui.js', './js/charts.js', './js/privacidade.js', './js/avisos.js', './js/saude.js', './js/router.js', './js/pwa.js', './js/app.js',
   './js/components/lancamento-form.js', './js/components/compra-form.js', './js/components/cartao-form.js', './js/components/categoria-form.js',

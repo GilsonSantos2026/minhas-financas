@@ -82,7 +82,13 @@
 .lanc-item:hover { background: #f8fafc; }
 [data-edit]:focus-visible { outline: 2px solid #10b981; outline-offset: -2px; }
 
+/* Marca do app (carteira) */
+.logo-app { background: linear-gradient(135deg, #10b981, #047857); box-shadow: 0 2px 8px rgb(5 150 105 / 0.35); }
+
 /* Navegação */
+.side-link > span[aria-hidden] svg { color: #94a3b8; transition: color 0.15s; }
+.side-link:hover > span[aria-hidden] svg, .side-link.is-active > span[aria-hidden] svg { color: #047857; }
+.tab-link > span:first-child svg { display: block; }
 .side-link { display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 0.9rem; border-radius: 0.75rem; font-size: 0.9rem; color: #475569; }
 .side-link:hover { background: #f1f5f9; }
 .side-link.is-active { background: #ecfdf5; color: #047857; font-weight: 600; }
