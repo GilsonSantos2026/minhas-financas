@@ -14,7 +14,7 @@ Fin.pages.investimentos = (() => {
   const I = () => Fin.inv;
   const FI = () => Fin.forms.inv;
 
-  const ABAS = [['resumo', 'Resumo'], ['ativos', 'Ativos'], ['proventos', 'Proventos'], ['rent', 'Rentabilidade'], ['movs', 'Movimentações'], ['metas', 'Metas']];
+  const ABAS = [['resumo', 'Resumo'], ['reserva', '🛟 Reserva'], ['ativos', 'Ativos'], ['proventos', 'Proventos'], ['rent', 'Rentabilidade'], ['movs', 'Movimentações'], ['metas', 'Metas']];
   const COR = { aplicado: '#2a78d6', ganho: '#0ca30c', proventos: '#0ca30c' };
   const filtroMovs = { conta: '', tipo: '', busca: '' };
 
@@ -84,7 +84,7 @@ Fin.pages.investimentos = (() => {
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         ${card(contasHTML(r))}
-        ${card(reservaHTML(I().reserva(r)))}
+        ${card(reservaHTML())}
         ${card(aportesHTML(I().conferenciaAportes(Fin.state.mes)))}
       </div>
       ${metasHTML(r, 3)}`;
@@ -123,15 +123,146 @@ Fin.pages.investimentos = (() => {
         </button></li>`).join('')}</ul>`;
   }
 
-  function reservaHTML(rv) {
-    const m = rv.meses;
-    const [ic, cls, txt] = m == null ? ['○', 'text-slate-500', 'sem dados de despesas']
-      : m >= 6 ? ['✓', 'text-emerald-700', 'confortável (6+ meses)'] : m >= 3 ? ['◐', 'text-amber-800', 'razoável (3 a 6 meses)'] : ['!', 'text-rose-700', 'baixa (menos de 3 meses)'];
+  /** Situação da reserva (ícone + texto, nunca só cor) pela cobertura em meses de custo essencial. */
+  function statusReserva(rv) {
+    const m = rv.cobertura;
+    if (m == null || !rv.base) return ['○', 'bg-slate-100 text-slate-600', 'sem dados de despesas', '#94a3b8'];
+    if (rv.atual >= rv.ideal) return ['✓', 'bg-emerald-50 text-emerald-800', 'reserva completa', '#0ca30c'];
+    if (m >= 3) return ['◐', 'bg-amber-50 text-amber-800', 'acima do mínimo (3 meses)', '#fab219'];
+    return ['!', 'bg-rose-50 text-rose-700', 'abaixo do mínimo (3 meses)', '#d03b3b'];
+  }
+  const mesesTxt = (m) => (m == null ? '—' : `${m.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} ${m >= 0.95 && m < 1.05 ? 'mês' : 'meses'}`);
+
+  /** Cartão do Resumo: situação curta e atalho para a aba Reserva. */
+  function reservaHTML() {
+    const rv = Fin.reserva.calcular();
+    const [ic, cls, txt] = statusReserva(rv);
     return `
-      <h3 class="font-semibold mb-2">Reserva de emergência</h3>
-      <div class="text-2xl font-semibold tabular-nums">${fmt.brl(rv.valor)}</div>
-      <div class="text-sm mt-1 ${cls}"><span aria-hidden="true">${ic}</span> ${m == null ? '—' : `${String(m.toFixed(1)).replace('.', ',')} meses de despesas`} · ${txt}</div>
-      <p class="text-xs text-slate-500 mt-2">Média de despesas: ${fmt.brl(rv.mediaDespesas)}/mês (${rv.mesesBase} meses fechados). Contas da classe “Reserva de emergência”.</p>`;
+      <div class="flex items-center justify-between mb-2"><h3 class="font-semibold">Reserva de emergência</h3>
+        <button data-aba="reserva" class="text-sm text-emerald-700 font-medium hover:underline">Ver →</button></div>
+      <div class="text-2xl font-semibold tabular-nums">${fmt.brl(rv.atual)}</div>
+      <div class="mt-1"><span class="pill ${cls}"><span aria-hidden="true">${ic}</span>${mesesTxt(rv.cobertura)} · ${txt}</span></div>
+      <p class="text-xs text-slate-500 mt-2">Ideal: <b class="tabular-nums">${fmt.brl(rv.ideal)}</b> (${rv.mesesAlvo} meses × ${fmt.brl(rv.base)} de custo essencial).</p>`;
+  }
+
+  /* ---------------- Reserva de emergência (aba) ---------------- */
+
+  function reservaAbaHTML() {
+    const rv = Fin.reserva.calcular();
+    if (!rv.janela) {
+      return card(`<h3 class="font-semibold">Reserva de emergência</h3>
+        <p class="text-sm text-slate-500 mt-1">Ainda não há meses completos de despesas para calcular o valor ideal. Lance receitas e despesas de pelo menos um mês inteiro.</p>`);
+    }
+    const [ic, cls, txt, cor] = statusReserva(rv);
+    const pct = rv.ideal > 0 ? Math.min(1, rv.atual / rv.ideal) : 0;
+    const pctMin = rv.ideal > 0 ? Math.min(1, rv.minimo / rv.ideal) : 0;
+    const chegada = rv.prazo ? fmt.monthLong(fmt.addMonths(fmt.currentYM(), rv.prazo)).toLowerCase() : '';
+    const perfis = Fin.reserva.PERFIS.map((p) => `
+      <label class="flex items-start gap-3 rounded-xl border ${p.meses === rv.mesesAlvo ? 'border-emerald-500 bg-emerald-50/50' : 'border-slate-200'} p-3 cursor-pointer">
+        <input type="radio" name="rv-meses" value="${p.meses}" ${p.meses === rv.mesesAlvo ? 'checked' : ''} class="accent-emerald-600 mt-1">
+        <span class="flex-1 min-w-0">
+          <span class="block text-sm font-semibold">${p.meses} meses · ${p.nome}</span>
+          <span class="block text-xs text-slate-500">${p.desc}</span>
+        </span>
+        <span class="text-sm font-semibold tabular-nums whitespace-nowrap">${fmt.brl(Math.ceil((rv.base * p.meses) / 100) * 100)}</span>
+      </label>`).join('');
+    const motivo = { escolha: 'sua escolha', essencial: 'essencial', compromisso: 'compromisso' };
+    const cats = rv.categorias.map((c) => `
+      <tr class="${c.essencial ? '' : 'text-slate-400'}">
+        <td><label class="inline-flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" data-rv-cat="${esc(c.nome)}" ${c.essencial ? 'checked' : ''} class="accent-emerald-600 w-4 h-4">
+          <span class="truncate max-w-[11rem]">${c.icone ? `${c.icone} ` : ''}${esc(c.nome)}</span></label></td>
+        <td class="num">${fmt.brl(c.mediana)}</td>
+        <td class="num">${fmt.brl(c.p75)}</td>
+        <td>${c.variavel ? '〰 variável' : '▬ fixa'}</td>
+        <td class="num">${c.pctCartao >= 0.05 ? `${Math.round(c.pctCartao * 100)}%` : '—'}</td>
+        <td class="text-xs">${c.motivo ? motivo[c.motivo] : ''}</td>
+      </tr>`).join('');
+
+    return `
+      ${card(`
+        <div class="flex items-start gap-3 flex-wrap">
+          <div class="flex-1 min-w-[14rem]">
+            <div class="text-sm text-slate-500">Reserva ideal · ${rv.mesesAlvo} meses (${esc(rv.perfil.nome.toLowerCase())})</div>
+            <div class="text-[40px] leading-tight font-semibold tracking-tight tabular-nums">${fmt.brl(rv.ideal)}</div>
+            <div class="text-sm text-slate-500">${rv.mesesAlvo} × <b class="text-slate-700">${fmt.brl(rv.base)}</b> de custo essencial por mês</div>
+          </div>
+          <div class="text-right">
+            <div class="text-sm text-slate-500">Você tem</div>
+            <div class="text-2xl font-semibold tabular-nums">${fmt.brl(rv.atual)}</div>
+            <span class="pill ${cls}"><span aria-hidden="true">${ic}</span>${mesesTxt(rv.cobertura)} · ${txt}</span>
+          </div>
+        </div>
+        <div class="relative mt-4" aria-label="Progresso da reserva: ${Math.round(pct * 100)}%">
+          <div class="h-3 rounded-full bg-slate-100 overflow-hidden"><div class="h-full rounded-full" style="width:${pct * 100}%;background:${cor}"></div></div>
+          <span class="absolute -top-1 -bottom-1 w-0.5 bg-slate-700" style="left:${pctMin * 100}%" aria-hidden="true"></span>
+        </div>
+        <div class="flex justify-between text-xs text-slate-500 mt-1">
+          <span>${Math.round(pct * 100)}% do ideal</span>
+          <span style="margin-left:${Math.max(0, pctMin * 100 - 30)}%">▲ mínimo (3 meses): ${fmt.brl(rv.minimo)}</span>
+          <span>falta ${fmt.brl(rv.falta)}</span>
+        </div>
+        <div class="flex flex-wrap gap-2 mt-4">
+          <button data-act="rv-aporte" class="btn btn-primary">＋ Guardar na reserva</button>
+          <button data-act="rv-saldo" class="btn btn-ghost">Atualizar saldo</button>
+          <button data-act="rv-meta" class="btn btn-ghost">🎯 ${I().metas().some((m) => m.tipo === 'classes' && m.classes?.[0] === 'reserva') ? 'Atualizar meta' : 'Criar meta'}</button>
+        </div>`)}
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        ${card(`
+          <h3 class="font-semibold">Quanto tempo a reserva deve cobrir?</h3>
+          <p class="text-xs text-slate-500 mt-0.5 mb-3">Quanto menos estável a renda, mais meses. Escolha o que descreve a sua situação.</p>
+          <div class="space-y-2">${perfis}</div>`)}
+        ${card(`
+          <h3 class="font-semibold">Plano para chegar lá</h3>
+          ${rv.sobraMediana > 0 ? `
+            <p class="text-sm text-slate-600 mt-1">Nos meses analisados sobrou, em geral, <b class="tabular-nums">${fmt.brl(rv.sobraMediana)}</b> por mês. Guardar metade disso é um bom começo.</p>` : `
+            <div class="text-sm bg-amber-50 text-amber-900 rounded-xl px-3 py-2 mt-2"><span aria-hidden="true">!</span>
+              Nos meses analisados as despesas passaram da renda (em geral <b class="tabular-nums">${fmt.brl(rv.sobraMediana)}</b> por mês).
+              Antes da reserva, é preciso abrir espaço: os gastos <b>não essenciais</b> somam cerca de <b class="tabular-nums">${fmt.brl(rv.naoEssencialMediana)}</b> por mês — reduzir parte deles é o caminho mais rápido.</div>`}
+          <label class="field mt-3"><span>Quanto vou guardar por mês (R$)</span>
+            <input id="rv-aporte" class="input tabular-nums" inputmode="decimal" value="${rv.aporte ? fmt.decimalInput(rv.aporte) : ''}" placeholder="${rv.sugerido ? fmt.decimalInput(rv.sugerido) : '0,00'}"></label>
+          <p class="text-sm mt-3" id="rv-prazo">${rv.falta <= 0 ? '<span class="text-emerald-800">✓ Reserva completa. Agora é manter: reponha sempre que usar.</span>'
+            : rv.prazo ? `Guardando <b class="tabular-nums">${fmt.brl(rv.aporte)}</b> por mês, você chega lá em <b>${rv.prazo} ${rv.prazo === 1 ? 'mês' : 'meses'}</b> (${chegada}).${rv.prazo > 36 ? ' <span class="text-amber-800">Prazo longo: comece pelo mínimo de 3 meses.</span>' : ''}`
+            : 'Informe quanto pretende guardar por mês para ver o prazo.'}</p>
+          <p class="text-xs text-slate-500 mt-3"><b>Onde guardar:</b> aplicações de <b>baixo risco</b> e <b>resgate no mesmo dia</b>, separadas da conta do dia a dia — rendendo pelo menos perto da Selic/CDI. Rentabilidade alta não é o objetivo; ter o dinheiro na hora é.</p>`)}
+      </div>
+
+      ${card(`
+        <h3 class="font-semibold">Como chegamos em ${fmt.brl(rv.base)} por mês</h3>
+        <dl class="text-sm grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 mt-2 tabular-nums">
+          <dt>Custo essencial do mês <span class="text-slate-500">(percentil 75 de ${rv.janela} ${rv.janela === 1 ? 'mês' : 'meses'})</span></dt><dd class="text-right">${fmt.brl(rv.p75)}</dd>
+          <dt>+ Parcelas já assumidas <span class="text-slate-500">(média dos próximos 6 meses, fora do essencial)</span></dt><dd class="text-right">${fmt.brl(rv.compromissos)}</dd>
+          <dt class="font-semibold border-t border-slate-200 pt-1">= Custo essencial por mês</dt><dd class="font-semibold border-t border-slate-200 pt-1 text-right">${fmt.brl(rv.base)}</dd>
+        </dl>
+        <p class="text-xs text-slate-500 mt-2">Para comparar: média ${fmt.brl(rv.media)} · mediana ${fmt.brl(rv.mediana)} do essencial; gasto total médio ${fmt.brl(rv.totalMedia)}.</p>
+        <div class="flex items-start justify-between gap-3 flex-wrap mt-4 mb-2">
+          <h4 class="text-sm font-semibold">Gastos por mês</h4>
+          ${Fin.charts.legend([{ label: 'Essencial', color: '#2a78d6' }, { label: 'Não essencial', color: '#c3c2b7' }])}
+        </div>
+        <div id="rv-grafico" class="w-full min-w-0 overflow-hidden"></div>
+        <details class="mt-3">
+          <summary class="text-xs text-slate-500 flex items-center gap-1"><span class="chev">▸</span> Por que esse método</summary>
+          <ul class="text-xs text-slate-600 mt-2 space-y-1.5 list-disc pl-5">
+            <li><b>Só o essencial:</b> numa emergência (perda de renda, doença) você corta o supérfluo. Conta o que não dá para cortar: moradia, mercado, saúde, educação, contas da casa e dívidas já contratadas. A classificação vem das suas categorias; ajuste na lista abaixo.</li>
+            <li><b>Cartão pela categoria de cada compra:</b> a fatura mistura mercado com lazer e varia muito. O app separa cada compra pela categoria e só soma as essenciais. Juros, IOF e multa do cartão ficam de fora.</li>
+            <li><b>Percentil 75 em vez da média:</b> gasto variável oscila. O percentil 75 é o valor que cobre 3 de cada 4 meses observados — mais seguro que a média, sem ser puxado por um mês fora da curva.</li>
+            <li><b>Só meses completos:</b> entram os meses fechados com receitas e despesas lançadas por inteiro (até 12). Meses só com compras do cartão ou lançados pela metade ficam de fora.</li>
+            <li><b>Parcelas já assumidas:</b> compras parceladas não essenciais continuam chegando mesmo numa emergência — entram pela média dos próximos 6 meses.</li>
+            <li><b>Meses de cobertura:</b> 3 a 12 conforme a estabilidade da renda; 6 meses para renda estável é a recomendação mais comum de educadores e planejadores financeiros.</li>
+          </ul>
+        </details>`)}
+
+      ${card(`
+        <h3 class="font-semibold">O que entra no custo essencial</h3>
+        <p class="text-xs text-slate-500 mt-0.5 mb-2">Marque o que você continuaria pagando numa emergência. Valores por mês nos ${rv.janela} meses analisados.</p>
+        <div class="table-wrap -mx-4 px-4">
+          <table>
+            <thead><tr><th>Categoria</th><th class="text-right">Mediana</th><th class="text-right">Percentil 75</th><th>Tipo</th><th class="text-right">No cartão</th><th>Origem</th></tr></thead>
+            <tbody>${cats}</tbody>
+          </table>
+        </div>
+        ${Object.keys(rv.cfg.essenciais || {}).length ? '<button data-act="rv-padrao" class="text-xs text-emerald-700 font-medium hover:underline mt-2">Voltar à classificação das categorias</button>' : ''}`)}`;
   }
 
   function aportesHTML(a) {
@@ -389,12 +520,15 @@ Fin.pages.investimentos = (() => {
       return;
     }
     I().garantirCategoria();
+    // Atalho de outras telas: #/investimentos?aba=reserva
+    const pedida = location.hash.match(/[?&]aba=(\w+)/);
+    if (pedida) { Fin.state.invAba = pedida[1]; history.replaceState(null, '', '#/investimentos'); }
     const aba = Fin.state.invAba || 'resumo';
     const r = I().resumo();
     I().salvarFoto(r);
     const hist = I().historico(r);
 
-    const corpo = { resumo: () => resumoHTML(r, hist), ativos: () => ativosHTML(r), proventos: () => proventosHTML(r), rent: () => rentHTML(hist), movs: movsHTML, metas: () => metasHTML(r) }[aba] || (() => resumoHTML(r, hist));
+    const corpo = { resumo: () => resumoHTML(r, hist), reserva: reservaAbaHTML, ativos: () => ativosHTML(r), proventos: () => proventosHTML(r), rent: () => rentHTML(hist), movs: movsHTML, metas: () => metasHTML(r) }[aba] || (() => resumoHTML(r, hist));
     view.innerHTML = `<div class="space-y-4">${cabecalho(aba)}${corpo()}</div>`;
 
     // Gráficos
@@ -424,6 +558,35 @@ Fin.pages.investimentos = (() => {
       ro.observe(pvEl);
       signal.addEventListener('abort', () => ro.disconnect());
     }
+
+    // Reserva de emergência: gráfico e controles
+    const rvEl = view.querySelector('#rv-grafico');
+    if (rvEl) {
+      const rv = Fin.reserva.calcular();
+      const desenhar = () => Fin.charts.columns(rvEl, rv.meses.map((m) => ({ ym: m.ym, essencial: m.essencial, outros: m.outros, saldo: m.total })), {
+        stacked: true, totalLabel: 'Total', label: 'Gastos essenciais e não essenciais por mês',
+        series: [{ key: 'essencial', label: 'Essencial', color: '#2a78d6' }, { key: 'outros', label: 'Não essencial', color: '#c3c2b7' }],
+      });
+      desenhar();
+      const ro = new ResizeObserver(() => requestAnimationFrame(desenhar));
+      ro.observe(rvEl);
+      signal.addEventListener('abort', () => ro.disconnect());
+    }
+    view.querySelectorAll('input[name="rv-meses"]').forEach((el) => el.addEventListener('change', (e) => {
+      Fin.reserva.salvar({ meses: Number(e.target.value) });
+      Fin.router.refresh();
+    }));
+    view.querySelector('#rv-aporte')?.addEventListener('change', (e) => {
+      const v = Fin.parsers.toNumber(e.target.value);
+      Fin.reserva.salvar({ aporteMensal: v > 0 ? v : null });
+      Fin.router.refresh();
+    });
+    view.querySelectorAll('[data-rv-cat]').forEach((el) => el.addEventListener('change', (e) => {
+      const ess = { ...(Fin.reserva.config().essenciais || {}) };
+      ess[e.target.dataset.rvCat] = e.target.checked;
+      Fin.reserva.salvar({ essenciais: ess });
+      Fin.router.refresh();
+    }));
 
     // Filtros das movimentações
     view.querySelector('#mv-busca')?.addEventListener('input', (e) => {
@@ -466,6 +629,15 @@ Fin.pages.investimentos = (() => {
       else if (act === 'foto') FI().foto();
       else if (act === 'limpar-ativo') { Fin.state.invFiltroAtivo = null; Fin.router.refresh(); }
       else if (act === 'dolar') atualizarDolar(true);
+      else if (act === 'rv-aporte') FI().mov({ conta: Fin.reserva.garantirConta().id, tipo: 'aporte' });
+      else if (act === 'rv-saldo') FI().mov({ conta: Fin.reserva.garantirConta().id, tipo: 'saldo' });
+      else if (act === 'rv-meta') {
+        Fin.reserva.garantirConta();
+        const rv = Fin.reserva.calcular();
+        Fin.reserva.salvarMeta(rv);
+        Fin.ui.toast(`Meta “Reserva de emergência”: ${fmt.brl(rv.ideal)}.`);
+        Fin.router.refresh();
+      } else if (act === 'rv-padrao') { Fin.reserva.salvar({ essenciais: {} }); Fin.router.refresh(); }
     }, { signal });
 
     // Dólar ao vivo: atualiza ao abrir (se tiver mais de 1 min) e a cada minuto.

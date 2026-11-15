@@ -167,7 +167,7 @@ Fin.pages.dashboard = (() => {
         </div>
         <ul class="divide-y divide-slate-100 min-w-0">${pilares}</ul>
       </div>
-      ${faltam.length ? `<p class="text-xs text-slate-400 mt-1">Fora do cálculo neste mês: ${faltam.map((k) => nomes[k]).join(', ')}.${faltam.includes('reserva') ? ' <a href="#/investimentos" class="text-emerald-700 font-medium hover:underline">Informar reserva</a>' : ''}</p>` : ''}
+      ${faltam.length ? `<p class="text-xs text-slate-400 mt-1">Fora do cálculo neste mês: ${faltam.map((k) => nomes[k]).join(', ')}.${faltam.includes('reserva') ? ' <a href="#/investimentos?aba=reserva" class="text-emerald-700 font-medium hover:underline">Criar reserva</a>' : ''}</p>` : ''}
       <div id="chart-saude" class="w-full min-w-0 overflow-hidden mt-3"></div>
       <div class="flex flex-wrap gap-4 text-xs text-slate-600 mt-1">${Fin.saude.FAIXAS.map((x) => `
         <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm" style="background:${x.cor};opacity:.6"></span><span aria-hidden="true">${x.icone}</span>${x.nome} ${x.id === 'bom' ? '(80+)' : x.id === 'atencao' ? '(40–79)' : '(até 39)'}</span>`).join('')}
@@ -191,7 +191,7 @@ Fin.pages.dashboard = (() => {
             <li><b>Gasta menos do que ganha:</b> nota máxima guardando 20% da renda ou mais (regra 50/30/20); zero com gasto 10% acima da renda. Aportes em investimento contam como dinheiro guardado.</li>
             <li><b>Contas em dia:</b> parte das despesas vencidas no mês pagas até o vencimento. Fatura paga a menos não conta como em dia.</li>
             <li><b>Dívidas sob controle:</b> parcelas (cartão e parcelados), rotativo e juros do mês ÷ renda. Nota máxima até 10%; zero a partir de 40%. Bancos e o Banco Central costumam usar 30% como teto prudente. Mês com rotativo vale no máximo 12 pontos.</li>
-            <li><b>Reserva de emergência:</b> meses de despesas cobertos pela reserva (Investimentos). Nota máxima com 6 meses.</li>
+            <li><b>Reserva de emergência:</b> meses de custo essencial cobertos pela reserva (Investimentos → Reserva). Nota máxima ao atingir a meta de meses escolhida lá (padrão 6).</li>
           </ul>
           <p>Pilar sem dados no mês fica de fora e o índice é proporcional aos demais. Faixas: <b>Saudável</b> 80+, <b>Atenção</b> 40–79, <b>Vulnerável</b> até 39. O mês atual é parcial: usa o previsto até o fim do mês.</p>
         </div>

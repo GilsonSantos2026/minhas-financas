@@ -11,7 +11,8 @@
  *  3. Dívidas sob controle — comprometimento da renda com parcelas (cartão e lançamentos parcelados),
  *     rotativo e juros do cartão ÷ receitas. 25 pts até 10%; 0 a partir de 40% (bancos e o
  *     Banco Central usam ~30% como teto prudente). Mês com rotativo vale no máximo 12 pts.
- *  4. Reserva de emergência — meses de despesas cobertos pela reserva. 25 pts com 6 meses ou mais.
+ *  4. Reserva de emergência — meses de CUSTO ESSENCIAL (Fin.reserva) cobertos pela reserva.
+ *     25 pts ao atingir a meta de meses escolhida na aba Reserva (padrão 6).
  *
  * Pilar sem dados (ex.: sem receitas ou sem conta de reserva) fica de fora e o índice é
  * proporcional aos pilares avaliados. Faixas: Saudável ≥ 80 · Atenção 40–79 · Vulnerável < 40.
@@ -90,7 +91,8 @@ Fin.saude = (() => {
     return total ? { pct: emDia / total, total, fora: total - emDia } : null;
   }
 
-  function reservaNoMes(ym) {
+  /** Reserva no fim do mês ÷ custo essencial mensal (o mesmo da aba Reserva). */
+  function reservaNoMes(ym, rv) {
     if (!Fin.inv?.temDados?.()) return null;
     // Só avalia se a reserva foi informada alguma vez (conta de reserva com movimento ou ativo de reserva).
     const contasRes = new Set(Fin.inv.contas().filter((c) => c.tipo === 'saldo' && c.classe === 'reserva').map((c) => c.id));
@@ -101,13 +103,16 @@ Fin.saude = (() => {
     const ativos = Fin.inv.posicoes(ate).filter((p) => p.classe === 'reserva' && p.qtd > 0)
       .reduce((s, p) => s + (p.valor ?? p.custoBRL ?? 0), 0);
     const valor = saldo + ativos;
-    const hist = F.historico(fmt.addMonths(ym, -1), 6).filter((m) => m.despesas > 0);
-    const media = hist.length ? hist.reduce((s, m) => s + m.despesas, 0) / hist.length : 0;
-    return media > 0 ? { valor, media, meses: valor / media } : null;
+    let base = rv?.base || 0;
+    if (!base) { // sem meses completos: média das despesas dos 6 meses anteriores
+      const hist = F.historico(fmt.addMonths(ym, -1), 6).filter((m) => m.despesas > 0);
+      base = hist.length ? hist.reduce((s, m) => s + m.despesas, 0) / hist.length : 0;
+    }
+    return base > 0 ? { valor, base, meses: valor / base, alvo: rv?.mesesAlvo || 6 } : null;
   }
 
   /** Índice do mês: { ym, score|null, faixa, pilares[], dividas, receitas, comprometimento } */
-  function mes(ym) {
+  function mes(ym, rv = Fin.reserva?.calcular()) {
     const r = F.resumo(ym);
     const d = dividas(ym);
     const pilares = [];
@@ -145,11 +150,11 @@ Fin.saude = (() => {
     }
 
     // 4. Reserva de emergência
-    const res = reservaNoMes(ym);
+    const res = reservaNoMes(ym, rv);
     if (res) {
       pilares.push({
-        id: 'reserva', nome: 'Reserva de emergência', icone: '🛟', pts: MAX * escala(res.meses, 0, 6),
-        texto: `${res.meses.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} ${res.meses >= 0.95 && res.meses < 1.05 ? 'mês' : 'meses'} de despesas (meta: 6)`,
+        id: 'reserva', nome: 'Reserva de emergência', icone: '🛟', pts: MAX * escala(res.meses, 0, res.alvo),
+        texto: `${res.meses.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} ${res.meses >= 0.95 && res.meses < 1.05 ? 'mês' : 'meses'} de custo essencial (meta: ${res.alvo})`,
       });
     }
 
@@ -162,7 +167,9 @@ Fin.saude = (() => {
   function serie(ym = fmt.currentYM(), n = 12) {
     const ultimo = ym > fmt.currentYM() ? fmt.currentYM() : ym;
     const out = [];
-    for (let i = n - 1; i >= 0; i--) out.push(mes(fmt.addMonths(ultimo, -i)));
+    let rv = null;
+    try { rv = Fin.reserva?.calcular() || null; } catch (e) { console.warn('[saude] reserva', e); }
+    for (let i = n - 1; i >= 0; i--) out.push(mes(fmt.addMonths(ultimo, -i), rv));
     // começa no primeiro mês com dados (evita meses vazios antes do início do uso)
     const k = out.findIndex((m) => m.score != null);
     return k < 0 ? [] : out.slice(k);
