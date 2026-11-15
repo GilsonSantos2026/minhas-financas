@@ -126,7 +126,12 @@ Fin.ui = (() => {
   function emptyState(icon, title, text, actionHTML = '') {
     return `
       <div class="bg-white rounded-2xl shadow-sm p-8 text-center">
-        <div class="text-4xl mb-2" aria-hidden="true">${icon}</div>
+        ${Fin.icones?.doEmoji(icon)
+          ? `<div class="relative mx-auto mb-3 w-16 h-16" aria-hidden="true">
+              <span class="absolute -right-2 -top-1 text-emerald-200">${Fin.icone('moedas', 'w-6 h-6')}</span>
+              <span class="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-600 grid place-items-center">${Fin.icone(Fin.icones.doEmoji(icon), 'w-8 h-8')}</span>
+            </div>`
+          : `<div class="text-4xl mb-2" aria-hidden="true">${icon}</div>`}
         <h2 class="font-semibold">${title}</h2>
         <p class="text-sm text-slate-500 mt-1">${text}</p>
         ${actionHTML ? `<div class="mt-4">${actionHTML}</div>` : ''}

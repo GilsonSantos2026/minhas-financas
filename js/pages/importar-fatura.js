@@ -32,7 +32,7 @@ Fin.pages.importarFatura = (() => {
       <section class="bg-white rounded-2xl shadow-sm p-5 sm:p-6">
         <div class="flex items-start justify-between gap-3">
           <div>
-            <h2 class="font-semibold text-lg">Importar fatura do cartão</h2>
+            ${Fin.icones.titulo('upload', 'violet', 'Importar fatura do cartão', { cls: 'text-lg', tam: 'w-8 h-8', ic: 'w-[18px] h-[18px]' })}
             <p class="text-sm text-slate-500 mt-1">Envie o PDF da fatura (recomendado) ou uma foto/print.
               O arquivo é lido aqui no seu navegador — nada é enviado para a internet.</p>
           </div>
@@ -153,7 +153,7 @@ Fin.pages.importarFatura = (() => {
         <section class="bg-white rounded-2xl shadow-sm p-4 sm:p-5 space-y-4">
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
-              <h2 class="font-semibold text-lg">Confira a fatura</h2>
+              ${Fin.icones.titulo('recibo', 'violet', 'Confira a fatura', { cls: 'text-lg', tam: 'w-8 h-8', ic: 'w-[18px] h-[18px]' })}
               <p class="text-sm text-slate-500 break-all">${esc(st.arquivo.name)}${info.banco ? ` · ${esc(info.banco)}` : ''}${info.finalCartao ? ` · final ${esc(info.finalCartao)}` : ''}</p>
             </div>
             <button data-act="cancelar" class="text-sm text-slate-500 hover:text-slate-800 shrink-0">Cancelar</button>

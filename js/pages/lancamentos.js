@@ -126,7 +126,7 @@ Fin.pages.lancamentos = (() => {
     return `
       <section class="bg-white rounded-2xl shadow-sm p-4">
         <div class="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 class="font-semibold">Conferência mês a mês</h2>
+          ${Fin.icones.titulo('calendario', 'blue', 'Conferência mês a mês')}
           <span class="text-xs ${faltando.length ? 'text-amber-800 font-medium' : 'text-emerald-800'}">
             ${faltando.length ? `! ${faltando.length} de ${meses.length} meses sem lançamento` : `✓ presente nos ${meses.length} meses`}</span>
         </div>

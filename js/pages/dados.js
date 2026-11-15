@@ -38,7 +38,9 @@ Fin.pages.dados = (() => {
   function secao(titulo, icone, corpo, extra = '') {
     return `
       <section class="bg-white rounded-2xl shadow-sm p-5 sm:p-6 ${extra}">
-        <h2 class="font-semibold text-lg flex items-center gap-2"><span aria-hidden="true">${icone}</span>${titulo}</h2>
+        ${Fin.icones.doEmoji(icone)
+          ? Fin.icones.titulo(Fin.icones.doEmoji(icone), icone === '⚠️' ? 'rose' : icone === '☁️' ? 'sky' : 'emerald', titulo, { cls: 'text-lg', tam: 'w-8 h-8', ic: 'w-[18px] h-[18px]' })
+          : `<h2 class="font-semibold text-lg flex items-center gap-2"><span aria-hidden="true">${icone}</span>${titulo}</h2>`}
         ${corpo}
       </section>`;
   }
@@ -73,7 +75,7 @@ Fin.pages.dados = (() => {
       <div class="space-y-4">
         <section class="bg-white rounded-2xl shadow-sm p-5 sm:p-6">
           <div class="flex items-start gap-3">
-            <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 grid place-items-center text-lg shrink-0" aria-hidden="true">✓</div>
+            ${Fin.icones.badge('check', 'emerald', 'w-10 h-10', 'w-6 h-6')}
             <div class="min-w-0">
               <h2 class="font-semibold text-lg">Seus dados estão neste navegador</h2>
               <p class="text-sm text-slate-500 mt-1">${origem}</p>
@@ -345,7 +347,7 @@ Fin.pages.dados = (() => {
       <section class="bg-white rounded-2xl shadow-sm p-5 sm:p-6">
         <div class="flex items-start justify-between gap-3">
           <div>
-            <h2 class="font-semibold text-lg">Importe sua planilha</h2>
+            ${Fin.icones.titulo('upload', 'emerald', 'Importe sua planilha', { cls: 'text-lg', tam: 'w-8 h-8', ic: 'w-[18px] h-[18px]' })}
             <p class="text-sm text-slate-500 mt-1">
               Envie o arquivo Excel com seus lançamentos antigos. Ele é lido aqui mesmo, no seu navegador — nada é enviado para a internet.
             </p>
@@ -374,7 +376,7 @@ Fin.pages.dados = (() => {
         <div class="bg-white rounded-2xl shadow-sm p-5 sm:p-6">
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
-              <h2 class="font-semibold text-lg">Confira antes de salvar</h2>
+              ${Fin.icones.titulo('lista', 'emerald', 'Confira antes de salvar', { cls: 'text-lg', tam: 'w-8 h-8', ic: 'w-[18px] h-[18px]' })}
               <p class="text-sm text-slate-500 mt-1 break-all">${esc(state.fileName)} · ${state.sheets.length} abas encontradas</p>
             </div>
             <button data-act="cancel" class="text-sm text-slate-500 hover:text-slate-800 shrink-0">Cancelar</button>

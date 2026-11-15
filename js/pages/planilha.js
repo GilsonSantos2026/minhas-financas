@@ -130,7 +130,7 @@ Fin.pages.planilha = (() => {
     view.innerHTML = `
       <div class="space-y-3">
         <header class="hidden md:block">
-          <h2 class="text-xl font-semibold">Planilha de conferência</h2>
+          ${Fin.icones.titulo('tabela', 'slate', 'Planilha de conferência', { cls: 'text-xl', tam: 'w-9 h-9', ic: 'w-5 h-5' })}
           <p class="text-sm text-slate-500">Todos os lançamentos, receitas e despesas, em linhas — filtre e confira.</p>
         </header>
         <section class="bg-white rounded-2xl shadow-sm p-3 space-y-2">

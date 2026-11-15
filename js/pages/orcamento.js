@@ -55,7 +55,7 @@ Fin.pages.orcamento = (() => {
 
     const semOrc = o.semOrcamento.length ? `
       <section class="bg-white rounded-2xl shadow-sm p-4 sm:p-5">
-        <h2 class="font-semibold">Gastos sem orçamento</h2>
+        ${Fin.icones.titulo('alerta', 'amber', 'Gastos sem orçamento')}
         <p class="text-xs text-slate-500 mb-2">Categorias com gasto neste mês e sem limite definido.</p>
         <ul class="divide-y divide-slate-100">
           ${o.semOrcamento.map((s) => `

@@ -16,10 +16,21 @@ Fin.acesso = (() => {
   const MAX_TENTATIVAS = 5;
   const ESPERA_MS = 30000;
 
+  /** Ícones de finanças espalhados, bem discretos, no fundo verde da tela de acesso. */
+  function desenhoFundo() {
+    const itens = [
+      ['moedas', 6, 8, 64, -12], ['cifrao', 80, 6, 52, 10], ['alta', 12, 72, 72, 0], ['cartao', 78, 66, 68, -8],
+      ['cofrinho', 44, 88, 56, 6], ['carteira', 88, 34, 44, 12], ['pizza', 2, 40, 40, 0], ['barras', 60, 24, 36, -6],
+    ];
+    return `<div class="fixed inset-0 overflow-hidden pointer-events-none text-white" aria-hidden="true">${itens.map(([ic, x, y, t, r]) =>
+      `<span class="absolute opacity-[0.09]" style="left:${x}%;top:${y}%;transform:rotate(${r}deg)">${Fin.icone(ic, '', `width="${t}" height="${t}"`)}</span>`).join('')}</div>`;
+  }
+
   function casca(inner) {
     root.innerHTML = `
       <div class="fixed inset-0 z-[60] overflow-y-auto bg-gradient-to-br from-emerald-600 to-teal-700">
-        <div class="min-h-full flex items-center justify-center p-4">
+        ${desenhoFundo()}
+        <div class="relative min-h-full flex items-center justify-center p-4">
           <div class="w-full max-w-sm">
             <div class="flex flex-col items-center text-white mb-5">
               <img src="icons/icon-192.png" alt="" class="w-16 h-16 rounded-2xl shadow-lg">

@@ -39,10 +39,10 @@ Fin.pages.relatorios = (() => {
 
   const card = (inner, cls = '') => `<section class="bg-white rounded-2xl shadow-sm p-4 sm:p-5 min-w-0 ${cls}">${inner}</section>`;
 
-  function kpi(rotulo, valor, sub, d) {
+  function kpi(rotulo, valor, sub, d, icone = null, cor = 'slate') {
     return `
       <div class="bg-white rounded-2xl shadow-sm p-4 min-w-0">
-        <div class="text-xs text-slate-500">${rotulo}</div>
+        <div class="text-xs text-slate-500 flex items-center gap-2">${icone ? Fin.icones.badge(icone, cor, 'w-7 h-7', 'w-4 h-4') : ''}${rotulo}</div>
         <div class="text-lg sm:text-xl font-semibold mt-0.5 truncate">${valor}</div>
         <div class="text-xs text-slate-500 mt-0.5 truncate">${sub}</div>
         <div class="text-xs mt-1.5">${d}</div>
@@ -77,10 +77,10 @@ Fin.pages.relatorios = (() => {
       ${c.completo ? '' : `<p class="text-xs text-slate-500 bg-white rounded-xl px-3 py-2 shadow-sm">
         <span aria-hidden="true">ⓘ</span> Sem comparação: o período anterior (${rotuloPeriodo(c.periodoAnterior.ini, c.periodoAnterior.fim)}) não tem dados em todos os meses.</p>`}
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        ${kpi('Receitas', fmt.brl(a.receitas), n > 1 ? `média ${fmt.brl(a.mediaReceitas)}/mês` : '&nbsp;', delta(c.delta.receitas, true))}
-        ${kpi('Despesas', fmt.brl(a.despesas), n > 1 ? `média ${fmt.brl(a.mediaDespesas)}/mês` : '&nbsp;', delta(c.delta.despesas, false))}
-        ${kpi('Saldo', `<span class="${a.saldo < 0 ? 'text-rose-700' : ''}">${fmt.brl(a.saldo)}</span>`, a.saldo < 0 ? 'gastou mais do que recebeu' : 'sobrou no período', delta(c.delta.saldo, true))}
-        ${kpi('Taxa de poupança', a.poupanca == null ? '—' : `<span class="${a.poupanca < 0 ? 'text-rose-700' : ''}">${pct(a.poupanca)}</span>`, a.aportes > 0 ? `inclui ${fmt.brl(a.aportes)} investidos` : 'da receita que sobrou', delta(c.delta.poupanca, true, true))}
+        ${kpi('Receitas', fmt.brl(a.receitas), n > 1 ? `média ${fmt.brl(a.mediaReceitas)}/mês` : '&nbsp;', delta(c.delta.receitas, true), 'entrada', 'blue')}
+        ${kpi('Despesas', fmt.brl(a.despesas), n > 1 ? `média ${fmt.brl(a.mediaDespesas)}/mês` : '&nbsp;', delta(c.delta.despesas, false), 'saida', 'orange')}
+        ${kpi('Saldo', `<span class="${a.saldo < 0 ? 'text-rose-700' : ''}">${fmt.brl(a.saldo)}</span>`, a.saldo < 0 ? 'gastou mais do que recebeu' : 'sobrou no período', delta(c.delta.saldo, true), 'carteira', a.saldo < 0 ? 'rose' : 'emerald')}
+        ${kpi('Taxa de poupança', a.poupanca == null ? '—' : `<span class="${a.poupanca < 0 ? 'text-rose-700' : ''}">${pct(a.poupanca)}</span>`, a.aportes > 0 ? `inclui ${fmt.brl(a.aportes)} investidos` : 'da receita que sobrou', delta(c.delta.poupanca, true, true), 'cofrinho', 'emerald')}
       </div>`;
   }
 
@@ -91,7 +91,7 @@ Fin.pages.relatorios = (() => {
     ];
     return card(`
       <div class="flex items-start justify-between gap-3 flex-wrap mb-3">
-        <h2 class="font-semibold">Receitas x despesas por mês</h2>
+        ${Fin.icones.titulo('barras', 'blue', 'Receitas x despesas por mês')}
         ${CH().legend(series)}
       </div>
       <div id="rel-evo" class="w-full min-w-0 overflow-hidden"></div>
@@ -108,7 +108,7 @@ Fin.pages.relatorios = (() => {
     const melhor = ev.reduce((m, x) => (x.saldo > m.saldo ? x : m), ev[0]);
     const pior = ev.reduce((m, x) => (x.saldo < m.saldo ? x : m), ev[0]);
     return card(`
-      <h2 class="font-semibold">Saldo acumulado</h2>
+      ${Fin.icones.titulo('linha', 'emerald', 'Saldo acumulado')}
       <p class="text-xs text-slate-500 mb-3">Soma dos saldos mês a mês no período.</p>
       <div id="rel-saldo" class="w-full min-w-0 overflow-hidden"></div>
       ${ev.length > 1 ? `<div class="grid grid-cols-2 gap-3 mt-3 text-xs">
@@ -137,7 +137,7 @@ Fin.pages.relatorios = (() => {
 
     return card(`
       <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
-        <h2 class="font-semibold">Por categoria</h2>
+        ${Fin.icones.titulo('pizza', 'orange', 'Por categoria')}
         <div class="seg w-56 !text-xs" role="tablist" aria-label="Tipo">
           <label><input type="radio" name="rel-tipo" value="despesa" ${st.tipo === 'despesa' ? 'checked' : ''}><span class="!py-1.5">Despesas</span></label>
           <label><input type="radio" name="rel-tipo" value="receita" ${st.tipo === 'receita' ? 'checked' : ''}><span class="!py-1.5">Receitas</span></label>
@@ -188,14 +188,14 @@ Fin.pages.relatorios = (() => {
     const maiores = A().itens(ini, fim, { tipo: 'despesa', detalhar: det }).slice(0, 10);
     return `
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        ${card(`<h2 class="font-semibold">Por classificação</h2>
+        ${card(`${Fin.icones.titulo('etiqueta', 'amber', 'Por classificação')}
           <p class="text-xs text-slate-500 mb-3">Despesas pelo grupo da categoria (ex.: Essencial). Ajuste em Categorias.</p>
           ${classes.length ? CH().hbars(classes.map((c) => ({ label: c.label, total: c.total }))) : '<p class="text-sm text-slate-500">—</p>'}`)}
-        ${card(`<h2 class="font-semibold">Por forma de pagamento</h2>
+        ${card(`${Fin.icones.titulo('carteira', 'violet', 'Por forma de pagamento')}
           <p class="text-xs text-slate-500 mb-3">Como as despesas foram pagas (fatura do cartão conta pela forma usada para pagá-la).</p>
           ${formas.length ? CH().hbars(formas.slice(0, 8).map((f) => ({ label: f.label, icone: f.icone, total: f.total }))) : '<p class="text-sm text-slate-500">—</p>'}`)}
       </div>
-      ${card(`<h2 class="font-semibold mb-1">Maiores despesas do período</h2>
+      ${card(`${Fin.icones.titulo('saida', 'rose', 'Maiores despesas do período', { cls: 'mb-1' })}
         ${maiores.length ? `<ul class="divide-y divide-slate-100">${maiores.map(itemHTML).join('')}</ul>` : '<p class="text-sm text-slate-500 py-2">—</p>'}`)}`;
   }
 

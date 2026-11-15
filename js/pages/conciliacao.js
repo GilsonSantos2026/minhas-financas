@@ -114,7 +114,7 @@ Fin.pages.conciliacao = (() => {
     const s = situacoes(false);
     return `
       <section class="bg-white rounded-2xl shadow-sm p-4 sm:p-5">
-        <h2 class="font-semibold">Faturas do cartão · ${fmt.monthLong(fim).toLowerCase()}</h2>
+        ${Fin.icones.titulo('cartao', 'violet', `Faturas do cartão · ${fmt.monthLong(fim).toLowerCase()}`)}
         <p class="text-xs text-slate-500 mb-3">Soma das compras × lançamento de pagamento × valor efetivamente pago.</p>
         <div class="table-wrap border border-slate-200 rounded-xl"><table>
           <thead><tr><th>Cartão</th><th class="num">Compras</th><th class="num">Lançado</th><th class="num">Pago</th><th>Situação</th></tr></thead>
@@ -174,7 +174,7 @@ Fin.pages.conciliacao = (() => {
 
         <section class="space-y-2">
           <div class="flex items-center justify-between gap-2 px-1">
-            <h2 class="font-semibold">Lançamentos × ${rec ? 'recebimentos' : 'pagamentos'}</h2>
+            ${Fin.icones.titulo('balanca', 'sky', `Lançamentos × ${rec ? 'recebimentos' : 'pagamentos'}`)}
             <button data-act="csv" class="text-xs font-semibold text-emerald-700 hover:underline">⬇️ Exportar CSV</button>
           </div>
           ${filtrosHTML(totais, s)}

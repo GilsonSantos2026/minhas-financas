@@ -193,7 +193,7 @@ Fin.pages.cartoes = (() => {
 
           ${cats.length ? `
             <section class="bg-white rounded-2xl shadow-sm p-4 sm:p-5 min-w-0">
-              <h2 class="font-semibold mb-3">Gastos da fatura por categoria</h2>
+              ${Fin.icones.titulo('pizza', 'orange', 'Gastos da fatura por categoria', { cls: 'mb-3' })}
               ${Fin.charts.hbars(cats.map((c) => ({ label: c.categoria, icone: c.icone, total: c.total })), { total: Math.max(total, 0.01) })}
             </section>` : ''}
 

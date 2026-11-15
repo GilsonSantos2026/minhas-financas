@@ -18,6 +18,8 @@ Fin.pages.investimentos = (() => {
   const COR = { aplicado: '#2a78d6', ganho: '#0ca30c', proventos: '#0ca30c' };
   const filtroMovs = { conta: '', tipo: '', busca: '' };
 
+  /** Título de cartão (h3) com ícone em círculo. */
+  const T3 = (ic, cor, txt, cls = '') => Fin.icones.titulo(ic, cor, txt, { tag: 'h3', cls });
   const card = (html, cls = '') => `<section class="bg-white rounded-2xl shadow-sm p-4 min-w-0 ${cls}">${html}</section>`;
   const tile = (rot, valor, sub = '', cls = '') => `<div class="bg-white rounded-2xl shadow-sm p-3 min-w-0">
     <div class="text-xs text-slate-500">${rot}</div><div class="text-lg font-semibold tabular-nums truncate ${cls}">${valor}</div>
@@ -37,7 +39,7 @@ Fin.pages.investimentos = (() => {
   function cabecalho(aba) {
     return `
       <div class="flex flex-wrap items-center gap-2">
-        <h2 class="text-xl font-semibold mr-auto hidden md:block">Investimentos</h2>
+        <div class="mr-auto hidden md:block">${Fin.icones.titulo('alta', 'emerald', 'Investimentos', { cls: 'text-xl', tam: 'w-9 h-9', ic: 'w-5 h-5' })}</div>
         <span data-dolar>${dolarChip()}</span>
         <button data-act="importar" class="btn btn-ghost !py-1.5 bg-white shadow-sm">📥 Importar</button>
         <button data-act="precos" class="btn btn-ghost !py-1.5 bg-white shadow-sm">🏷️ Preços</button>
@@ -68,7 +70,7 @@ Fin.pages.investimentos = (() => {
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         ${card(`
           <div class="flex items-start justify-between gap-3 flex-wrap mb-3">
-            <h3 class="font-semibold">Evolução do patrimônio</h3>
+            ${T3('alta', 'emerald', 'Evolução do patrimônio')}
             ${Fin.charts.legend([{ label: 'Valor aplicado', color: COR.aplicado }, { label: 'Ganho de capital', color: COR.ganho }])}
           </div>
           <div id="inv-evolucao" class="w-full min-w-0 overflow-hidden"></div>
@@ -76,7 +78,7 @@ Fin.pages.investimentos = (() => {
             <button data-act="foto" class="text-emerald-700 font-medium hover:underline">informar mês passado</button></p>`)}
         ${card(`
           <div class="flex items-center justify-between gap-3 mb-3">
-            <h3 class="font-semibold">Alocação por classe</h3>
+            ${T3('pizza', 'violet', 'Alocação por classe')}
             <button data-act="alocacao" class="text-sm text-emerald-700 font-medium hover:underline">% ideal</button>
           </div>
           ${alocacaoHTML(I().alocacao(r))}`)}
@@ -112,7 +114,7 @@ Fin.pages.investimentos = (() => {
     const contas = I().contas();
     const total = r.patrimonio || 1;
     return `
-      <div class="flex items-center justify-between mb-2"><h3 class="font-semibold">Por conta</h3>
+      <div class="flex items-center justify-between mb-2">${T3('banco', 'sky', 'Por conta')}
         <button data-act="nova-conta" class="text-sm text-emerald-700 font-medium hover:underline">＋ Conta</button></div>
       <ul class="divide-y divide-slate-100">${contas.map((c) => `
         <li><button data-conta="${c.id}" class="w-full flex items-center gap-2 py-2 text-left text-sm hover:bg-slate-50 rounded">
@@ -138,7 +140,7 @@ Fin.pages.investimentos = (() => {
     const rv = Fin.reserva.calcular();
     const [ic, cls, txt] = statusReserva(rv);
     return `
-      <div class="flex items-center justify-between mb-2"><h3 class="font-semibold">Reserva de emergência</h3>
+      <div class="flex items-center justify-between mb-2">${T3('escudo', 'emerald', 'Reserva de emergência')}
         <button data-aba="reserva" class="text-sm text-emerald-700 font-medium hover:underline">Ver →</button></div>
       <div class="text-2xl font-semibold tabular-nums">${fmt.brl(rv.atual)}</div>
       <div class="mt-1"><span class="pill ${cls}"><span aria-hidden="true">${ic}</span>${mesesTxt(rv.cobertura)} · ${txt}</span></div>
@@ -150,7 +152,7 @@ Fin.pages.investimentos = (() => {
   function reservaAbaHTML() {
     const rv = Fin.reserva.calcular();
     if (!rv.janela) {
-      return card(`<h3 class="font-semibold">Reserva de emergência</h3>
+      return card(`${T3('escudo', 'emerald', 'Reserva de emergência')}
         <p class="text-sm text-slate-500 mt-1">Ainda não há meses completos de despesas para calcular o valor ideal. Lance receitas e despesas de pelo menos um mês inteiro.</p>`);
     }
     const [ic, cls, txt, cor] = statusReserva(rv);
@@ -210,11 +212,11 @@ Fin.pages.investimentos = (() => {
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         ${card(`
-          <h3 class="font-semibold">Quanto tempo a reserva deve cobrir?</h3>
+          ${T3('relogio', 'amber', 'Quanto tempo a reserva deve cobrir?')}
           <p class="text-xs text-slate-500 mt-0.5 mb-3">Quanto menos estável a renda, mais meses. Escolha o que descreve a sua situação.</p>
           <div class="space-y-2">${perfis}</div>`)}
         ${card(`
-          <h3 class="font-semibold">Plano para chegar lá</h3>
+          ${T3('alvo', 'orange', 'Plano para chegar lá')}
           ${rv.sobraMediana > 0 ? `
             <p class="text-sm text-slate-600 mt-1">Nos meses analisados sobrou, em geral, <b class="tabular-nums">${fmt.brl(rv.sobraMediana)}</b> por mês. Guardar metade disso é um bom começo.</p>` : `
             <div class="text-sm bg-amber-50 text-amber-900 rounded-xl px-3 py-2 mt-2"><span aria-hidden="true">!</span>
@@ -229,7 +231,7 @@ Fin.pages.investimentos = (() => {
       </div>
 
       ${card(`
-        <h3 class="font-semibold">Como chegamos em ${fmt.brl(rv.base)} por mês</h3>
+        ${T3('lista', 'blue', `Como chegamos em ${fmt.brl(rv.base)} por mês`)}
         <dl class="text-sm grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 mt-2 tabular-nums">
           <dt>Custo essencial do mês <span class="text-slate-500">(percentil 75 de ${rv.janela} ${rv.janela === 1 ? 'mês' : 'meses'})</span></dt><dd class="text-right">${fmt.brl(rv.p75)}</dd>
           <dt>+ Parcelas já assumidas <span class="text-slate-500">(média dos próximos 6 meses, fora do essencial)</span></dt><dd class="text-right">${fmt.brl(rv.compromissos)}</dd>
@@ -254,7 +256,7 @@ Fin.pages.investimentos = (() => {
         </details>`)}
 
       ${card(`
-        <h3 class="font-semibold">O que entra no custo essencial</h3>
+        ${T3('etiqueta', 'amber', 'O que entra no custo essencial')}
         <p class="text-xs text-slate-500 mt-0.5 mb-2">Marque o que você continuaria pagando numa emergência. Valores por mês nos ${rv.janela} meses analisados.</p>
         <div class="table-wrap -mx-4 px-4">
           <table>
@@ -268,7 +270,7 @@ Fin.pages.investimentos = (() => {
   function aportesHTML(a) {
     const ok = Math.abs(a.diferenca) < 0.01;
     return `
-      <h3 class="font-semibold mb-1">Aportes de ${fmt.monthShort(Fin.state.mes)}</h3>
+      ${T3('cofrinho', 'emerald', `Aportes de ${fmt.monthShort(Fin.state.mes)}`, 'mb-1')}
       <p class="text-xs text-slate-500 mb-2">Conferência: Lançamentos (categorias de investimento) × carteira.</p>
       <dl class="text-sm grid grid-cols-[1fr_auto] gap-y-1 tabular-nums">
         <dt class="text-slate-500">Lançado nos Lançamentos</dt><dd>${fmt.brl(a.lancado)}</dd>
@@ -364,12 +366,12 @@ Fin.pages.investimentos = (() => {
         ${tile('A receber', fmt.brl(pv.totalAReceber), `${pv.aReceber.length} provisionado(s)`)}
       </div>
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        ${card(`<div class="flex items-start justify-between gap-3 flex-wrap mb-3"><h3 class="font-semibold">Proventos por mês</h3>
+        ${card(`<div class="flex items-start justify-between gap-3 flex-wrap mb-3">${T3('moedas', 'emerald', 'Proventos por mês')}
           ${Fin.charts.legend([{ label: 'Recebido', color: COR.proventos }])}</div>
           <div id="inv-proventos" class="w-full min-w-0 overflow-hidden"></div>`)}
-        ${card(`<h3 class="font-semibold mb-3">Por ativo (12 meses)</h3>${pv.porAtivo.length ? Fin.charts.hbars(pv.porAtivo.slice(0, 10)) : '<p class="text-sm text-slate-500">Nenhum provento nos últimos 12 meses.</p>'}`)}
+        ${card(`${T3('barras', 'blue', 'Por ativo (12 meses)', 'mb-3')}${pv.porAtivo.length ? Fin.charts.hbars(pv.porAtivo.slice(0, 10)) : '<p class="text-sm text-slate-500">Nenhum provento nos últimos 12 meses.</p>'}`)}
       </div>
-      ${card(`<div class="flex items-center justify-between mb-2"><h3 class="font-semibold">Meus proventos</h3>
+      ${card(`<div class="flex items-center justify-between mb-2">${T3('lista', 'slate', 'Meus proventos')}
         <button data-act="novo-provento" class="text-sm text-emerald-700 font-semibold hover:underline">＋ Provento</button></div>
         ${pv.lista.length ? `<div class="table-wrap"><table class="w-full"><thead><tr><th>Data</th><th>Ativo</th><th>Tipo</th><th class="text-right">Valor</th><th class="text-right">Em R$</th><th>Situação</th></tr></thead>
         <tbody>${pv.lista.slice(0, 60).map((p) => `<tr data-mov="${p.mov.id}" class="cursor-pointer hover:bg-emerald-50/60">
@@ -401,7 +403,7 @@ Fin.pages.investimentos = (() => {
         ${tile('Últimos 12 meses', doze != null ? `<span class="${sinal(doze)}">${pctS(doze)}</span>` : '—', 'composta mês a mês')}
         <div class="col-span-2 lg:col-span-1">${tile('Último mês', ult ? `<span class="${sinal(ult.rent)}">${pctS(ult.rent)}</span>` : '—', ult ? fmt.monthLong(ult.ym) : 'sem dados')}</div>
       </div>
-      ${card(`<div class="flex items-center justify-between gap-2 mb-2 flex-wrap"><h3 class="font-semibold">Rentabilidade mês a mês</h3>
+      ${card(`<div class="flex items-center justify-between gap-2 mb-2 flex-wrap">${T3('linha', 'emerald', 'Rentabilidade mês a mês')}
         <button data-act="foto" class="text-sm text-emerald-700 font-semibold hover:underline">＋ Patrimônio de mês passado</button></div>
         ${hist.some((m) => m.rent != null) ? `<div class="table-wrap"><table class="w-full"><thead><tr><th>Ano</th>${['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'].map((m) => `<th class="text-right">${m}</th>`).join('')}<th class="text-right">Ano</th></tr></thead>
           <tbody>${anos.map((y) => {
@@ -411,7 +413,7 @@ Fin.pages.investimentos = (() => {
           }).join('')}</tbody></table></div>`
         : '<p class="text-sm text-slate-500">A rentabilidade aparece quando houver o patrimônio de dois meses seguidos. O app guarda o deste mês sozinho; para os anteriores, informe o patrimônio (ex.: copiando do Investidor 10).</p>'}
         <p class="text-xs text-slate-500 mt-2">Cálculo: (patrimônio final − inicial − aportes líquidos + proventos) ÷ (patrimônio inicial + metade dos aportes). Acumulado = composto.</p>`)}
-      ${fotos.length ? card(`<h3 class="font-semibold mb-2">Meses informados</h3><ul class="text-sm divide-y divide-slate-100">${fotos.map((h) => `
+      ${fotos.length ? card(`${T3('calendario', 'slate', 'Meses informados', 'mb-2')}<ul class="text-sm divide-y divide-slate-100">${fotos.map((h) => `
         <li><button data-foto="${h.id}" class="w-full flex justify-between py-1.5 hover:bg-slate-50"><span>${fmt.monthLong(h.id)}</span>
           <span class="tabular-nums">${fmt.brl(h.patrimonio)}${h.manual ? ` <span class="text-xs text-slate-400">aplicado ${fmt.brl(h.investido)}</span>` : ''}</span></button></li>`).join('')}</ul>`) : ''}`;
   }
@@ -468,7 +470,7 @@ Fin.pages.investimentos = (() => {
     if (limite && !ms.length) return '';
     const lista = limite ? ms.slice(0, limite) : ms;
     return `
-      <div class="flex items-center justify-between px-1"><h3 class="font-semibold">Metas</h3>
+      <div class="flex items-center justify-between px-1">${T3('alvo', 'orange', 'Metas')}
         <span class="flex gap-3">${limite && ms.length > limite ? '<button data-aba="metas" class="text-sm text-slate-500 hover:underline">ver todas</button>' : ''}
         <button data-act="nova-meta" class="text-sm text-emerald-700 font-semibold hover:underline">＋ Meta</button></span></div>
       ${lista.length ? `<div class="grid grid-cols-1 lg:grid-cols-3 gap-3 items-start">${lista.map((p) => `

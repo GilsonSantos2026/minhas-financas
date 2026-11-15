@@ -35,6 +35,20 @@ Fin.icones = (() => {
     cifrao: '<path d="M12 2.5v19"/><path d="M16.5 6.5c-.6-1.4-2.4-2.5-4.5-2.5-2.5 0-4.5 1.5-4.5 3.5s2 3 4.5 3.5 4.5 1.5 4.5 3.5-2 3.5-4.5 3.5c-2.1 0-3.9-1.1-4.5-2.5"/>',
     maleta: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 5v2"/><path d="M3 12.5h18"/><path d="M11 12.5v1.5h2v-1.5"/>',
     relogio: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+    // utilidades
+    lupa: '<circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/>',
+    nuvem: '<path d="M7 18.5a4.5 4.5 0 0 1-.6-9 6 6 0 0 1 11.4 1.6A3.8 3.8 0 0 1 17.5 18.5z"/>',
+    download: '<path d="M12 3.5v11M7.5 10.5 12 15l4.5-4.5"/><path d="M4 16.5v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>',
+    upload: '<path d="M12 15V4M7.5 8.5 12 4l4.5 4.5"/><path d="M4 16.5v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>',
+    chave: '<circle cx="8" cy="15" r="4.5"/><path d="m11.2 11.8 8.3-8.3M16.5 6.5l2.5 2.5M14 9l2 2"/>',
+    linha: '<path d="M3 3.5V20.5h17.5"/><path d="M6.5 16c2-1 3-5 5-5s2.5 3 4.5 3 2.5-4.5 4-6"/>',
+    celular: '<rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 18h3"/>',
+    documento: '<path d="M14 2.5H6.5a2 2 0 0 0-2 2v15a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V8z"/><path d="M14 2.5V8h5.5"/><path d="M8.5 13h7M8.5 16.5h5"/>',
+    alerta: '<path d="M12 3.5 2.5 20h19z"/><path d="M12 10v4.5"/><circle cx="12" cy="17.2" r=".6" fill="currentColor"/>',
+    reciclar: '<path d="M20 11.5A8 8 0 0 0 6 6.3L4 8.5"/><path d="M4 4v4.5h4.5"/><path d="M4 12.5a8 8 0 0 0 14 5.2l2-2.2"/><path d="M20 20v-4.5h-4.5"/>',
+    banco: '<path d="M3 9.5 12 4l9 5.5"/><path d="M4.5 10v7.5M9.5 10v7.5M14.5 10v7.5M19.5 10v7.5"/><path d="M3 20.5h18"/>',
+    lista: '<path d="M9 6.5h11M9 12h11M9 17.5h11"/><circle cx="4.5" cy="6.5" r="1" fill="currentColor"/><circle cx="4.5" cy="12" r="1" fill="currentColor"/><circle cx="4.5" cy="17.5" r="1" fill="currentColor"/>',
+    check: '<circle cx="12" cy="12" r="8.5"/><path d="m8 12.5 2.8 2.8L16.5 9.5"/>',
     cofrinho: '<path d="M4.5 11.5c0-3.6 3.4-6 7.5-6 1.7 0 3.2.4 4.4 1.1L19 5.5l-.4 3.1c.8.8 1.4 1.8 1.6 2.9H21.5v3.5h-1.6c-.5 1.2-1.4 2.2-2.4 2.9V20h-3v-1.6c-.8.2-1.6.2-2.5.2s-1.7 0-2.5-.2V20H6.5v-2.6c-1.3-1.2-2-2.7-2-4.4z"/><circle cx="16" cy="10.5" r=".7" fill="currentColor"/><path d="M10 8.5h3"/>',
   };
 
@@ -63,6 +77,19 @@ Fin.icones = (() => {
     return `<span class="${tam} shrink-0 rounded-xl grid place-items-center ${cores[cor] || cores.slate}" aria-hidden="true">${icone(nome, ic)}</span>`;
   }
 
+  /** Título com ícone: <h2|h3> com badge. */
+  function titulo(nome, cor, texto, { tag = 'h2', cls = '', tam = 'w-7 h-7', ic = 'w-4 h-4' } = {}) {
+    return `<${tag} class="font-semibold flex items-center gap-2 ${cls}">${badge(nome, cor, tam, ic)}<span class="min-w-0">${texto}</span></${tag}>`;
+  }
+
+  /** Emojis decorativos antigos → ícone equivalente (estados vazios, seções). */
+  const DE_EMOJI = {
+    '⚖️': 'balanca', '🧾': 'recibo', '💳': 'cartao', '🏷️': 'etiqueta', '📂': 'cofreDados', '📊': 'pizza',
+    '🎯': 'alvo', '🔎': 'lupa', '📑': 'tabela', '🛟': 'escudo', '🔒': 'cadeado', '🔐': 'chave', '📲': 'celular',
+    '📄': 'documento', '⚠️': 'alerta', '☁️': 'nuvem', '♻️': 'reciclar', '💼': 'alta', '📈': 'alta', '💰': 'moedas',
+  };
+  const doEmoji = (e) => DE_EMOJI[e] || (P[e] ? e : null);
+
   Fin.icone = icone;
-  return { icone, aplicar, badge, nomes: Object.keys(P) };
+  return { icone, aplicar, badge, titulo, doEmoji, nomes: Object.keys(P) };
 })();
