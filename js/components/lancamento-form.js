@@ -46,7 +46,7 @@ Fin.forms.lancamento = (() => {
           ${l?.grupo ? `
             <div class="bg-slate-50 rounded-xl px-3 py-2.5 text-sm space-y-2">
               <p><span aria-hidden="true">${l.recorrencia === 'fixo' ? '🔁' : '🧩'}</span>
-                ${l.recorrencia === 'fixo' ? `Lançamento fixo · mês <b>${l.parcela?.atual}/${l.parcela?.total}</b>` : `Parcela <b>${l.parcela?.atual}/${l.parcela?.total}</b>`}</p>
+                ${l.recorrencia === 'fixo' ? `Recorrente · mês <b>${l.parcela?.atual}/${l.parcela?.total}</b>` : `Parcela <b>${l.parcela?.atual}/${l.parcela?.total}</b>`}</p>
               <fieldset class="flex flex-wrap gap-x-4 gap-y-1">
                 <legend class="sr-only">Aplicar alterações a</legend>
                 <label class="inline-flex items-center gap-1.5"><input type="radio" name="escopo" value="este" checked class="accent-emerald-600"> Só este</label>
@@ -77,19 +77,37 @@ Fin.forms.lancamento = (() => {
           </div>
 
           ${l ? '' : `
-          <div class="space-y-2">
-            <label class="field"><span>Repetir</span>
-              <select name="repeticao" class="input">
-                <option value="nao">Não repetir</option>
-                <option value="parcelado">Parcelado (divide o valor em parcelas)</option>
-                <option value="fixo">Fixo todo mês (mesmo valor)</option>
-              </select></label>
-            <div id="rep-box" class="hidden grid grid-cols-[7rem_1fr] gap-3 items-center">
-              <label class="field"><span>Meses</span>
-                <input name="vezes" type="number" inputmode="numeric" min="2" max="120" value="12" class="input" /></label>
-              <p id="rep-resumo" class="text-xs text-slate-600 bg-emerald-50 rounded-lg px-3 py-2 self-end"></p>
+          <!-- Recorrência (só em lançamento novo): aluguel, água, luz… -->
+          <section class="rounded-2xl border border-slate-200 p-3 space-y-3" aria-labelledby="rec-titulo">
+            <label class="flex items-center gap-3 cursor-pointer">
+              <span class="flex-1 min-w-0">
+                <span id="rec-titulo" class="block text-sm font-semibold">🔁 Recorrente</span>
+                <span class="block text-xs text-slate-500">Repete todo mês — ex.: aluguel, água, luz</span>
+              </span>
+              <input type="checkbox" name="recorrente" class="toggle" role="switch" />
+            </label>
+            <div id="rep-box" class="hidden space-y-3">
+              <div class="seg seg-neutro" role="radiogroup" aria-label="Valor de cada mês">
+                <label><input type="radio" name="repeticao" value="fixo" checked><span>Mesmo valor todo mês</span></label>
+                <label><input type="radio" name="repeticao" value="parcelado"><span>Parcelar o total</span></label>
+              </div>
+              <div class="seg seg-neutro" role="radiogroup" aria-label="Até quando repetir">
+                <label><input type="radio" name="ateModo" value="vezes" checked><span>Nº de vezes</span></label>
+                <label><input type="radio" name="ateModo" value="ate"><span>Até mês/ano</span></label>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <label class="field" data-ate="vezes"><span>Quantas vezes (meses)</span>
+                  <input name="vezes" type="number" inputmode="numeric" min="2" max="120" value="12" class="input" /></label>
+                <label class="field hidden" data-ate="ate"><span>Repetir até</span>
+                  <input name="ate" type="month" class="input" /></label>
+                <div class="flex flex-wrap items-end gap-1.5" data-atalhos>
+                  <button type="button" data-ate-fim-ano class="chip !py-1.5 !text-xs">Até dezembro</button>
+                  <button type="button" data-ate-12 class="chip !py-1.5 !text-xs">12 meses</button>
+                </div>
+              </div>
+              <p id="rep-resumo" class="text-xs text-slate-700 bg-emerald-50 rounded-lg px-3 py-2" aria-live="polite"></p>
             </div>
-          </div>`}
+          </section>`}
 
           <!-- Pagamento efetivado: separado do valor lançado (o lançado nunca é alterado aqui) -->
           <section class="rounded-2xl border border-slate-200 p-3 space-y-3" aria-labelledby="pg-titulo">
@@ -208,29 +226,79 @@ Fin.forms.lancamento = (() => {
       atualizarPagamento();
     });
 
-    // Repetição (só em lançamento novo): mostra quantidade de meses e um resumo.
-    const syncRepeticao = () => {
-      if (!el('repeticao')) return;
+    // Recorrência (só em lançamento novo): por nº de vezes ou até um mês/ano, com resumo ao vivo.
+    const MAX_MESES = 120;
+    const mesInicio = () => el('competencia').value || (el('vencimento').value || '').slice(0, 7);
+    const mesesAte = (a, b) => {
+      const [y1, m1] = a.split('-').map(Number);
+      const [y2, m2] = b.split('-').map(Number);
+      return (y2 - y1) * 12 + (m2 - m1) + 1;
+    };
+    const dezembro = (ini) => `${Number(ini.slice(0, 4)) + (ini.endsWith('-12') ? 1 : 0)}-12`;
+    /** { modo: 'nao'|'fixo'|'parcelado', n, erro } */
+    const recorrencia = () => {
+      if (!el('recorrente')?.checked) return { modo: 'nao' };
       const modo = el('repeticao').value;
-      const n = Math.max(2, Math.min(120, Number(el('vezes').value) || 2));
-      form.querySelector('#rep-box').classList.toggle('hidden', modo === 'nao');
-      form.querySelector('#lbl-valor').textContent = modo === 'parcelado' ? 'Valor total (R$) *' : 'Valor lançado (R$) *';
-      const valor = P.toNumber(el('valorPrevisto').value);
-      const ini = el('competencia').value || (el('vencimento').value || '').slice(0, 7);
+      const ini = mesInicio();
+      let n;
+      if (el('ateModo').value === 'ate') {
+        if (!el('ate').value) return { modo, erro: 'Escolha até qual mês repetir.' };
+        if (!ini) return { modo, erro: 'Informe o vencimento.' };
+        n = mesesAte(ini, el('ate').value);
+        if (n < 2) return { modo, erro: `Escolha um mês depois de ${fmt.monthShort(ini)}.` };
+      } else {
+        n = Math.trunc(Number(el('vezes').value));
+        if (!(n >= 2)) return { modo, erro: 'Repita pelo menos 2 vezes.' };
+      }
+      if (n > MAX_MESES) return { modo, n, erro: `Máximo de ${MAX_MESES} meses (10 anos).` };
+      return { modo, n };
+    };
+
+    const syncRepeticao = () => {
+      if (!el('recorrente')) return;
+      const r = recorrencia();
+      const ligado = r.modo !== 'nao';
+      form.querySelector('#rep-box').classList.toggle('hidden', !ligado);
+      form.querySelector('#lbl-valor').textContent = r.modo === 'parcelado' ? 'Valor total (R$) *' : 'Valor lançado (R$) *';
+      const porAte = el('ateModo').value === 'ate';
+      form.querySelector('[data-ate="vezes"]').classList.toggle('hidden', porAte);
+      form.querySelector('[data-ate="ate"]').classList.toggle('hidden', !porAte);
+      if (mesInicio()) form.querySelector('[data-ate-fim-ano]').textContent = `Até ${fmt.monthShort(dezembro(mesInicio()))}`;
+      if (!ligado) return;
       const resumo = form.querySelector('#rep-resumo');
-      if (modo === 'nao') return;
+      resumo.classList.toggle('bg-emerald-50', !r.erro);
+      resumo.classList.toggle('bg-rose-50', !!r.erro);
+      resumo.classList.toggle('text-rose-700', !!r.erro);
+      if (r.erro) { resumo.textContent = `! ${r.erro}`; return; }
+      const valor = P.toNumber(el('valorPrevisto').value);
+      const ini = mesInicio();
       if (!valor || !ini) { resumo.textContent = 'Informe valor e vencimento para ver o resumo.'; return; }
-      const fim = fmt.monthShort(fmt.addMonths(ini, n - 1));
-      resumo.textContent = modo === 'parcelado'
-        ? `${n}x de ${fmt.brl(Math.trunc((valor * 100) / n) / 100)} — de ${fmt.monthShort(ini)} a ${fim}.`
-        : `${fmt.brl(valor)} por mês, de ${fmt.monthShort(ini)} a ${fim} (${fmt.brl(valor * n)} no total).`;
+      const de = `de ${fmt.monthShort(ini)} a ${fmt.monthShort(fmt.addMonths(ini, r.n - 1))}`;
+      const dia = Number((el('vencimento').value || '').slice(8, 10));
+      resumo.innerHTML = r.modo === 'parcelado'
+        ? `<b>${r.n}x</b> de ${fmt.brl(Math.trunc((valor * 100) / r.n) / 100)} — ${de}.`
+        : `<b>${r.n} lançamentos</b> de ${fmt.brl(valor)}, ${de}${dia ? `, vencendo todo dia ${dia}` : ''} (${fmt.brl(valor * r.n)} no total).`
+          + '<br><span class="text-slate-500">Conta que muda de valor (água, luz): ajuste o mês quando ela chegar e escolha “Só este”.</span>';
     };
     form.addEventListener('input', syncRepeticao);
+    form.querySelector('[data-ate-fim-ano]')?.addEventListener('click', () => {
+      const ini = mesInicio();
+      if (!ini) return;
+      form.querySelector('input[name="ateModo"][value="ate"]').checked = true;
+      el('ate').value = dezembro(ini);
+      syncRepeticao();
+    });
+    form.querySelector('[data-ate-12]')?.addEventListener('click', () => {
+      form.querySelector('input[name="ateModo"][value="vezes"]').checked = true;
+      el('vezes').value = 12;
+      syncRepeticao();
+    });
     syncRepeticao();
 
     form.addEventListener('change', (e) => {
       const n = e.target.name;
-      if (['repeticao', 'vencimento', 'competencia'].includes(n)) setTimeout(syncRepeticao);
+      if (n === 'ateModo' && e.target.value === 'ate' && !el('ate').value && mesInicio()) el('ate').value = dezembro(mesInicio());
+      if (['recorrente', 'repeticao', 'ateModo', 'ate', 'vezes', 'vencimento', 'competencia'].includes(n)) setTimeout(syncRepeticao);
       if (n === 'tipo') { el('categoria').innerHTML = categoriaOptions(e.target.value, el('categoria').value); atualizarPagamento(); }
       if (n === 'status') syncPago();
       if (n === 'vencimento' || n === 'dataPagamento') atualizarPagamento();
@@ -272,9 +340,10 @@ Fin.forms.lancamento = (() => {
       if (status === 'parcial' && valorPago != null && valorPrevisto != null && valorPago >= valorPrevisto) {
         problemas.push('um valor pago menor que o lançado (ou marque “Pago”)');
       }
-      const repeticao = el('repeticao')?.value || 'nao';
-      const vezes = Number(el('vezes')?.value);
-      if (repeticao !== 'nao' && !(vezes >= 2 && vezes <= 120)) problemas.push('a quantidade de meses (2 a 120)');
+      const rec = l ? { modo: 'nao' } : recorrencia();
+      const repeticao = rec.modo;
+      const vezes = rec.n;
+      if (rec.erro) problemas.push(`a recorrência (${rec.erro.replace(/\.$/, '').toLowerCase()})`);
       if (problemas.length) {
         erro.textContent = `Informe ${problemas.join(', ')}.`;
         erro.classList.remove('hidden');
@@ -315,7 +384,8 @@ Fin.forms.lancamento = (() => {
         } else msg = 'Lançamento atualizado.';
       } else if (repeticao !== 'nao') {
         F.criarRepetidos(dados, repeticao, vezes);
-        msg = repeticao === 'parcelado' ? `Criado em ${vezes} parcelas.` : `Lançamento fixo criado para ${vezes} meses.`;
+        msg = repeticao === 'parcelado' ? `Criado em ${vezes} parcelas.`
+          : `Recorrente criado: ${vezes} meses, até ${fmt.monthShort(fmt.addMonths(dados.competencia, vezes - 1))}.`;
       } else {
         Fin.storage.upsert('lancamentos', dados);
         msg = 'Lançamento criado.';
