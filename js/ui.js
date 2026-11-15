@@ -46,6 +46,82 @@ Fin.ui = (() => {
     lastFocus?.focus?.();
   }
 
+  /* ---------- Confirmação de ação perigosa ---------- */
+
+  /**
+   * Caixa que explica o que vai acontecer antes de uma ação que não tem volta.
+   * opts: { titulo, icone, cor ('rose'|'amber'), intro, perde: [html], mantem: [html], avisos: [html],
+   *         resumo: html, backup: async fn | null, ciente: texto da caixinha, palavra: 'APAGAR' | null,
+   *         botao: texto do botão de confirmar }
+   * Resolve true (confirmou) ou false (cancelou/fechou).
+   */
+  function confirmar(opts) {
+    return new Promise((resolve) => {
+      const rose = opts.cor !== 'amber';
+      const lista = (itens, sinal, cls) => itens.map((t) => `<li class="flex gap-2"><span class="font-bold shrink-0 ${cls}" aria-hidden="true">${sinal}</span><span>${t}</span></li>`).join('');
+      const panel = openModal(`
+        <form class="p-5 space-y-4" novalidate>
+          <div class="flex items-start gap-3">
+            ${Fin.icones ? Fin.icones.badge(opts.icone || 'alerta', rose ? 'rose' : 'amber', 'w-10 h-10', 'w-6 h-6') : ''}
+            <div class="flex-1 min-w-0">
+              <h2 class="font-semibold text-lg leading-tight">${opts.titulo}</h2>
+              ${opts.intro ? `<p class="text-sm text-slate-600 mt-1">${opts.intro}</p>` : ''}
+            </div>
+            <button type="button" data-nao class="icon-btn shrink-0" aria-label="Cancelar">✕</button>
+          </div>
+          ${opts.avisos?.length ? `<ul class="text-sm bg-amber-50 text-amber-900 rounded-xl px-3 py-2.5 space-y-1.5">${lista(opts.avisos, '!', 'text-amber-700')}</ul>` : ''}
+          ${opts.perde?.length ? `
+            <div class="rounded-xl border ${rose ? 'border-rose-200 bg-rose-50/60' : 'border-amber-200 bg-amber-50/60'} px-3 py-2.5">
+              <div class="text-xs font-semibold uppercase tracking-wide ${rose ? 'text-rose-700' : 'text-amber-800'} mb-1.5">O que vai acontecer</div>
+              <ul class="text-sm space-y-1.5">${lista(opts.perde, '✕', rose ? 'text-rose-600' : 'text-amber-700')}</ul>
+            </div>` : ''}
+          ${opts.mantem?.length ? `
+            <div class="rounded-xl border border-emerald-200 bg-emerald-50/60 px-3 py-2.5">
+              <div class="text-xs font-semibold uppercase tracking-wide text-emerald-800 mb-1.5">Continua como está</div>
+              <ul class="text-sm space-y-1.5">${lista(opts.mantem, '✓', 'text-emerald-700')}</ul>
+            </div>` : ''}
+          ${opts.resumo || ''}
+          ${opts.backup ? `
+            <div class="flex flex-wrap items-center gap-2 text-sm bg-slate-50 rounded-xl px-3 py-2.5">
+              <span class="flex-1 min-w-[12rem]">Recomendado: <b>baixe um backup</b> antes. Com ele dá para voltar atrás.</span>
+              <button type="button" data-backup class="btn btn-ghost !bg-white !py-1.5">Baixar backup agora</button>
+            </div>` : ''}
+          <label class="flex items-start gap-2 text-sm cursor-pointer">
+            <input type="checkbox" data-ciente class="accent-rose-600 w-4 h-4 mt-0.5 shrink-0">
+            <span>${opts.ciente || 'Entendi o que vai acontecer e que não dá para desfazer.'}</span>
+          </label>
+          ${opts.palavra ? `
+            <label class="field"><span>Para confirmar, digite <b>${opts.palavra}</b></span>
+              <input data-palavra class="input" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>` : ''}
+          <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-1">
+            <button type="button" data-nao class="btn btn-ghost">Cancelar</button>
+            <button type="submit" data-sim class="btn ${rose ? 'bg-rose-600 hover:bg-rose-700' : 'bg-amber-600 hover:bg-amber-700'} text-white" disabled>${opts.botao || 'Confirmar'}</button>
+          </div>
+        </form>`, opts.titulo.replace(/<[^>]+>/g, ''));
+
+      let fim = false;
+      const terminar = (v) => { if (fim) return; fim = true; obs.disconnect(); closeModal(); resolve(v); };
+      // Fechou de outro jeito (Esc, toque fora) = cancelou.
+      const obs = new MutationObserver(() => { if (!panel.isConnected && !fim) { fim = true; obs.disconnect(); resolve(false); } });
+      obs.observe(document.getElementById('modal-root'), { childList: true });
+
+      const form = panel.querySelector('form');
+      const sim = panel.querySelector('[data-sim]');
+      const valido = () => panel.querySelector('[data-ciente]').checked
+        && (!opts.palavra || (panel.querySelector('[data-palavra]').value || '').trim().toUpperCase() === opts.palavra);
+      form.addEventListener('input', () => { sim.disabled = !valido(); });
+      form.addEventListener('change', () => { sim.disabled = !valido(); });
+      form.addEventListener('submit', (e) => { e.preventDefault(); if (valido()) terminar(true); });
+      panel.querySelectorAll('[data-nao]').forEach((b) => b.addEventListener('click', () => terminar(false)));
+      panel.querySelector('[data-backup]')?.addEventListener('click', async (e) => {
+        const b = e.currentTarget;
+        b.disabled = true;
+        try { await opts.backup(); b.textContent = '✓ Backup baixado'; } catch (err) { b.disabled = false; toast(err.message, 'error'); }
+      });
+      setTimeout(() => panel.querySelector('[data-nao]')?.focus(), 40); // foco no Cancelar, não no perigo
+    });
+  }
+
   /* ---------- Navegador de mês (os cliques são tratados em app.js) ---------- */
 
   function monthNav(ym) {
@@ -138,5 +214,5 @@ Fin.ui = (() => {
       </div>`;
   }
 
-  return { toast, openModal, closeModal, monthNav, statusPill, pagamentoLinha, alertaRotativo, catIcon, emptyState };
+  return { toast, openModal, closeModal, confirmar, monthNav, statusPill, pagamentoLinha, alertaRotativo, catIcon, emptyState };
 })();

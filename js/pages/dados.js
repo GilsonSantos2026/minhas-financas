@@ -120,11 +120,11 @@ Fin.pages.dados = (() => {
         ${secao('Instalar como app', '📲', instalar)}
 
         ${secao('Planilha', '📄', `
-          <p class="text-sm text-slate-600 mt-1">Importar a planilha de novo substitui todos os dados atuais.</p>
+          <p class="text-sm text-slate-600 mt-1">Importar a planilha de novo <b>substitui</b> lançamentos, compras, categorias e cartões. O app mostra o que muda e compara o arquivo com os dados de hoje antes de gravar.</p>
           <button data-act="reimport" class="btn btn-ghost mt-3">Importar planilha novamente</button>`)}
 
         ${secao('Apagar todos os dados', '⚠️', `
-          <p class="text-sm text-slate-600 mt-1">Remove lançamentos, compras, categorias e cartões deste navegador. Não pode ser desfeito.</p>
+          <p class="text-sm text-slate-600 mt-1">Remove tudo deste aparelho: lançamentos, compras, categorias, cartões, investimentos e o acesso. O app mostra o que será apagado e pede confirmação.</p>
           <button data-act="apagar" class="btn btn-danger-ghost border border-rose-200 mt-3">Apagar todos os dados…</button>`, 'border border-rose-100')}
       </div>`;
   }
@@ -532,9 +532,103 @@ Fin.pages.dados = (() => {
     }
   }
 
-  function onSave() {
+  /* ---------------- Confirmações (reimportar e apagar) ---------------- */
+
+  const num = (n) => n.toLocaleString('pt-BR');
+  const plural = (n, um, varios) => `${num(n)} ${n === 1 ? um : varios}`;
+
+  /** Retrato do que existe hoje neste aparelho. */
+  function retrato() {
+    const S = Fin.storage;
+    const l = S.list('lancamentos');
+    const c = S.list('cartaoCompras');
+    const comps = l.map((x) => x.competencia).filter(Boolean).sort();
+    return {
+      lanc: l.length, compras: c.length, cats: S.list('categorias').length, cartoes: Fin.finance.cartoes().length,
+      lancApp: l.filter((x) => x.origem === 'app').length,
+      lancEditados: l.filter((x) => x.origem !== 'app' && x.atualizadoEm).length,
+      comprasApp: c.filter((x) => x.origem === 'app' || x.origem === 'pdf').length,
+      invMovs: S.list('invMovs').length, invContas: S.list('invContas').length,
+      de: comps[0] || null, ate: comps[comps.length - 1] || null,
+      drive: Fin.drive?.conectado() || false,
+    };
+  }
+  const periodo = (de, ate) => (de ? `${fmt.monthShort(de)} a ${fmt.monthShort(ate)}` : '—');
+
+  /** 1º passo da reimportação: explica antes de escolher o arquivo. */
+  async function confirmarReimportar() {
+    const r = retrato();
+    const ok = await Fin.ui.confirmar({
+      titulo: 'Importar a planilha novamente?', icone: 'upload', cor: 'amber',
+      intro: 'A planilha vai <b>substituir</b> os lançamentos, compras, categorias e cartões deste app. Use só se a planilha for a versão mais completa dos seus dados.',
+      perde: [
+        `Os <b>${plural(r.lanc, 'lançamento', 'lançamentos')}</b> e <b>${plural(r.compras, 'compra', 'compras')} no cartão</b> de hoje serão trocados pelos da planilha.`,
+        ...(r.lancApp ? [r.lancApp === 1
+          ? '<b>1 lançamento criado no app</b> (que não está na planilha) será perdido.'
+          : `<b>${num(r.lancApp)} lançamentos criados no app</b> (que não estão na planilha) serão perdidos.`] : []),
+        ...(r.lancEditados ? [`Alterações feitas no app em <b>${plural(r.lancEditados, 'lançamento', 'lançamentos')}</b> (pagamentos marcados, valores) voltam ao que está na planilha.`] : []),
+        ...(r.comprasApp ? [r.comprasApp === 1
+          ? '<b>1 compra lançada</b> no app ou por PDF de fatura será perdida.'
+          : `<b>${num(r.comprasApp)} compras lançadas</b> no app ou por PDF de fatura serão perdidas.`] : []),
+        'As categorias voltam às da planilha (marcações feitas no app, como "investimento", se perdem).',
+        ...(r.drive ? ['<b>O Google Drive e os outros aparelhos</b> (celular/computador) também recebem a substituição na próxima sincronização.'] : []),
+      ],
+      mantem: [
+        ...(r.invMovs || r.invContas ? ['Investimentos (carteira, reserva, metas) não são tocados.'] : []),
+        'Usuário, senha e preferências.',
+        'Antes de gravar, o app mostra o arquivo escolhido e compara com os dados de hoje.',
+      ],
+      backup: onBackup,
+      ciente: 'Entendi que os dados atuais serão substituídos pelos da planilha.',
+      botao: 'Continuar e escolher o arquivo',
+    });
+    if (ok) { state.mode = 'upload'; draw(); }
+  }
+
+  /** 2º passo: arquivo escolhido e conferido — compara com o que existe e pede a confirmação final. */
+  async function confirmarSubstituicao(data) {
+    const r = retrato();
+    const meta = Fin.storage.getMeta();
+    const comps = data.lancamentos.map((x) => x.competencia).filter(Boolean).sort();
+    const novo = { lanc: data.lancamentos.length, compras: data.cartaoCompras.length, cats: data.categorias.length, de: comps[0], ate: comps[comps.length - 1] };
+    const avisos = [];
+    if (meta?.arquivo && meta.arquivo !== state.fileName) avisos.push(`O arquivo escolhido (<b>${esc(state.fileName)}</b>) é <b>diferente</b> do usado na última importação (<b>${esc(meta.arquivo)}</b>). Confira se é o arquivo certo.`);
+    if (r.lanc && novo.lanc < r.lanc * 0.8) avisos.push(`A planilha tem <b>menos lançamentos</b> (${num(novo.lanc)}) do que o app hoje (${num(r.lanc)}): ${num(r.lanc - novo.lanc)} sairiam.`);
+    if (r.compras && novo.compras < r.compras * 0.8) avisos.push(`A planilha tem <b>menos compras no cartão</b> (${num(novo.compras)}) do que o app hoje (${num(r.compras)}).`);
+    if (r.ate && novo.ate && novo.ate < r.ate) avisos.push(`A planilha vai só até <b>${fmt.monthShort(novo.ate)}</b>; o app tem lançamentos até <b>${fmt.monthShort(r.ate)}</b>.`);
+    const linha = (rot, a, b) => `<tr><td class="py-1 pr-3">${rot}</td><td class="py-1 pr-3 text-right tabular-nums">${a}</td><td class="py-1 text-right tabular-nums font-medium ${a !== b ? 'text-amber-800' : ''}">${b}</td></tr>`;
+    const resumo = `
+      <div class="text-sm">
+        <div class="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">Hoje × planilha escolhida</div>
+        <table class="w-full">
+          <thead><tr class="text-xs text-slate-500"><th class="text-left font-medium"></th><th class="text-right font-medium pr-3">Hoje no app</th><th class="text-right font-medium">Planilha</th></tr></thead>
+          <tbody>
+            ${linha('Lançamentos', num(r.lanc), num(novo.lanc))}
+            ${linha('Compras no cartão', num(r.compras), num(novo.compras))}
+            ${linha('Categorias', num(r.cats), num(novo.cats))}
+            ${linha('Período', periodo(r.de, r.ate), periodo(novo.de, novo.ate))}
+          </tbody>
+        </table>
+        <p class="text-xs text-slate-500 mt-1">Arquivo: <b>${esc(state.fileName)}</b>${meta?.importadoEm ? ` · última importação: ${esc(meta.arquivo || '—')} em ${quando(meta.importadoEm)}` : ''}</p>
+      </div>`;
+    return Fin.ui.confirmar({
+      titulo: 'Substituir os dados agora?', icone: 'alerta', cor: 'rose',
+      intro: 'Último passo. Depois disso, os dados de hoje só voltam com um backup.',
+      avisos, resumo,
+      perde: [
+        `Os dados de hoje são trocados pelos da planilha <b>${esc(state.fileName)}</b>.`,
+        ...(r.lancApp ? [r.lancApp === 1 ? '<b>1 lançamento criado no app</b> será perdido.' : `<b>${num(r.lancApp)} lançamentos criados no app</b> serão perdidos.`] : []),
+        ...(r.drive ? ['A troca também vai para o <b>Google Drive</b> e para os outros aparelhos.'] : []),
+      ],
+      backup: onBackup,
+      ciente: avisos.length ? 'Conferi os avisos acima e quero substituir mesmo assim.' : 'Conferi o arquivo e quero substituir os dados.',
+      botao: 'Substituir dados',
+    });
+  }
+
+  async function onSave() {
     const data = Fin.importer.collect(state.sheets);
-    if (Fin.storage.hasData() && !confirm('Isso vai SUBSTITUIR todos os dados salvos neste navegador (inclusive o que você lançou no app). Continuar?')) return;
+    if (Fin.storage.hasData() && !(await confirmarSubstituicao(data))) return;
     try {
       Fin.storage.saveImport(data, { arquivo: state.fileName });
       state.sheets = [];
@@ -583,12 +677,27 @@ Fin.pages.dados = (() => {
     }
   }
 
-  function onApagar() {
-    const resp = prompt('Isto apaga TODOS os dados deste navegador e não pode ser desfeito.\n\nSe quiser, cancele e baixe um backup antes.\n\nPara confirmar, digite APAGAR:');
-    if ((resp || '').trim().toUpperCase() !== 'APAGAR') {
-      if (resp !== null) Fin.ui.toast('Nada foi apagado (a palavra não confere).', 'error');
-      return;
-    }
+  async function onApagar() {
+    const r = retrato();
+    const ok = await Fin.ui.confirmar({
+      titulo: 'Apagar todos os dados deste aparelho?', icone: 'alerta', cor: 'rose',
+      intro: 'O app volta ao estado de recém-instalado neste navegador. <b>Não dá para desfazer</b> sem um backup.',
+      perde: [
+        `<b>${plural(r.lanc, 'lançamento', 'lançamentos')}</b> e <b>${plural(r.compras, 'compra', 'compras')} no cartão</b>${r.de ? ` (${periodo(r.de, r.ate)})` : ''}.`,
+        `<b>${plural(r.cats, 'categoria', 'categorias')}</b>, <b>${plural(r.cartoes, 'cartão', 'cartões')}</b>, orçamentos e configurações.`,
+        ...(r.invMovs || r.invContas ? [`<b>Investimentos</b>: ${plural(r.invContas, 'conta', 'contas')}, ${plural(r.invMovs, 'movimentação', 'movimentações')}, reserva e metas.`] : []),
+        `O <b>acesso deste aparelho</b> (usuário ${esc(Fin.cofre.usuario() || '')} e senha): o app volta para "Criar acesso".`,
+      ],
+      mantem: [
+        ...(r.drive ? ['A cópia no <b>Google Drive</b>: o aparelho é desconectado antes de apagar, então o Drive e os outros aparelhos não são afetados. Para trazer de volta: "Já uso o app em outro aparelho".'] : ['Backups que você já baixou.']),
+        'Os outros aparelhos onde você usa o app.',
+      ],
+      backup: onBackup,
+      ciente: 'Entendi que tudo neste aparelho será apagado e que não dá para desfazer.',
+      palavra: 'APAGAR',
+      botao: 'Apagar tudo',
+    });
+    if (!ok) { Fin.ui.toast('Nada foi apagado.'); return; }
     Fin.drive.desconectar();
     Fin.storage.clearAll(); // inclui o acesso (usuário/senha) deste aparelho
     location.reload(); // volta para "Criar acesso"
@@ -659,7 +768,7 @@ Fin.pages.dados = (() => {
         if (act === 'backup') onBackup();
         if (act === 'compartilhar') onCompartilhar();
         if (act === 'save') onSave();
-        if (act === 'reimport') { state.mode = 'upload'; draw(); }
+        if (act === 'reimport') confirmarReimportar();
         if (act === 'cancel') { state.mode = null; state.sheets = []; draw(); }
         if (act === 'restore-ok') confirmarRestauracao();
         if (act === 'restore-cancel') { Object.assign(state, { mode: null, restore: null }); draw(); }
