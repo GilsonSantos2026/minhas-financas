@@ -22,6 +22,7 @@ Fin.ui = (() => {
   const onKey = (e) => e.key === 'Escape' && closeModal();
 
   function openModal(innerHTML, label = 'Janela') {
+    limparArraste();
     lastFocus = document.activeElement;
     const root = document.getElementById('modal-root');
     root.innerHTML = `
@@ -35,11 +36,138 @@ Fin.ui = (() => {
     document.addEventListener('keydown', onKey);
     document.body.classList.add('overflow-hidden');
     const panel = root.querySelector('.modal-panel');
-    setTimeout(() => panel.querySelector('input, select, textarea, button')?.focus(), 30);
+    arrastavel(root, panel);
+    setTimeout(() => panel.querySelector('input, select, textarea, button:not([data-centralizar])')?.focus(), 30);
     return panel;
   }
 
+  /* ---------- Janela que se move (formulários com cabeçalho [data-arrastar]) ----------
+   * No computador (≥ 640 px) o cabeçalho vira alça: arrastar solta a janela, o fundo
+   * deixa de escurecer e fica só para consulta (dá para rolar, selecionar e copiar texto;
+   * cliques que abririam outra coisa são bloqueados para não perder o que está sendo
+   * digitado). A próxima janela abre na mesma posição até "Voltar ao centro". */
+
+  let ultimaPos = null;          // posição guardada durante o uso (some ao recarregar)
+  let limparArraste = () => {};
+
+  function arrastavel(root, panel) {
+    const alca = panel.querySelector('[data-arrastar]');
+    if (!alca) return;
+    const fundo = root.querySelector('[data-backdrop]');
+    const computador = () => matchMedia('(min-width: 640px)').matches;
+    const titulo = alca.querySelector('h2, h3');
+
+    alca.classList.add('modal-alca');
+    alca.title = 'Arraste para mover a janela';
+    titulo?.insertAdjacentHTML('beforebegin',
+      `<span class="modal-grip" aria-hidden="true"><svg viewBox="0 0 10 16" width="10" height="16" fill="currentColor">
+        <circle cx="2" cy="2" r="1.4"/><circle cx="8" cy="2" r="1.4"/><circle cx="2" cy="8" r="1.4"/>
+        <circle cx="8" cy="8" r="1.4"/><circle cx="2" cy="14" r="1.4"/><circle cx="8" cy="14" r="1.4"/></svg></span>`);
+    const fechar = alca.querySelector('[data-close]');
+    fechar?.insertAdjacentHTML('beforebegin',
+      `<button type="button" data-centralizar class="icon-btn modal-centro" hidden
+         aria-label="Voltar a janela ao centro" title="Voltar ao centro">${Fin.icone ? Fin.icone('alvo', 'w-4 h-4') : '◎'}</button>`);
+    const btnCentro = alca.querySelector('[data-centralizar]');
+    if (fechar && btnCentro) fechar.parentElement.insertBefore(btnCentro, fechar);
+    // Título + botões juntos à direita do grip
+    if (titulo && !titulo.classList.contains('flex-1')) titulo.classList.add('flex-1');
+
+    let solta = false, pos = null, inicio = null, avisou = false;
+
+    const ajustar = () => {
+      if (!solta) return;
+      // A janela inteira fica dentro da área visível (altura máxima = tela − 16 px no CSS).
+      const m = 8;
+      pos.x = Math.max(m, Math.min(pos.x, innerWidth - panel.offsetWidth - m));
+      pos.y = Math.max(m, Math.min(pos.y, innerHeight - panel.offsetHeight - m));
+      panel.style.left = `${Math.round(pos.x)}px`;
+      panel.style.top = `${Math.round(pos.y)}px`;
+      ultimaPos = { ...pos };
+    };
+
+    // Com a janela solta, o fundo serve só para consulta.
+    const bloquearFundo = (e) => {
+      if (panel.contains(e.target) || e.target.closest?.('#toast')) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (!avisou) {
+        avisou = true;
+        toast('Com a janela aberta, a tela de fundo é só para consulta: dá para rolar, selecionar e copiar.');
+      }
+    };
+
+    const soltar = (x, y) => {
+      if (solta) return;
+      const r = panel.getBoundingClientRect();
+      solta = true;
+      pos = { x: x ?? r.left, y: y ?? r.top };
+      panel.style.width = `${r.width}px`;
+      panel.classList.add('modal-solta');
+      fundo.classList.add('modal-fundo-livre');
+      document.body.classList.remove('overflow-hidden');
+      document.addEventListener('click', bloquearFundo, true);
+      btnCentro.hidden = false;
+      ajustar();
+    };
+
+    const centralizar = () => {
+      if (!solta) return;
+      solta = false;
+      ultimaPos = null;
+      panel.classList.remove('modal-solta');
+      panel.style.left = panel.style.top = panel.style.width = '';
+      fundo.classList.remove('modal-fundo-livre');
+      document.body.classList.add('overflow-hidden');
+      document.removeEventListener('click', bloquearFundo, true);
+      btnCentro.hidden = true;
+    };
+
+    alca.addEventListener('pointerdown', (e) => {
+      if (!computador() || e.button !== 0 || e.target.closest('button, a, input, select, textarea, label')) return;
+      const r = panel.getBoundingClientRect();
+      inicio = { px: e.clientX, py: e.clientY, x: solta ? pos.x : r.left, y: solta ? pos.y : r.top, moveu: false };
+      alca.setPointerCapture(e.pointerId);
+      e.preventDefault();               // não seleciona o título ao arrastar
+    });
+    alca.addEventListener('pointermove', (e) => {
+      if (!inicio) return;
+      const dx = e.clientX - inicio.px, dy = e.clientY - inicio.py;
+      if (!inicio.moveu && Math.hypot(dx, dy) < 4) return;
+      inicio.moveu = true;
+      if (!solta) soltar(inicio.x, inicio.y);
+      alca.classList.add('arrastando');
+      pos.x = inicio.x + dx;
+      pos.y = inicio.y + dy;
+      ajustar();
+    });
+    const parar = () => { inicio = null; alca.classList.remove('arrastando'); };
+    alca.addEventListener('pointerup', parar);
+    alca.addEventListener('pointercancel', parar);
+    alca.addEventListener('dblclick', (e) => { if (!e.target.closest('button')) centralizar(); });
+    btnCentro.addEventListener('click', centralizar);
+
+    const aoRedimensionar = () => {
+      if (!solta) return;
+      if (!computador()) centralizar(); else ajustar();
+    };
+    addEventListener('resize', aoRedimensionar);
+    // O formulário cresce (ex.: abrir "Recorrente") → reencaixa na tela.
+    const ro = window.ResizeObserver ? new ResizeObserver(() => ajustar()) : null;
+    ro?.observe(panel);
+
+    limparArraste = () => {
+      document.removeEventListener('click', bloquearFundo, true);
+      removeEventListener('resize', aoRedimensionar);
+      ro?.disconnect();
+      limparArraste = () => {};
+    };
+
+    // Reabre onde a última janela ficou.
+    if (ultimaPos && computador()) soltar(ultimaPos.x, ultimaPos.y);
+  }
+
   function closeModal() {
+    limparArraste();
     document.getElementById('modal-root').innerHTML = '';
     document.removeEventListener('keydown', onKey);
     document.body.classList.remove('overflow-hidden');

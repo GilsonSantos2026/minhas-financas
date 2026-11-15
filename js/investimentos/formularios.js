@@ -34,7 +34,7 @@ Fin.forms.inv = (() => {
   function modal(titulo, corpo, { excluir = false, salvar = 'Salvar' } = {}) {
     const panel = Fin.ui.openModal(`
       <form novalidate class="inv-form">
-        <div class="flex items-center justify-between px-5 pt-5 pb-3 border-b border-slate-100 sticky top-0 bg-white z-10">
+        <div data-arrastar class="flex items-center justify-between gap-2 px-5 pt-5 pb-3 border-b border-slate-100 sticky top-0 bg-white z-10">
           <h2 class="font-semibold text-lg">${titulo}</h2>
           <button type="button" data-close class="icon-btn" aria-label="Fechar">✕</button>
         </div>

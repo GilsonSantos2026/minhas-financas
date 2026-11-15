@@ -201,3 +201,16 @@ details > summary { list-style: none; cursor: pointer; }
 details > summary::-webkit-details-marker { display: none; }
 details[open] .chev { transform: rotate(90deg); }
 .chev { display: inline-block; transition: transform 0.15s; }
+
+/* Janela móvel (formulários com [data-arrastar]) — só no computador */
+.modal-grip { display: none; color: #cbd5e1; flex: none; }
+.modal-centro[hidden] { display: none !important; }
+@media (min-width: 640px) {
+  .modal-alca { cursor: grab; user-select: none; -webkit-user-select: none; touch-action: none; }
+  .modal-alca.arrastando { cursor: grabbing; }
+  .modal-alca:hover .modal-grip { color: #64748b; }
+  .modal-grip { display: inline-flex; }
+  .modal-panel.modal-solta { position: fixed; margin: 0; max-height: calc(100vh - 16px); box-shadow: 0 20px 50px -12px rgba(15, 23, 42, 0.45), 0 0 0 1px rgba(15, 23, 42, 0.08); }
+  .modal-fundo-livre { background: transparent !important; pointer-events: none; }
+  .modal-fundo-livre > .modal-panel { pointer-events: auto; }
+}
