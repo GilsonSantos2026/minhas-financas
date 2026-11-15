@@ -95,6 +95,27 @@ Fin.ui = (() => {
     return `<div class="text-[11px] text-slate-500 tabular-nums">${rec ? 'recebido' : 'pago'} ${fmt.brl(c.pago)}${data}${dif}</div>`;
   }
 
+  /**
+   * Alerta de rotativo: fatura de cartão paga a menos. p = Fin.finance.faturaParcial(l);
+   * hist = Fin.finance.rotativo(...) (opcional, para mostrar a frequência).
+   */
+  function alertaRotativo(p, hist = null, { compacto = false } = {}) {
+    const vezes = hist ? hist.parciais.length : 0;
+    const custo = hist ? hist.encargos + hist.pagoAMais : 0;
+    const freq = hist && (vezes > 1 || custo > 0) ? `
+      <p class="text-xs bg-white/70 rounded-lg px-2 py-1.5">
+        Nos últimos ${hist.meses} meses: <b>${vezes} fatura${vezes === 1 ? '' : 's'} paga${vezes === 1 ? '' : 's'} a menos</b>${custo > 0 ? ` · <b>${fmt.brl(custo)}</b> em juros, IOF e multa já identificados` : ''}.
+        ${vezes >= 3 ? 'Virou hábito — e é o que mais pesa no orçamento.' : ''}</p>` : '';
+    const dica = compacto ? '' : `
+      <p class="text-xs text-rose-900/80">Se não der para pagar tudo, compare antes: o <b>parcelamento da fatura</b> oferecido pelo banco costuma ter juros menores que o rotativo. E segure novas compras no cartão até zerar o saldo.</p>`;
+    return `
+      <div class="rounded-xl bg-rose-50 text-rose-900 border border-rose-200 px-3 py-2.5 text-sm space-y-1.5" role="note">
+        <p class="font-semibold"><span aria-hidden="true">⚠️</span> Fatura paga a menos: ${fmt.brl(p.falta)} vão para o rotativo</p>
+        <p class="text-xs">O que falta volta na próxima fatura com <b>juros, IOF e multa</b>. O rotativo é um dos créditos mais caros do mercado (costuma passar de 10% ao mês): só no próximo mês, pode custar <b>mais de ${fmt.brl(p.custoMes)}</b> — e os juros crescem sobre os juros.</p>
+        ${freq}${dica}
+      </div>`;
+  }
+
   /** Bolinha com o emoji da categoria (ou a inicial). */
   function catIcon(icone, nome, tipo) {
     const bg = tipo === 'receita' ? 'bg-emerald-50' : 'bg-slate-100';
@@ -112,5 +133,5 @@ Fin.ui = (() => {
       </div>`;
   }
 
-  return { toast, openModal, closeModal, monthNav, statusPill, pagamentoLinha, catIcon, emptyState };
+  return { toast, openModal, closeModal, monthNav, statusPill, pagamentoLinha, alertaRotativo, catIcon, emptyState };
 })();

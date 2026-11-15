@@ -83,6 +83,27 @@ Fin.avisos = (() => {
         });
       }
 
+      // Rotativo do cartão: fatura paga a menos neste mês ou no anterior; e frequência em 12 meses.
+      const rot = F.rotativo(null, ym);
+      const recentes = rot.parciais.filter((p) => p.competencia >= fmt.addMonths(ym, -1));
+      for (const p of recentes) {
+        out.push({
+          id: `rotativo:${p.l.id}`, nivel: 'critico', grupo: 'cartao', icone: '⚠️',
+          titulo: `Fatura paga a menos: ${p.l.descricao || p.cartao || 'cartão'}`,
+          sub: `${fmt.brl(p.falta)} foram para o rotativo (juros de mais de 10% ao mês)`,
+          acao: { edit: p.l.id },
+        });
+      }
+      if (rot.parciais.length >= 3) {
+        const custo = rot.encargos + rot.pagoAMais;
+        out.push({
+          id: `rotativo-freq:${ym}:${rot.parciais.length}`, nivel: 'atencao', grupo: 'cartao', icone: '💳',
+          titulo: `Rotativo em ${rot.parciais.length} dos últimos 12 meses`,
+          sub: custo > 0 ? `${fmt.brl(custo)} em juros, IOF e multa identificados` : 'pagar a fatura inteira evita os juros mais caros',
+          acao: { href: '#/cartoes', rotulo: 'Ver cartões' },
+        });
+      }
+
       const b = Fin.storage.situacaoBackup();
       if (b.lembrar) {
         out.push({
@@ -154,6 +175,7 @@ Fin.avisos = (() => {
   const GRUPOS = [
     ['contas', 'Contas a pagar'],
     ['receitas', 'Receitas não recebidas'],
+    ['cartao', 'Cartão de crédito'],
     ['orcamento', 'Orçamento'],
     ['app', 'App'],
   ];

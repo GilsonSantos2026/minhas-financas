@@ -165,33 +165,43 @@ Fin.charts = (() => {
 
   /**
    * Linha (uma série) — ex.: saldo acumulado. Aceita valores negativos (linha do zero marcada).
-   * @param data [{ ym, valor }]   opts { color, label, nome }
+   * @param data [{ ym, valor, extra? }]
+   * @param opts { color, label, nome,
+   *               escala: { min, max, passo } (eixo fixo, ex.: índice 0–100),
+   *               formato: (v) => texto (padrão R$; quando informado, não é valor em dinheiro),
+   *               faixas: [{ de, ate, cor }] (fundo colorido por faixa) }
    */
   function line(el, data, opts = {}) {
     const W = Math.max(240, el.clientWidth);
     const H = 200;
-    const m = { t: 14, r: 18, b: 26, l: 52 };
+    const m = { t: 14, r: 18, b: 26, l: opts.escala ? 34 : 52 };
     const iw = W - m.l - m.r;
     const ih = H - m.t - m.b;
     const cor = opts.color || SERIES.receitas;
     const vals = data.map((d) => d.valor);
+    const dinheiro = !opts.formato;
+    const rotulo = opts.formato || fmt.brl;
+    const vlr = dinheiro ? 'class="vlr"' : '';
     // Eixo sempre inclui o zero, em degraus "redondos" (ex.: 5 mil), alinhados ao zero.
     const maxV = Math.max(0, ...vals);
     const minV = Math.min(0, ...vals);
-    const passo = niceMax((maxV - minV) / 4 || 1);
-    const top = Math.ceil(maxV / passo) * passo || passo;
-    const bot = Math.floor(minV / passo) * passo;
+    const passo = opts.escala?.passo || niceMax((maxV - minV) / 4 || 1);
+    const top = opts.escala ? opts.escala.max : Math.ceil(maxV / passo) * passo || passo;
+    const bot = opts.escala ? opts.escala.min : Math.floor(minV / passo) * passo;
     const nTicks = Math.round((top - bot) / passo);
     const y = (v) => m.t + ((top - v) / (top - bot || 1)) * ih;
     const x = (i) => m.l + (data.length === 1 ? iw / 2 : (i * iw) / (data.length - 1));
 
     let svg = `<svg width="${W}" height="${H}" role="img" aria-label="${fmt.esc(opts.label || 'Gráfico de linha')}" style="display:block">`;
+    for (const f of opts.faixas || []) {
+      svg += `<rect x="${m.l}" y="${y(f.ate)}" width="${iw}" height="${Math.max(0, y(f.de) - y(f.ate))}" fill="${f.cor}" opacity="0.09"/>`;
+    }
     for (let k = 0; k <= nTicks; k++) {
       const v = bot + passo * k;
       const yy = Math.round(y(v)) + 0.5;
       const zero = Math.abs(v) < 1e-9;
       svg += `<line x1="${m.l}" x2="${W - m.r}" y1="${yy}" y2="${yy}" stroke="${zero ? C.axis : C.grid}" stroke-width="1"/>`;
-      svg += `<text x="${m.l - 8}" y="${yy + 4}" text-anchor="end" font-size="11" fill="${C.muted}" class="vlr" style="font-variant-numeric:tabular-nums">${fmt.compact(v)}</text>`;
+      svg += `<text x="${m.l - 8}" y="${yy + 4}" text-anchor="end" font-size="11" fill="${C.muted}" ${vlr} style="font-variant-numeric:tabular-nums">${dinheiro ? fmt.compact(v) : rotulo(v)}</text>`;
     }
     const passoX = Math.max(1, Math.ceil(data.length / Math.max(1, Math.floor(iw / 42))));
     data.forEach((d, i) => {
@@ -202,7 +212,8 @@ Fin.charts = (() => {
     });
     const pts = data.map((d, i) => `${x(i).toFixed(1)},${y(d.valor).toFixed(1)}`);
     if (data.length > 1) {
-      svg += `<path d="M${x(0)},${y(0)}L${pts.join('L')}L${x(data.length - 1)},${y(0)}Z" fill="${cor}" opacity="0.1"/>`;
+      if (!opts.faixas) svg += `<path d="M${x(0)},${y(0)}L${pts.join('L')}L${x(data.length - 1)},${y(0)}Z" fill="${cor}" opacity="0.1"/>`;
+      if (opts.pontos) data.forEach((d, i) => { svg += `<circle cx="${x(i)}" cy="${y(d.valor)}" r="3" fill="${d.cor || cor}" stroke="#fff" stroke-width="1.5"/>`; });
       svg += `<path d="M${pts.join('L')}" fill="none" stroke="${cor}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
     }
     // ponto final com anel na cor da superfície + valor (único rótulo direto)
@@ -211,7 +222,7 @@ Fin.charts = (() => {
     const uy = y(ult.valor);
     svg += `<circle cx="${ux}" cy="${uy}" r="5" fill="${cor}" stroke="#fff" stroke-width="2"/>`;
     // rótulo com "halo" branco para não se misturar com a linha
-    svg += `<text x="${Math.min(ux, W - 4)}" y="${uy - 10}" text-anchor="end" font-size="12" font-weight="600" fill="${C.ink}" stroke="#fff" stroke-width="3" paint-order="stroke">${fmt.brl(ult.valor)}</text>`;
+    svg += `<text x="${Math.min(ux, W - 4)}" y="${uy < m.t + 16 ? uy + 20 : uy - 10}" text-anchor="end" font-size="12" font-weight="600" fill="${C.ink}" stroke="#fff" stroke-width="3" paint-order="stroke" ${vlr}>${rotulo(ult.valor)}</text>`;
     // camada de interação
     svg += `<line class="cross" x1="0" x2="0" y1="${m.t}" y2="${m.t + ih}" stroke="${C.axis}" stroke-width="1" visibility="hidden"/>`;
     svg += `<circle class="crossdot" r="5" fill="${cor}" stroke="#fff" stroke-width="2" visibility="hidden"/>`;
@@ -233,7 +244,7 @@ Fin.charts = (() => {
       cross.setAttribute('x1', x(i)); cross.setAttribute('x2', x(i)); cross.setAttribute('visibility', 'visible');
       dot.setAttribute('cx', x(i)); dot.setAttribute('cy', y(d.valor)); dot.setAttribute('visibility', 'visible');
       tip.innerHTML = `<div class="font-semibold mb-1">${fmt.monthLong(d.ym)}</div>
-        <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full" style="background:${cor}"></span>${fmt.esc(opts.nome || 'Valor')}<span class="ml-auto pl-3 tabular-nums">${fmt.brl(d.valor)}</span></div>
+        <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full" style="background:${d.cor || cor}"></span>${fmt.esc(opts.nome || 'Valor')}<span class="ml-auto pl-3 tabular-nums">${rotulo(d.valor)}</span></div>
         ${d.extra ? `<div class="text-slate-500 mt-0.5">${d.extra}</div>` : ''}`;
       tip.classList.remove('hidden');
       const tw = tip.offsetWidth;

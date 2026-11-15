@@ -131,6 +131,7 @@ Fin.forms.lancamento = (() => {
                 <button type="button" data-usar-lancado class="text-xs font-semibold text-emerald-700 hover:underline">Usar o valor lançado</button>
                 <span id="pg-diff" class="text-xs ml-auto"></span>
               </div>
+              <div id="pg-rotativo"></div>
             </div>
             <label class="field"><span>Forma de pagamento</span>
               <input name="formaPagamento" class="input" list="formas-list" value="${esc(v.formaPagamento)}" placeholder="PIX, Boleto, Débito…" />
@@ -181,6 +182,13 @@ Fin.forms.lancamento = (() => {
       sit.innerHTML = '';
       diff.innerHTML = '';
 
+      // Fatura de cartão paga a menos → alerta de rotativo (juros altos).
+      const ehFatura = !rec && F.isPagamentoFatura({ tipo: 'despesa', categoria: el('categoria').value });
+      const parcialFatura = ehFatura && st !== 'aberto' && lancado > 0 && pago > 0
+        ? F.faturaParcial({ tipo: 'despesa', categoria: el('categoria').value, status: st, valorPrevisto: lancado, valorPago: pago })
+        : null;
+      form.querySelector('#pg-rotativo').innerHTML = parcialFatura ? Fin.ui.alertaRotativo(parcialFatura, F.rotativo()) : '';
+
       if (st === 'aberto') {
         if (venc) {
           const d = dias(hoje, venc);
@@ -205,7 +213,9 @@ Fin.forms.lancamento = (() => {
       } else if (dif > 0) {
         diff.innerHTML = `<span class="text-amber-800">＋${fmt.brl(dif)} ${rec ? 'a mais' : 'a mais (juros/multa)'}</span>`;
       } else {
-        diff.innerHTML = `<span class="text-emerald-800">−${fmt.brl(-dif)} ${rec ? 'a menos' : '(desconto)'}</span>`;
+        diff.innerHTML = ehFatura
+          ? `<span class="text-rose-700 font-medium">−${fmt.brl(-dif)} a menos (rotativo)</span>`
+          : `<span class="text-emerald-800">−${fmt.brl(-dif)} ${rec ? 'a menos' : '(desconto)'}</span>`;
       }
     };
 
@@ -301,7 +311,7 @@ Fin.forms.lancamento = (() => {
       if (['recorrente', 'repeticao', 'ateModo', 'ate', 'vezes', 'vencimento', 'competencia'].includes(n)) setTimeout(syncRepeticao);
       if (n === 'tipo') { el('categoria').innerHTML = categoriaOptions(e.target.value, el('categoria').value); atualizarPagamento(); }
       if (n === 'status') syncPago();
-      if (n === 'vencimento' || n === 'dataPagamento') atualizarPagamento();
+      if (n === 'vencimento' || n === 'dataPagamento' || n === 'categoria') atualizarPagamento();
       if (n === 'competencia') competenciaTocada = true;
       if (n === 'vencimento' && !competenciaTocada && e.target.value) el('competencia').value = e.target.value.slice(0, 7);
       if (n === 'categoria' && e.target.value === NOVA) novaCategoria(el('categoria'), form.querySelector('input[name="tipo"]:checked').value);
@@ -391,8 +401,10 @@ Fin.forms.lancamento = (() => {
         msg = 'Lançamento criado.';
       }
 
+      const rot = F.faturaParcial(dados);
       Fin.ui.closeModal();
-      Fin.ui.toast(msg);
+      if (rot) Fin.ui.toast(`${msg} ⚠️ ${fmt.brl(rot.falta)} ficam no rotativo do cartão.`, 'erro');
+      else Fin.ui.toast(msg);
       if (!l && dados.competencia !== Fin.state.mes) Fin.state.mes = dados.competencia;
       Fin.router.refresh();
     });

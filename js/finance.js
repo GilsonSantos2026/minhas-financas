@@ -524,6 +524,57 @@ Fin.finance = (() => {
   }
 
   /** Faturas do mês: compras do cartão × pagamento lançado × pago. */
+  /* ================= Rotativo do cartão: fatura paga a menos ================= */
+
+  /** Taxa usada só para dar ideia do custo (o rotativo costuma passar de 10% ao mês). */
+  const TAXA_ROTATIVO_REF = 0.10;
+  /** Itens de fatura que são custo de atraso/rotativo (lidos da descrição das compras). */
+  const RE_ENCARGO = /\b(juros|encargos?|iof|multa|mora|rotativ\w*)\b/;
+
+  /** Pagamento de fatura feito a menos que o lançado → { devido, pago, falta, custoMes } ou null. */
+  function faturaParcial(l) {
+    if (!l || !isPagamentoFatura(l)) return null;
+    const st = statusEfetivo(l);
+    if (st !== 'parcial' && st !== 'pago') return null;
+    const devido = l.valorPrevisto || 0;
+    const pago = l.valorPago || 0;
+    if (!pago || pago >= devido - 0.01) return null;
+    const falta = Math.round((devido - pago) * 100) / 100;
+    return { devido, pago, falta, custoMes: Math.round(falta * TAXA_ROTATIVO_REF * 100) / 100 };
+  }
+
+  /**
+   * Histórico de faturas pagas a menos nos últimos n meses até ym (nome = um cartão ou todos):
+   * { parciais[{ l, competencia, cartao, devido, pago, falta }], totalFalta,
+   *   encargos (soma dos itens de juros/IOF/multa nas faturas), itensEncargo[], pagoAMais (pago > lançado) }.
+   */
+  function rotativo(nome = null, ym = fmt.currentYM(), n = 12) {
+    const ini = fmt.addMonths(ym, -(n - 1));
+    const cfgs = nome ? [cartao(nome)].filter(Boolean) : cartoes();
+    const doCartao = (l) => cfgs.find((c) => c.palavraChave && ` ${N(l.descricao)} `.includes(` ${N(c.palavraChave)} `))?.nome || null;
+    const parciais = [];
+    let pagoAMais = 0;
+    for (const l of lancamentos()) {
+      const comp = competencia(l);
+      if (!isPagamentoFatura(l) || comp < ini || comp > ym) continue;
+      const cart = doCartao(l);
+      if (nome && cart !== nome) continue;
+      const p = faturaParcial(l);
+      if (p) parciais.push({ l, competencia: comp, cartao: cart, ...p });
+      else if (statusEfetivo(l) === 'pago' && l.valorPago > (l.valorPrevisto || 0) + 0.01) pagoAMais += l.valorPago - l.valorPrevisto;
+    }
+    parciais.sort((a, b) => b.competencia.localeCompare(a.competencia));
+    const itensEncargo = compras().filter((c) => (!nome || c.cartao === nome) && c.fatura >= ini && c.fatura <= ym
+      && (c.valor || 0) > 0 && RE_ENCARGO.test(N(c.descricao)));
+    return {
+      meses: n, parciais,
+      totalFalta: soma(parciais, (p) => p.falta),
+      encargos: soma(itensEncargo),
+      itensEncargo,
+      pagoAMais: Math.round(pagoAMais * 100) / 100,
+    };
+  }
+
   function conciliacaoFaturas(ym) {
     return cartoes().map((cfg) => {
       const compras = soma(comprasDaFatura(cfg.nome, ym));
@@ -544,5 +595,6 @@ Fin.finance = (() => {
     porCategoria, porCategoriaDetalhada, historico, contasAbertas, faturas, mesInicial, categorias, formasPagamento, togglePago,
     isPagamentoFatura, faturaDaCompra, vencimentoFatura, inferirConfig, cartoes, cartao, comprasDaFatura, soma,
     pagamentoDaFatura, limiteUsado, faturaPorCategoria, sincronizarPagamento, criarCompra,
+    faturaParcial, rotativo, TAXA_ROTATIVO_REF,
   };
 })();

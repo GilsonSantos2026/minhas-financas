@@ -37,7 +37,9 @@ Fin.pages.cartoes = (() => {
     return `
       <div class="bg-slate-50 rounded-xl px-3 py-2.5 text-sm space-y-2">
         <div class="flex items-center gap-3" data-edit="${pag.id}" role="button" tabindex="0" aria-label="Abrir lançamento de pagamento">
-          <span class="flex-1 min-w-0">Pagamento: <b class="tabular-nums">${fmt.brl(valorPag)}</b>
+          <span class="flex-1 min-w-0">Pagamento: ${F.faturaParcial(pag)
+            ? `pagou <b class="tabular-nums text-rose-700">${fmt.brl(pag.valorPago)}</b> de <b class="tabular-nums">${fmt.brl(pag.valorPrevisto)}</b>`
+            : `<b class="tabular-nums">${fmt.brl(valorPag)}</b>`}
             <span class="text-slate-500 truncate">· ${esc(pag.descricao)}</span></span>
           ${Fin.ui.statusPill(pag)}
         </div>
@@ -46,7 +48,53 @@ Fin.pages.cartoes = (() => {
             <span class="flex-1 min-w-[12rem]">Compras somam ${fmt.brl(total)} (${diff > 0 ? '+' : '−'}${fmt.brl(Math.abs(diff))} em relação ao lançamento).</span>
             ${podeAtualizar ? `<button data-act="sync" class="text-emerald-700 font-semibold hover:underline">Atualizar para ${fmt.brl(total)}</button>` : ''}
           </div>` : ''}
-      </div>`;
+      </div>
+      ${F.faturaParcial(pag) ? Fin.ui.alertaRotativo(F.faturaParcial(pag)) : ''}`;
+  }
+
+  /**
+   * Histórico do rotativo do cartão (12 meses até o mês atual): quantas faturas foram pagas a
+   * menos e quanto já saiu em juros/IOF/multa. Sem nenhuma, um reforço positivo.
+   */
+  function rotativoHTML(cfg) {
+    const h = F.rotativo(cfg.nome, fmt.currentYM());
+    const custo = Math.round((h.encargos + h.pagoAMais) * 100) / 100;
+    const vezes = h.parciais.length;
+    if (!vezes && !custo) {
+      const pagos = F.lancamentos().filter((l) => F.isPagamentoFatura(l) && F.statusEfetivo(l) === 'pago'
+        && F.pagamentoDaFatura(cfg, F.competencia(l))?.id === l.id).length;
+      return pagos >= 3 ? `<p class="text-xs text-emerald-800 bg-emerald-50 rounded-xl px-3 py-2"><span aria-hidden="true">✓</span> Fatura paga inteira nos últimos 12 meses — sem juros de rotativo.</p>` : '';
+    }
+    const critico = vezes >= 3;
+    const linhas = h.parciais.map((p) => `
+      <li class="flex items-center gap-2 py-1.5" data-edit="${p.l.id}" role="button" tabindex="0">
+        <span class="w-16 shrink-0 text-slate-500">${fmt.monthShort(p.competencia)}</span>
+        <span class="flex-1 min-w-0 truncate">pagou ${fmt.brl(p.pago)} de ${fmt.brl(p.devido)}</span>
+        <span class="shrink-0 font-medium text-rose-700 tabular-nums">−${fmt.brl(p.falta)}</span>
+      </li>`).join('');
+    const encargos = h.itensEncargo.slice().sort((a, b) => b.fatura.localeCompare(a.fatura)).map((c) => `
+      <li class="flex items-center gap-2 py-1.5">
+        <span class="w-16 shrink-0 text-slate-500">${fmt.monthShort(c.fatura)}</span>
+        <span class="flex-1 min-w-0 truncate">${esc(c.descricao)}</span>
+        <span class="shrink-0 font-medium tabular-nums">${fmt.brl(c.valor)}</span>
+      </li>`).join('');
+    return `
+      <details class="rounded-xl ${critico ? 'bg-rose-50 text-rose-900' : 'bg-amber-50 text-amber-900'} px-3 py-2.5 text-sm">
+        <summary class="flex items-start gap-2">
+          <span aria-hidden="true">${critico ? '!' : '◐'}</span>
+          <span class="flex-1">
+            <b>Rotativo nos últimos 12 meses:</b> ${vezes} fatura${vezes === 1 ? '' : 's'} paga${vezes === 1 ? '' : 's'} a menos${vezes ? ` (${fmt.brl(h.totalFalta)} ficaram para trás)` : ''}${custo ? ` · <b>${fmt.brl(custo)}</b> em juros, IOF e multa` : ''}.
+            ${critico ? '<span class="block text-xs mt-0.5">Está virando hábito: esses juros são o gasto mais caro do orçamento.</span>' : ''}
+          </span>
+          <span class="chev text-xs mt-0.5" aria-hidden="true">▸</span>
+        </summary>
+        <div class="mt-2 space-y-2 text-xs">
+          ${linhas ? `<div><div class="font-semibold mb-0.5">Faturas pagas a menos</div><ul class="divide-y divide-black/5">${linhas}</ul></div>` : ''}
+          ${encargos ? `<div><div class="font-semibold mb-0.5">Juros, IOF e multa cobrados nas faturas</div><ul class="divide-y divide-black/5">${encargos}</ul></div>` : ''}
+          ${h.pagoAMais ? `<p>Pago acima do lançado (juros/multa por atraso): <b>${fmt.brl(h.pagoAMais)}</b>.</p>` : ''}
+          <p class="opacity-80">Juros e encargos são lidos das compras da fatura com “juros”, “encargos”, “IOF”, “multa”, “mora” ou “rotativo” na descrição.</p>
+        </div>
+      </details>`;
   }
 
   function limiteHTML(cfg) {
@@ -135,6 +183,7 @@ Fin.pages.cartoes = (() => {
             </div>
             ${!cfg.diaFechamento || !cfg.diaVencimento ? `<p class="text-sm bg-amber-50 rounded-xl px-3 py-2"><span aria-hidden="true">!</span> Configure os dias de fechamento e vencimento para o app calcular as faturas. <button data-act="config" class="text-emerald-700 font-semibold hover:underline">Configurar</button></p>` : ''}
             ${pagamentoHTML(cfg, ym, total)}
+            ${rotativoHTML(cfg)}
             ${limiteHTML(cfg)}
             <div class="flex flex-col sm:flex-row gap-2">
               <button data-act="nova-compra" class="btn btn-primary">＋ Nova compra</button>
