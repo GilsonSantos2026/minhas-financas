@@ -21,8 +21,35 @@ Fin.avisos = (() => {
   const diasEntre = (a, b) => Math.round((new Date(`${b}T12:00`) - new Date(`${a}T12:00`)) / 86400000);
   const quando = (dias) => (dias === 0 ? 'vence hoje' : dias === 1 ? 'vence amanhã' : `vence em ${dias} dias`);
 
-  /** Lista de avisos: { id, nivel ('critico'|'atencao'|'info'), grupo, icone, titulo, sub, valor, acao }. */
+  /* ---------------- Dispensados ("já estou ciente") ---------------- */
+
+  const dispensados = () => new Set(Fin.storage.prefs().avisosDispensados || []);
+  const gravarDispensados = (ids) => { try { Fin.storage.setPref('avisosDispensados', [...ids]); } catch { /* bloqueado */ } };
+
+  /**
+   * Avisos visíveis = todos menos os dispensados. A dispensa vale para aquela mensagem enquanto
+   * a situação durar: quando o aviso deixa de existir (conta paga, Drive reconectado…), a dispensa
+   * é esquecida — se a situação voltar a ocorrer, o aviso aparece normalmente.
+   */
   function lista() {
+    const todos = gerar();
+    let disp = dispensados();
+    if (disp.size && !Fin.storage.bloqueado()) {
+      const ativos = new Set(todos.map((a) => a.id));
+      const manter = [...disp].filter((id) => ativos.has(id));
+      if (manter.length !== disp.size) { gravarDispensados(manter); disp = new Set(manter); }
+    }
+    return todos.filter((a) => !disp.has(a.id));
+  }
+
+  /** Quantos avisos existem agora mas estão dispensados. */
+  function qtdDispensados() {
+    const disp = dispensados();
+    return disp.size ? gerar().filter((a) => disp.has(a.id)).length : 0;
+  }
+
+  /** Todos os avisos: { id, nivel ('critico'|'atencao'|'info'), grupo, icone, titulo, sub, valor, acao }. */
+  function gerar() {
     const out = [];
     const desbloqueado = !Fin.storage.bloqueado();
 
@@ -186,15 +213,21 @@ Fin.avisos = (() => {
     else if (a.acao.drive) botao = '<button data-drive="reconectar" data-fechar class="btn btn-ghost !py-1.5 !px-3 text-xs shrink-0">Reconectar</button>';
     else if (a.acao.atualizar) botao = '<button data-atualizar-agora class="btn btn-primary !py-1.5 !px-3 text-xs shrink-0">Atualizar</button>';
     const clicavel = a.acao.edit ? `data-edit="${esc(a.acao.edit)}" role="button" tabindex="0"` : '';
+    // A caixinha fica FORA da área clicável (tocar nela não abre o lançamento).
     return `
-      <li class="flex items-center gap-3 py-2.5 px-2 -mx-2 rounded-xl ${a.acao.edit ? 'hover:bg-slate-50 cursor-pointer' : ''}" ${clicavel}>
-        <span class="w-9 h-9 shrink-0 rounded-full grid place-items-center text-base font-bold ${COR[a.nivel]}" aria-hidden="true">${esc(a.icone)}</span>
-        <div class="flex-1 min-w-0">
-          <div class="text-sm font-medium truncate">${novo ? '<span class="inline-block w-2 h-2 rounded-full bg-rose-500 mr-1.5 align-middle" title="Novo"></span><span class="sr-only">Novo: </span>' : ''}${esc(a.titulo)}</div>
-          <div class="text-xs ${a.nivel === 'critico' ? 'text-rose-700' : 'text-slate-500'}">${esc(a.sub)}</div>
+      <li class="flex items-center gap-1 py-1.5 -mx-2">
+        <label class="shrink-0 p-2 cursor-pointer" title="Selecionar para dispensar">
+          <input type="checkbox" data-dispensar="${esc(a.id)}" class="accent-emerald-600 w-4 h-4 block" aria-label="Selecionar “${esc(a.titulo)}” para dispensar">
+        </label>
+        <div class="flex-1 min-w-0 flex items-center gap-3 py-1 pr-2 rounded-xl ${a.acao.edit ? 'hover:bg-slate-50 cursor-pointer' : ''}" ${clicavel}>
+          <span class="w-9 h-9 shrink-0 rounded-full grid place-items-center text-base font-bold ${COR[a.nivel]}" aria-hidden="true">${esc(a.icone)}</span>
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-medium truncate">${novo ? '<span class="inline-block w-2 h-2 rounded-full bg-rose-500 mr-1.5 align-middle" title="Novo"></span><span class="sr-only">Novo: </span>' : ''}${esc(a.titulo)}</div>
+            <div class="text-xs ${a.nivel === 'critico' ? 'text-rose-700' : 'text-slate-500'}">${esc(a.sub)}</div>
+          </div>
+          ${a.valor != null ? `<div class="text-sm font-semibold tabular-nums shrink-0">${fmt.brl(a.valor)}</div>` : ''}
+          ${botao}
         </div>
-        ${a.valor != null ? `<div class="text-sm font-semibold tabular-nums shrink-0">${fmt.brl(a.valor)}</div>` : ''}
-        ${botao}
       </li>`;
   }
 
@@ -231,6 +264,7 @@ Fin.avisos = (() => {
     }).join('');
 
     const pwa = Fin.pwa?.estado || {};
+    const ocultos = qtdDispensados();
     const panel = Fin.ui.openModal(`
       <div class="p-4 sm:p-5">
         <div class="flex items-center gap-3">
@@ -238,12 +272,24 @@ Fin.avisos = (() => {
           <h2 class="font-semibold flex-1">Notificações</h2>
           <button data-fechar class="icon-btn" aria-label="Fechar">×</button>
         </div>
-        ${itens.length ? secoes : `
+        ${itens.length ? `
+          <div class="flex items-center gap-2 mt-2 text-xs text-slate-500">
+            <label class="inline-flex items-center gap-2 cursor-pointer px-0.5"><input type="checkbox" data-selecionar-todos class="accent-emerald-600 w-4 h-4"> Selecionar todas</label>
+            <span class="ml-auto hidden sm:inline">Marque as que você já viu e não quer mais ver</span>
+          </div>
+          ${secoes}
+          <div class="sticky bottom-0 -mx-4 sm:-mx-5 px-4 sm:px-5 py-3 mt-2 bg-white border-t border-slate-100 flex items-center gap-2">
+            <button data-dispensar-sel class="btn btn-ghost !py-2 flex-1 sm:flex-none" disabled>Dispensar selecionadas</button>
+            <span class="text-xs text-slate-500 flex-1 hidden sm:block">Somem até acontecer de novo.</span>
+          </div>` : `
           <div class="text-center py-8">
             <div class="text-3xl" aria-hidden="true">✓</div>
             <p class="font-medium mt-1">Tudo em dia</p>
-            <p class="text-sm text-slate-500">Nenhuma conta atrasada ou vencendo nos próximos ${DIAS_ANTES} dias.</p>
+            <p class="text-sm text-slate-500">${ocultos ? 'Nenhum aviso novo.' : `Nenhuma conta atrasada ou vencendo nos próximos ${DIAS_ANTES} dias.`}</p>
           </div>`}
+        ${ocultos ? `
+          <p class="text-xs text-slate-500 mt-3">${ocultos} aviso${ocultos > 1 ? 's' : ''} dispensado${ocultos > 1 ? 's' : ''} (continua${ocultos > 1 ? 'm' : ''} valendo, só não aparece${ocultos > 1 ? 'm' : ''}).
+            <button data-restaurar class="text-emerald-700 font-medium hover:underline">Mostrar de novo</button></p>` : ''}
         ${pwa.suportado ? `
           <div class="flex flex-wrap items-center gap-2 border-t border-slate-100 mt-4 pt-3 text-xs text-slate-500">
             <span class="flex-1">Versão do app: <span data-versao>…</span>${pwa.novaVersao ? ' · <b class="text-amber-800">nova versão disponível</b>' : ''}</span>
@@ -251,8 +297,36 @@ Fin.avisos = (() => {
           </div>` : ''}
       </div>`, 'Notificações');
 
+    // Seleção para dispensar
+    const caixas = () => [...panel.querySelectorAll('[data-dispensar]')];
+    const btnDisp = panel.querySelector('[data-dispensar-sel]');
+    const atualizarSel = () => {
+      const n = caixas().filter((c) => c.checked).length;
+      if (btnDisp) {
+        btnDisp.disabled = !n;
+        btnDisp.textContent = n ? `Dispensar ${n} selecionada${n > 1 ? 's' : ''}` : 'Dispensar selecionadas';
+        btnDisp.classList.toggle('btn-primary', !!n);
+        btnDisp.classList.toggle('btn-ghost', !n);
+      }
+      const todos = panel.querySelector('[data-selecionar-todos]');
+      if (todos) { todos.checked = n > 0 && n === caixas().length; todos.indeterminate = n > 0 && n < caixas().length; }
+    };
+    panel.addEventListener('change', (e) => {
+      if (e.target.matches('[data-selecionar-todos]')) caixas().forEach((c) => { c.checked = e.target.checked; });
+      if (e.target.matches('[data-dispensar], [data-selecionar-todos]')) atualizarSel();
+    });
+
     panel.addEventListener('click', (e) => {
       const t = e.target;
+      if (t.closest('[data-dispensar-sel]')) {
+        const sel = caixas().filter((c) => c.checked).map((c) => c.dataset.dispensar);
+        if (!sel.length) return;
+        gravarDispensados(new Set([...dispensados(), ...sel]));
+        Fin.ui.toast(`${sel.length} aviso${sel.length > 1 ? 's' : ''} dispensado${sel.length > 1 ? 's' : ''}. Volta${sel.length > 1 ? 'm' : ''} a aparecer se acontecer de novo.`);
+        abrir();
+        return;
+      }
+      if (t.closest('[data-restaurar]')) { gravarDispensados([]); abrir(); return; }
       if (t.closest('[data-ver-atrasadas]')) {
         Object.assign(Fin.pages.planilha.estado, { periodo: 'tudo', status: 'atrasado', busca: '', tipo: 'despesa', categoria: '', forma: '' });
       }
