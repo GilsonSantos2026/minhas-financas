@@ -19,6 +19,28 @@ Fin.forms.compra = (() => {
   const P = Fin.parsers;
   const S = Fin.storage;
 
+  /**
+   * Modo casal: compra lançada pela OUTRA pessoa → salvar/excluir pede confirmação
+   * (barra no lugar dos botões, como no formulário de lançamento). Vale nos dois sentidos.
+   */
+  const autorOutro = (c) => (c && F.temCasal() && F.autor(c) !== Fin.cofre.membroId() ? Fin.membros.porId(F.autor(c)) : null);
+  function deOutroHTML(c) {
+    const a = autorOutro(c);
+    if (!a) return '';
+    const nome = esc(Fin.membros.primeiroNome(a) || a.usuario);
+    return `
+      <div data-confirma-outro class="hidden px-5 py-4 border-t border-amber-200 bg-amber-50 sticky bottom-0 space-y-3" role="alertdialog" aria-live="assertive">
+        <div class="flex items-start gap-2 text-sm text-amber-900">
+          ${Fin.membros.avatar(a, { tam: 'w-7 h-7', txt: 'text-[10px]' })}
+          <span><b>Esta compra foi lançada por ${nome}.</b> <span data-confirma-texto>Quer mesmo salvar a alteração?</span></span>
+        </div>
+        <div class="flex justify-end gap-2">
+          <button type="button" data-confirma-nao class="btn btn-ghost !py-1.5">Voltar</button>
+          <button type="button" data-confirma-sim class="btn btn-primary !py-1.5">Sim, salvar</button>
+        </div>
+      </div>`;
+  }
+
   function open({ id = null, cartao = null } = {}) {
     const c = id ? S.list('cartaoCompras').find((x) => x.id === id) : null;
     if (id && !c) return Fin.ui.toast('Compra não encontrada.', 'error');
@@ -80,13 +102,14 @@ Fin.forms.compra = (() => {
           <p id="form-erro" class="hidden text-sm text-rose-700 bg-rose-50 rounded-lg px-3 py-2" role="alert"></p>
         </div>
 
-        <div class="flex flex-wrap items-center gap-2 px-5 py-4 border-t border-slate-100 sticky bottom-0 bg-white">
+        <div data-rodape class="flex flex-wrap items-center gap-2 px-5 py-4 border-t border-slate-100 sticky bottom-0 bg-white">
           ${c ? `<button type="button" data-delete="one" class="btn btn-danger-ghost">${grupo.length > 1 ? 'Excluir parcela' : 'Excluir'}</button>` : ''}
           ${grupo.length > 1 ? `<button type="button" data-delete="all" class="btn btn-danger-ghost">Excluir as ${grupo.length}</button>` : ''}
           <span class="flex-1"></span>
           <button type="button" data-close class="btn btn-ghost">Cancelar</button>
           <button type="submit" class="btn btn-primary">Salvar</button>
         </div>
+        ${deOutroHTML(c)}
       </form>`, c ? 'Editar compra' : 'Nova compra no cartão');
 
     const form = panel.querySelector('#compra-form');
@@ -121,15 +144,44 @@ Fin.forms.compra = (() => {
     });
     panel.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', Fin.ui.closeModal));
 
-    panel.querySelectorAll('[data-delete]').forEach((b) => b.addEventListener('click', () => {
-      const todas = b.dataset.delete === 'all';
-      const msg = todas ? `Excluir as ${grupo.length} parcelas de “${c.descricao}”?` : `Excluir “${c.descricao}”${c.parcela ? ` (parcela ${c.parcela.atual}/${c.parcela.total})` : ''}?`;
-      if (!confirm(`${msg} Esta ação não pode ser desfeita.`)) return;
+    // Compra da outra pessoa: barra de confirmação no lugar dos botões.
+    const outro = autorOutro(c);
+    let confirmadoOutro = false;
+    const barra = form.querySelector('[data-confirma-outro]');
+    const rodape = form.querySelector('[data-rodape]');
+    const mostrarConfirmacao = (texto, rotulo, aoConfirmar) => {
+      barra.querySelector('[data-confirma-texto]').textContent = texto;
+      const sim = barra.querySelector('[data-confirma-sim]');
+      sim.textContent = rotulo;
+      sim.onclick = aoConfirmar;
+      rodape.classList.add('hidden');
+      barra.classList.remove('hidden');
+      sim.focus();
+    };
+    barra?.querySelector('[data-confirma-nao]').addEventListener('click', () => {
+      barra.classList.add('hidden');
+      rodape.classList.remove('hidden');
+    });
+
+    const excluir = (todas) => {
       const ids = new Set(todas ? grupo.map((x) => x.id) : [c.id]);
       S.set('cartaoCompras', S.list('cartaoCompras').filter((x) => !ids.has(x.id)));
       Fin.ui.closeModal();
       Fin.ui.toast(todas ? 'Compra excluída.' : 'Parcela excluída.');
       Fin.router.refresh();
+    };
+    panel.querySelectorAll('[data-delete]').forEach((b) => b.addEventListener('click', () => {
+      const todas = b.dataset.delete === 'all';
+      if (outro) {
+        return mostrarConfirmacao(
+          todas ? `Quer mesmo excluir as ${grupo.length} parcelas? Não dá para desfazer.` : 'Quer mesmo excluir? Não dá para desfazer.',
+          'Sim, excluir',
+          () => excluir(todas),
+        );
+      }
+      const msg = todas ? `Excluir as ${grupo.length} parcelas de “${c.descricao}”?` : `Excluir “${c.descricao}”${c.parcela ? ` (parcela ${c.parcela.atual}/${c.parcela.total})` : ''}?`;
+      if (!confirm(`${msg} Esta ação não pode ser desfeita.`)) return;
+      excluir(todas);
     }));
 
     form.addEventListener('submit', (e) => {
@@ -147,6 +199,14 @@ Fin.forms.compra = (() => {
         erro.textContent = `Informe ${problemas.join(', ')}.`;
         erro.classList.remove('hidden');
         return;
+      }
+      // Compra da outra pessoa: confirma antes de salvar (nos dois sentidos).
+      if (outro && !confirmadoOutro) {
+        return mostrarConfirmacao(
+          `Quer mesmo salvar a alteração${grupo.length > 1 ? ' (descrição e categoria valem para todas as parcelas)' : ''}?`,
+          'Sim, salvar',
+          () => { confirmadoOutro = true; form.requestSubmit(); },
+        );
       }
 
       const icone = F.categorias().find((k) => k.nome === categoria)?.icone ?? null;
