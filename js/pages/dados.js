@@ -139,7 +139,7 @@ Fin.pages.dados = (() => {
       <p class="text-sm text-slate-600 mt-1">Usuário: <b>${esc(Fin.cofre.usuario())}</b> · os dados estão <b>cifrados</b> com a sua senha neste aparelho.</p>
       <div class="flex flex-col sm:flex-row flex-wrap gap-2 mt-4">
         <button data-act="trocar-senha" class="btn btn-ghost">Trocar senha</button>
-        <button data-act="nova-chave" class="btn btn-ghost">Gerar nova chave de recuperação</button>
+        ${Fin.cofre.ehPrincipal() ? '<button data-act="nova-chave" class="btn btn-ghost">Gerar nova chave de recuperação</button>' : ''}
         <button data-bloquear class="btn btn-ghost">🔒 Bloquear agora</button>
       </div>
       <label class="flex flex-wrap items-center gap-2 text-sm mt-4">
@@ -572,6 +572,7 @@ Fin.pages.dados = (() => {
           : `<b>${num(r.comprasApp)} compras lançadas</b> no app ou por PDF de fatura serão perdidas.`] : []),
         'As categorias voltam às da planilha (marcações feitas no app, como "investimento", se perdem).',
         ...(r.drive ? ['<b>O Google Drive e os outros aparelhos</b> (celular/computador) também recebem a substituição na próxima sincronização.'] : []),
+        ...(Fin.cofre.pessoas().length > 1 ? ['<b>A outra pessoa da casa</b> também perde os lançamentos que ela fez no app e passa a ver os da planilha.'] : []),
       ],
       mantem: [
         ...(r.invMovs || r.invContas ? ['Investimentos (carteira, reserva, metas) não são tocados.'] : []),

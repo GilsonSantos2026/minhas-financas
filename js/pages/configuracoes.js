@@ -60,6 +60,175 @@ Fin.pages.configuracoes = (() => {
       <p class="text-center font-semibold mt-3" id="tema-nome">${esc(t.nome)}</p>`);
   }
 
+  /* ---------------- Modo casal: pessoas com acesso ---------------- */
+
+  function pessoasHTML() {
+    if (!Fin.drive?.configurado()) return '';
+    const C = Fin.cofre;
+    const eu = C.membroId();
+    const titular = C.ehPrincipal();
+    const conectado = Fin.drive.conectado();
+    const comp = Fin.drive.compartilhado();
+    const pendentes = C.convitesPendentes();
+    const linhas = C.pessoas().map((p) => {
+      const m = Fin.membros.porId(p.id);
+      const nome = Fin.membros.nome(m) || p.usuario;
+      const tags = [p.principal ? 'titular' : '', p.id === eu ? 'você' : ''].filter(Boolean);
+      return `
+        <li class="flex items-center gap-3 py-2.5">
+          ${Fin.membros.avatar(m, { tam: 'w-10 h-10', txt: 'text-xs' })}
+          <span class="flex-1 min-w-0">
+            <span class="block text-sm font-medium truncate">${esc(nome)} ${tags.map((t) => `<span class="ml-1 text-[11px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600 font-normal">${t}</span>`).join('')}</span>
+            <span class="block text-xs text-slate-500 truncate">usuário ${esc(p.usuario)}</span>
+          </span>
+          ${titular && !p.principal ? `<button data-act="remover-pessoa" data-id="${esc(p.id)}" data-nome="${esc(nome)}" class="btn btn-danger-ghost !px-2 !py-1 text-xs">Remover</button>` : ''}
+        </li>`;
+    }).join('');
+
+    let acoes = '';
+    if (!titular) {
+      acoes = `<p class="text-sm text-slate-600">Você entrou pelo convite de <b>${esc(C.titular() || '')}</b>. Vocês veem e editam as mesmas finanças; cada um tem a própria senha.</p>`;
+    } else if (!conectado) {
+      acoes = `<p class="text-sm text-slate-600">Para dividir as finanças com outra pessoa (ex.: esposa ou marido), primeiro
+        <a href="#/dados" class="text-prim-700 font-medium hover:underline">conecte o Google Drive em Dados e backup</a>.</p>`;
+    } else if (!comp) {
+      acoes = `
+        <p class="text-sm text-slate-600">Divida as finanças da casa com outra pessoa: cada um entra com <b>o próprio usuário e senha</b>,
+          no próprio celular, e vocês veem e editam os mesmos lançamentos. Os dados continuam cifrados.</p>
+        <button data-act="compartilhar" class="btn btn-primary mt-3">${Fin.icone('usuario', 'w-4 h-4')} Convidar uma pessoa</button>`;
+    } else {
+      acoes = `
+        <div class="flex flex-wrap items-center gap-2">
+          <button data-act="convidar" class="btn btn-primary">${Fin.icone('usuario', 'w-4 h-4')} Gerar convite</button>
+          <button data-act="acessos-drive" class="btn btn-ghost">Quem acessa a pasta no Drive</button>
+        </div>
+        ${pendentes.length ? `<p class="text-xs text-amber-800 bg-amber-50 rounded-lg px-3 py-2 mt-3">
+          ${pendentes.length === 1 ? '1 convite em aberto' : `${pendentes.length} convites em aberto`} (vence ${fmt.dataBR ? fmt.dataBR(pendentes[pendentes.length - 1].expira.slice(0, 10)) : new Date(pendentes[pendentes.length - 1].expira).toLocaleDateString('pt-BR')}).
+          <button data-act="cancelar-convites" class="underline font-medium ml-1">Cancelar</button></p>` : ''}
+        <div id="acessos-drive" class="mt-3"></div>
+        <p class="text-xs text-slate-500 mt-3">Os dados ficam na pasta <b>${esc(Fin.drive.PASTA)}</b> do seu Google Drive. Não apague nem mova o arquivo.</p>`;
+    }
+
+    return card(`
+      ${Fin.icones.titulo('usuario', 'prim', 'Pessoas (finanças da casa)', { cls: 'mb-2' })}
+      <ul class="divide-y divide-slate-100 mb-3">${linhas}</ul>
+      ${acoes}`);
+  }
+
+  /** Mostra o código do convite (uma vez), com cópia e WhatsApp. */
+  function mostrarConvite(codigo, expira, email) {
+    const quem = Fin.membros.primeiroNome() || Fin.cofre.usuario();
+    const site = location.origin + location.pathname;
+    const msg = `${quem} te convidou para as finanças da casa no app Minhas Finanças.\n\n1) Abra ${site}\n2) Toque em "Recebi um convite (finanças da casa)"\n3) Entre com o seu Gmail${email ? ` (${email})` : ''} e escolha o arquivo "${Fin.drive.NOME}" na pasta "${Fin.drive.PASTA}"\n4) Código do convite: ${codigo}\n\nO código vale até ${new Date(expira).toLocaleDateString('pt-BR')} e só pode ser usado uma vez.`;
+    const panel = Fin.ui.openModal(`
+      <div class="p-5 space-y-4">
+        <div class="flex items-center justify-between gap-2">
+          <h2 class="font-semibold text-lg">Convite pronto</h2>
+          <button type="button" data-close class="icon-btn" aria-label="Fechar">✕</button>
+        </div>
+        <p class="text-sm text-slate-600">Passe este código para a pessoa${email ? ` (${esc(email)})` : ''}. Ele aparece <b>só agora</b>:
+          se perder, é só gerar outro.</p>
+        <div class="bg-prim-50 border border-prim-200 rounded-xl p-4 text-center">
+          <code class="text-2xl font-bold tracking-[0.2em] text-prim-800 select-all">${esc(codigo)}</code>
+          <p class="text-xs text-slate-500 mt-1">vale até ${new Date(expira).toLocaleDateString('pt-BR')} · uso único</p>
+        </div>
+        <ol class="text-sm text-slate-600 space-y-1 list-decimal pl-5">
+          <li>No celular dela/dele: abrir o app (${esc(location.host)}) e tocar em <b>“Recebi um convite”</b>.</li>
+          <li>Entrar com o <b>Gmail</b>${email ? ` <b>${esc(email)}</b>` : ''} e escolher <b>${esc(Fin.drive.NOME)}</b> na pasta <b>${esc(Fin.drive.PASTA)}</b>.</li>
+          <li>Digitar o código e criar o próprio usuário e senha.</li>
+        </ol>
+        <div class="grid grid-cols-2 gap-2">
+          <button data-act="copiar-convite" class="btn btn-ghost">Copiar mensagem</button>
+          <a class="btn btn-primary" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(msg)}">Enviar no WhatsApp</a>
+        </div>
+      </div>`, 'Convite');
+    panel.querySelector('[data-close]').addEventListener('click', () => Fin.ui.closeModal());
+    panel.querySelector('[data-act="copiar-convite"]').addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(msg); Fin.ui.toast('Mensagem copiada.'); } catch { Fin.ui.toast('Não deu para copiar: selecione o código.', 'error'); }
+    });
+  }
+
+  /** Formulário: Gmail da pessoa (opcional quando a pasta já está compartilhada). */
+  function pedirEmail({ primeira }) {
+    return new Promise((resolve) => {
+      let fim = false;
+      const terminar = (v) => { if (fim) return; fim = true; obs.disconnect(); Fin.ui.closeModal(); resolve(v); };
+      const panel = Fin.ui.openModal(`
+        <form class="p-5 space-y-4" novalidate>
+          <div class="flex items-center justify-between gap-2">
+            <h2 class="font-semibold text-lg">${primeira ? 'Convidar uma pessoa' : 'Gerar convite'}</h2>
+            <button type="button" data-close class="icon-btn" aria-label="Fechar">✕</button>
+          </div>
+          ${primeira ? `<div class="text-sm text-slate-600 space-y-2">
+            <p>O que vai acontecer:</p>
+            <ul class="space-y-1.5">
+              <li>• Os dados passam da pasta oculta do app para a pasta <b>${esc(Fin.drive.PASTA)}</b> no <b>seu</b> Google Drive (continuam cifrados).</li>
+              <li>• A pasta é compartilhada com o Gmail abaixo: o Google manda um e-mail avisando.</li>
+              <li>• Você recebe um <b>código de convite</b> para passar à pessoa. Com ele, ela cria o próprio usuário e senha.</li>
+              <li>• Seus outros aparelhos mudam sozinhos para a pasta nova (pode pedir “Reconectar Google” uma vez).</li>
+            </ul>
+            <p class="text-xs text-slate-500">Antes, o app pede ao Google a permissão de <b>arquivos criados pelo app</b> (não dá acesso aos seus outros arquivos).</p>
+          </div>` : '<p class="text-sm text-slate-600">Para alguém que já tem acesso à pasta, deixe o e-mail em branco. Para uma pessoa nova, informe o Gmail dela.</p>'}
+          <label class="field"><span>Gmail da pessoa${primeira ? '' : ' (opcional)'}</span>
+            <input name="email" type="email" class="input" autocomplete="off" placeholder="nome@gmail.com" ${primeira ? 'required' : ''} /></label>
+          <p data-erro class="hidden text-sm text-rose-700 bg-rose-50 rounded-lg px-3 py-2" role="alert"></p>
+          <div class="flex justify-end gap-2">
+            <button type="button" data-close class="btn btn-ghost">Cancelar</button>
+            <button type="submit" class="btn btn-primary">${primeira ? 'Compartilhar e gerar convite' : 'Gerar convite'}</button>
+          </div>
+        </form>`, 'Convidar');
+      const obs = new MutationObserver(() => { if (!document.body.contains(panel)) terminar(null); });
+      obs.observe(document.getElementById('modal-root'), { childList: true });
+      panel.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => terminar(null)));
+      panel.querySelector('form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const email = e.target.elements.email.value.trim();
+        if ((primeira || email) && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          const er = panel.querySelector('[data-erro]');
+          er.textContent = 'Digite um e-mail válido (o Gmail da pessoa).';
+          er.classList.remove('hidden');
+          return;
+        }
+        terminar({ email });
+      });
+    });
+  }
+
+  async function convidar(view, primeira) {
+    const r = await pedirEmail({ primeira });
+    if (!r) return;
+    Fin.ui.toast(primeira ? 'Preparando a pasta compartilhada…' : 'Gerando convite…');
+    try {
+      if (primeira) await Fin.drive.ativarCompartilhamento(r.email);
+      else if (r.email) await Fin.drive.compartilharCom(r.email);
+      const conv = await Fin.cofre.criarConvite();
+      window.dispatchEvent(new CustomEvent('fin:alterado'));
+      await Fin.drive.sincronizar(); // o convite precisa estar no Drive para a pessoa achar
+      if (Fin.drive.estado.erro) throw new Error(Fin.drive.estado.erro);
+      mostrarConvite(conv.codigo, conv.expira, r.email);
+    } catch (err) {
+      console.warn('[convite]', err);
+      Fin.ui.toast(err.message || 'Não foi possível criar o convite.', 'error');
+    }
+    view.querySelector('#cfg-pessoas').innerHTML = pessoasHTML();
+  }
+
+  async function listarAcessosDrive(view) {
+    const box = view.querySelector('#acessos-drive');
+    box.innerHTML = '<p class="text-xs text-slate-500">Consultando o Google Drive…</p>';
+    try {
+      const lista = await Fin.drive.acessosDrive();
+      box.innerHTML = `<ul class="text-sm divide-y divide-slate-100 border border-slate-100 rounded-xl px-3">${lista.map((p) => `
+        <li class="flex items-center gap-2 py-2">
+          <span class="flex-1 min-w-0 truncate">${esc(p.displayName || p.emailAddress || 'Conta Google')}
+            <span class="block text-xs text-slate-500 truncate">${esc(p.emailAddress || '')} · ${p.role === 'owner' ? 'dono' : 'pode editar'}</span></span>
+          ${p.role === 'owner' ? '' : `<button data-act="remover-drive" data-perm="${esc(p.id)}" data-email="${esc(p.emailAddress || '')}" class="btn btn-danger-ghost !px-2 !py-1 text-xs">Tirar acesso</button>`}
+        </li>`).join('')}</ul>`;
+    } catch (err) {
+      box.innerHTML = `<p class="text-xs text-rose-700">${esc(err.message)}</p>`;
+    }
+  }
+
   function atalhosHTML() {
     return card(`
       <a href="#/dados" class="flex items-center gap-3 -m-1 p-1 rounded-xl hover:bg-slate-50">
@@ -79,6 +248,7 @@ Fin.pages.configuracoes = (() => {
         <div class="space-y-4 max-w-2xl mx-auto">
           ${Fin.icones.titulo('engrenagem', 'prim', 'Configurações', { tag: 'h1', cls: 'text-xl hidden md:flex', tam: 'w-9 h-9', ic: 'w-5 h-5' })}
           <div id="cfg-perfil">${perfilHTML(m, rascunho)}</div>
+          <div id="cfg-pessoas">${pessoasHTML()}</div>
           ${aparenciaHTML()}
           ${atalhosHTML()}
         </div>`;
@@ -134,7 +304,50 @@ Fin.pages.configuracoes = (() => {
         view.querySelector('#tema-nome').textContent = t.nome;
         return;
       }
-      const act = e.target.closest('[data-act]')?.dataset.act;
+      const alvo = e.target.closest('[data-act]');
+      const act = alvo?.dataset.act;
+      if (act === 'compartilhar') return convidar(view, true);
+      if (act === 'convidar') return convidar(view, false);
+      if (act === 'acessos-drive') return listarAcessosDrive(view);
+      if (act === 'cancelar-convites') {
+        Fin.cofre.cancelarConvites();
+        window.dispatchEvent(new CustomEvent('fin:alterado'));
+        view.querySelector('#cfg-pessoas').innerHTML = pessoasHTML();
+        return Fin.ui.toast('Convites cancelados.');
+      }
+      if (act === 'remover-drive') {
+        (async () => {
+          const ok = await Fin.ui.confirmar({
+            titulo: 'Tirar o acesso à pasta no Drive?', icone: 'nuvem', cor: 'rose',
+            intro: `<b>${esc(alvo.dataset.email || 'Esta conta')}</b> deixa de ver a pasta <b>${esc(Fin.drive.PASTA)}</b> no Google Drive e para de receber atualizações.`,
+            ciente: 'Entendi', botao: 'Tirar acesso',
+          });
+          if (!ok) return;
+          try { await Fin.drive.removerAcessoDrive(alvo.dataset.perm); Fin.ui.toast('Acesso à pasta removido.'); listarAcessosDrive(view); } catch (err) { Fin.ui.toast(err.message, 'error'); }
+        })();
+        return;
+      }
+      if (act === 'remover-pessoa') {
+        (async () => {
+          const nome = alvo.dataset.nome;
+          const ok = await Fin.ui.confirmar({
+            titulo: `Remover ${nome}?`, icone: 'usuario', cor: 'rose',
+            intro: `${esc(nome)} não vai mais conseguir entrar nas finanças da casa com a senha dela/dele.`,
+            perde: [`O acesso de <b>${esc(nome)}</b> (usuário e senha).`],
+            mantem: ['Todos os lançamentos, inclusive os que essa pessoa fez.', 'Seu acesso e seus outros aparelhos.'],
+            avisos: ['Para cortar de vez, tire também o acesso dela à pasta no Google Drive (botão “Quem acessa a pasta no Drive”).'],
+            ciente: 'Entendi', botao: 'Remover acesso',
+          });
+          if (!ok) return;
+          try {
+            Fin.cofre.removerPessoa(alvo.dataset.id);
+            window.dispatchEvent(new CustomEvent('fin:alterado'));
+            view.querySelector('#cfg-pessoas').innerHTML = pessoasHTML();
+            Fin.ui.toast(`${nome} foi removido(a).`);
+          } catch (err) { Fin.ui.toast(err.message, 'error'); }
+        })();
+        return;
+      }
       if (act === 'sem-foto') {
         rascunho.foto = '';
         rascunho.sujo = true;

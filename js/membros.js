@@ -22,19 +22,31 @@ Fin.membros = (() => {
   /** Membro de quem está usando este aparelho (sem gravar nada). */
   function atual() {
     const usuario = Fin.cofre?.usuario?.() || '';
+    const id = Fin.cofre?.membroId?.() || 'm1';
     const todos = lista();
-    const achado = todos.find((m) => norm(m.usuario) === norm(usuario))
-      || (todos.length === 1 && !todos[0].usuario ? todos[0] : null);
-    if (achado) return achado;
-    return { id: todos.length ? null : 'm1', usuario, nome: '', foto: '', tema: null, principal: !todos.length, novo: true };
+    const porId = todos.find((m) => m.id === id);
+    if (porId) return porId;
+    // Mesmo usuário com outro id (ex.: removido e convidado de novo): o perfil acompanha o acesso novo.
+    const porUsuario = todos.find((m) => norm(m.usuario) === norm(usuario));
+    if (porUsuario) return { ...porUsuario, id, _idAntigo: porUsuario.id, principal: id === 'm1' };
+    return { id, usuario, nome: '', foto: '', tema: null, principal: id === 'm1', novo: true };
+  }
+
+  /** Perfil de um membro pelo id (ou um perfil mínimo com o usuário do envelope). */
+  function porId(id) {
+    const m = lista().find((x) => x.id === id);
+    if (m) return m;
+    const p = Fin.cofre?.pessoas?.().find((x) => x.id === id);
+    return { id, usuario: p?.usuario || '', nome: '', foto: '', principal: id === 'm1' };
   }
 
   /** Salva (cria ou atualiza) o perfil de quem está usando. */
   function salvarAtual(campos) {
     const m = atual();
-    const { novo, ...base } = m;
+    const { novo, _idAntigo, ...base } = m;
     const item = { ...base, ...campos, usuario: base.usuario || Fin.cofre?.usuario?.() || '' };
     if (!item.id) item.id = S().uid();
+    if (_idAntigo && _idAntigo !== item.id) S().remove('membros', _idAntigo);
     const salvo = S().upsert('membros', item);
     desenharTopo();
     return salvo;
@@ -124,5 +136,5 @@ Fin.membros = (() => {
   window.addEventListener('fin:desbloqueado', aoDesbloquear);
   window.addEventListener('fin:dados-externos', aoDesbloquear);
 
-  return { lista, atual, salvarAtual, nome, primeiroNome, iniciais, avatar, saudacao, prepararFoto, desenharTopo };
+  return { lista, atual, porId, salvarAtual, nome, primeiroNome, iniciais, avatar, saudacao, prepararFoto, desenharTopo };
 })();

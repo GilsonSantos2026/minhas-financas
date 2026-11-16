@@ -5,6 +5,7 @@
  *  entrar  → usuário + senha
  *  recuperar → esqueci a senha: chave de recuperação + senha nova
  *  drive   → já uso em outro aparelho: entra pelo Google Drive com a mesma senha
+ *  convite → modo casal: escolhe o arquivo compartilhado e cria usuário/senha com o código
  */
 window.Fin = window.Fin || {};
 
@@ -99,8 +100,9 @@ Fin.acesso = (() => {
         <button type="submit" class="btn btn-primary w-full">Criar acesso</button>
       </form>
       <p class="text-xs text-slate-500 mt-4">Se esquecer a senha, só a <b>chave de recuperação</b> (mostrada a seguir) devolve o acesso.</p>
-      ${Fin.config?.googleClientId ? `<div class="border-t border-slate-100 mt-4 pt-4 text-center">
-        <button data-ir="drive" class="text-sm text-prim-700 font-semibold hover:underline">Já uso o app em outro aparelho</button></div>` : ''}`);
+      ${Fin.config?.googleClientId ? `<div class="border-t border-slate-100 mt-4 pt-4 flex flex-col items-center gap-2">
+        <button data-ir="drive" class="text-sm text-prim-700 font-semibold hover:underline">Já uso o app em outro aparelho</button>
+        <button data-ir="convite" class="text-sm text-prim-700 font-semibold hover:underline">Recebi um convite (finanças da casa)</button></div>` : ''}`);
     const form = root.querySelector('#ac-form');
     ligarOlhos();
     medidorForca(form);
@@ -164,7 +166,8 @@ Fin.acesso = (() => {
         ${erroBox}
         <button type="submit" class="btn btn-primary w-full">Entrar</button>
       </form>
-      <div class="text-center mt-4"><button data-ir="recuperar" class="text-sm text-slate-500 hover:text-slate-800 hover:underline">Esqueci minha senha</button></div>`);
+      <div class="text-center mt-4"><button data-ir="recuperar" class="text-sm text-slate-500 hover:text-slate-800 hover:underline">Esqueci minha senha</button></div>
+      ${Fin.config?.googleClientId ? `<div class="text-center mt-2"><button data-ir="convite" class="text-sm text-slate-500 hover:text-slate-800 hover:underline">Recebi um convite (finanças da casa)</button></div>` : ''}`);
     const form = root.querySelector('#ac-form');
     if (usuario) setTimeout(() => form.elements.senha.focus(), 60);
     ligarOlhos();
@@ -276,6 +279,88 @@ Fin.acesso = (() => {
     });
   }
 
+  /**
+   * Modo casal: quem recebeu o convite entra no Google (com o Gmail que recebeu o
+   * compartilhamento), escolhe o arquivo da pasta "Minhas Finanças (casa)" e cria o próprio
+   * usuário e senha com o código do convite.
+   */
+  function telaConvite() {
+    casca(`
+      <h2 class="font-semibold text-lg">Entrar com um convite</h2>
+      <p class="text-sm text-slate-600 mt-1">Alguém compartilhou as finanças da casa com você. Você vai precisar de:</p>
+      <ol class="text-sm text-slate-600 mt-2 space-y-1 list-decimal pl-5">
+        <li>o <b>Gmail</b> que recebeu o e-mail de compartilhamento do Google Drive;</li>
+        <li>o <b>código do convite</b> (ex.: K7QM-2XRA-PZ4D) que a pessoa te passou.</li>
+      </ol>
+      <button data-acao="google" class="btn btn-ghost w-full mt-4 border border-slate-200">
+        ${Fin.icone('nuvem', 'w-5 h-5')} Entrar no Google e escolher o arquivo</button>
+      <p data-dica class="text-xs text-slate-500 mt-2">Na janela do Google, abra a pasta <b>${esc(Fin.drive.PASTA)}</b> e escolha <b>${esc(Fin.drive.NOME)}</b>.</p>
+      <form id="ac-form" class="space-y-3 mt-4 hidden" novalidate>
+        <p id="ac-achado" class="text-sm text-emerald-800 bg-emerald-50 rounded-lg px-3 py-2"></p>
+        <label class="field"><span>Código do convite</span>
+          <input name="codigo" class="input font-mono uppercase tracking-wider" autocomplete="one-time-code" placeholder="XXXX-XXXX-XXXX" required /></label>
+        <label class="field"><span>Como você quer ser chamado(a)?</span>
+          <input name="nome" class="input" autocomplete="nickname" maxlength="40" placeholder="Ex.: Ana" /></label>
+        <label class="field"><span>Seu usuário (para entrar no app)</span>
+          <input name="usuario" class="input" autocomplete="username" maxlength="40" required /></label>
+        ${campoSenha('senha', 'Sua senha (mínimo 8 caracteres)', 'new-password')}
+        <div id="forca" class="h-4"></div>
+        ${campoSenha('senha2', 'Repita a senha', 'new-password')}
+        <p class="text-xs text-slate-500">A senha é só sua: quem convidou não fica sabendo. Se esquecer, peça um novo convite e use o mesmo usuário.</p>
+        <button type="submit" class="btn btn-primary w-full">Entrar nas finanças da casa</button>
+      </form>
+      ${erroBox}
+      <div class="text-center mt-4"><button data-ir="criar" class="text-sm text-slate-500 hover:underline">Voltar</button></div>`);
+    let remoto = null;
+    const form = root.querySelector('#ac-form');
+    ligarOlhos();
+    medidorForca(form);
+    root.querySelector('[data-acao="google"]').addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      btn.disabled = true;
+      const txt = btn.innerHTML;
+      btn.textContent = 'Abrindo o Google…';
+      root.querySelector('#ac-erro').classList.add('hidden');
+      try {
+        remoto = await Fin.drive.escolherArquivoCompartilhado();
+        if (!remoto) { btn.disabled = false; btn.innerHTML = txt; return; }
+        if (!Fin.cofre.convitesPendentes(remoto.conta).length) {
+          throw new Error('Este arquivo não tem convite em aberto (vencido ou já usado). Peça um novo convite.');
+        }
+        btn.classList.add('hidden');
+        root.querySelector('[data-dica]').classList.add('hidden');
+        form.classList.remove('hidden');
+        root.querySelector('#ac-achado').textContent =
+          `Arquivo de ${remoto.conta?.usuario || 'quem convidou'} encontrado (atualizado em ${new Date(remoto.atualizadoEm).toLocaleString('pt-BR')}).`;
+        form.elements.codigo.focus();
+      } catch (err) {
+        btn.disabled = false;
+        btn.innerHTML = txt;
+        mostrarErro(err.message);
+      }
+    });
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const f = form.elements;
+      const s = f.senha.value;
+      if (!f.codigo.value.trim()) return mostrarErro('Digite o código do convite.');
+      if (!f.usuario.value.trim()) return mostrarErro('Escolha um usuário.');
+      if (s.length < 8) return mostrarErro('A senha precisa ter pelo menos 8 caracteres.');
+      if (s !== f.senha2.value) return mostrarErro('As senhas não conferem.');
+      ocupado(form, true, 'Conferindo o convite…');
+      try {
+        await Fin.drive.entrarPorConvite(remoto, f.codigo.value, f.usuario.value, s);
+        const nome = f.nome.value.trim().replace(/\s+/g, ' ');
+        Fin.membros.salvarAtual(nome ? { nome } : {});
+        concluir();
+        Fin.ui.toast(`Bem-vindo(a)${nome ? `, ${nome.split(' ')[0]}` : ''}! Vocês agora usam as mesmas finanças.`);
+      } catch (err) {
+        ocupado(form, false);
+        mostrarErro(err.message);
+      }
+    });
+  }
+
   /* ---------------- Fluxo ---------------- */
 
   function concluir() {
@@ -293,6 +378,12 @@ Fin.acesso = (() => {
       if (ir === 'entrar') telaEntrar();
       if (ir === 'criar') telaCriar();
       if (ir === 'drive') telaDrive();
+      if (ir === 'convite') telaConvite();
+    });
+    // Modo casal: o titular removeu esta pessoa (chega pela sincronização do envelope).
+    window.addEventListener('fin:acesso-removido', async () => {
+      await bloquear();
+      mostrarErro(`Seu acesso às finanças da casa foi removido por ${Fin.cofre.titular() || 'quem convidou'}.`);
     });
     if (Fin.cofre.existeConta()) telaEntrar();
     else telaCriar();

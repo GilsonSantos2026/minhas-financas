@@ -12,4 +12,7 @@ window.Fin = window.Fin || {};
 
 Fin.config = {
   googleClientId: '542708707263-b7sdeqbudurcqdjrr21773ev9r4u1qrj.apps.googleusercontent.com',
+  // Modo casal: o seletor de arquivos do Google (Picker) usa o número do projeto (início do Client ID).
+  // googlePickerKey: chave de API "de navegador", restrita ao site e à Picker API — só se o Google exigir.
+  googlePickerKey: '',
 };
