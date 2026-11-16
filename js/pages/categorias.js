@@ -28,6 +28,7 @@ Fin.pages.categorias = (() => {
           </div>
           <button data-act="nova" class="btn btn-primary ml-auto">＋ Nova</button>
         </div>
+        ${cats.length ? '<p class="text-xs text-slate-500 px-1 -mt-1">Toque numa categoria para mudar nome, ícone, classificação ou orçamento. Se ela já tiver lançamentos, o app mostra quais e pergunta se quer corrigi-los também.</p>' : ''}
 
         ${cats.length ? [...grupos.entries()].sort((a, b) => a[0].localeCompare(b[0], 'pt-BR')).map(([grupo, itens]) => `
           <section>
@@ -43,7 +44,7 @@ Fin.pages.categorias = (() => {
                     <div class="text-xs text-slate-500">${u} ${u === 1 ? 'registro' : 'registros'}</div>
                   </div>
                   ${c.orcamentoMensal > 0 ? `<div class="text-right text-xs text-slate-500 shrink-0">orçamento<div class="text-sm font-semibold text-slate-700 tabular-nums">${fmt.brl(c.orcamentoMensal)}</div></div>` : ''}
-                  <span class="text-slate-300" aria-hidden="true">›</span>
+                  <span class="shrink-0 inline-flex items-center gap-1 text-xs font-medium text-prim-700 bg-prim-50 rounded-full px-2.5 py-1" aria-hidden="true">✎ Editar</span>
                 </li>`;
               }).join('')}
             </ul>

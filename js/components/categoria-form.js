@@ -1,7 +1,8 @@
 /**
  * components/categoria-form.js — Criar/editar/excluir categoria (com orçamento mensal).
  *
- * Renomear atualiza todos os lançamentos e compras que usam a categoria.
+ * Mudar nome/ícone de categoria em uso mostra os registros afetados e pergunta:
+ * corrigir todos (padrão) ou manter os antigos (no caso do nome, cria a nova ao lado).
  * Excluir uma categoria em uso pede para onde mover os lançamentos.
  *
  * Uso: Fin.forms.categoria.open({ tipo })   → nova
@@ -30,7 +31,7 @@ Fin.forms.categoria = (() => {
 
     const panel = Fin.ui.openModal(`
       <form id="cat-form" novalidate>
-        <div class="flex items-center justify-between px-5 pt-5 pb-3 border-b border-slate-100 sticky top-0 bg-white z-10">
+        <div data-arrastar class="flex items-center justify-between px-5 pt-5 pb-3 border-b border-slate-100 sticky top-0 bg-white z-10">
           <h2 class="font-semibold text-lg">${c ? 'Editar categoria' : `Nova categoria de ${t}`}</h2>
           <button type="button" data-close class="icon-btn" aria-label="Fechar">✕</button>
         </div>
@@ -60,7 +61,17 @@ Fin.forms.categoria = (() => {
             ${media > 0 ? `<button type="button" data-media class="text-sm text-prim-700 font-medium hover:underline -mt-2">
               Usar a média dos últimos 3 meses: ${fmt.brl(media)}</button>` : ''}` : ''}
 
-          ${c ? `<p class="text-xs text-slate-500">Usada em ${usos.total} ${usos.total === 1 ? 'registro' : 'registros'}. Renomear atualiza todos eles.</p>` : ''}
+          ${c ? `<p class="text-xs text-slate-500">Usada em ${usos.total} ${usos.total === 1 ? 'registro' : 'registros'}${usos.total ? '. Se mudar o nome ou o ícone, o app mostra quais são e pergunta se quer corrigi-los também.' : '.'}</p>` : ''}
+
+          <div id="corrigir-box" class="hidden rounded-xl border border-amber-200 bg-amber-50 p-3 space-y-3" role="alertdialog" aria-live="assertive">
+            <p class="text-sm text-amber-900" data-corrigir-texto></p>
+            <ul class="text-xs text-slate-600 bg-white rounded-lg divide-y divide-slate-100" data-corrigir-lista></ul>
+            <div class="flex flex-col sm:flex-row-reverse gap-2">
+              <button type="button" data-corrigir="sim" class="btn btn-primary"></button>
+              <button type="button" data-corrigir="nao" class="btn btn-ghost !bg-white"></button>
+            </div>
+            <button type="button" data-corrigir="voltar" class="text-xs text-slate-500 hover:underline">‹ Voltar e continuar editando</button>
+          </div>
 
           <div id="excluir-box" class="hidden bg-rose-50 rounded-xl p-3 space-y-2">
             <p class="text-sm text-rose-800">Esta categoria está em uso. Para onde mover os ${usos.total} registros?</p>
@@ -70,7 +81,7 @@ Fin.forms.categoria = (() => {
 
           <p id="form-erro" class="hidden text-sm text-rose-700 bg-rose-50 rounded-lg px-3 py-2" role="alert"></p>
         </div>
-        <div class="flex items-center gap-2 px-5 py-4 border-t border-slate-100 sticky bottom-0 bg-white">
+        <div data-rodape class="flex items-center gap-2 px-5 py-4 border-t border-slate-100 sticky bottom-0 bg-white">
           ${c ? '<button type="button" data-delete class="btn btn-danger-ghost">Excluir</button>' : ''}
           <span class="flex-1"></span>
           <button type="button" data-close class="btn btn-ghost">Cancelar</button>
@@ -110,6 +121,71 @@ Fin.forms.categoria = (() => {
       if (confirm(`Mover ${usos.total} registros para “${destino}” e excluir “${c.nome}”?`)) excluir(destino);
     });
 
+    /** Registros que usam a categoria (lançamentos + compras do cartão), mais recentes primeiro. */
+    const registros = () => {
+      if (!c) return [];
+      const lanc = F.todos().filter((l) => l.categoria === c.nome && l.tipo === t)
+        .map((l) => ({ data: l.vencimento || l.data || l.competencia || '', desc: l.descricao || c.nome, valor: l.valorPago || l.valorPrevisto || 0, onde: '' }));
+      const comp = t === 'despesa' ? S.list('cartaoCompras').filter((x) => x.categoria === c.nome)
+        .map((x) => ({ data: x.data || '', desc: x.descricao || c.nome, valor: x.valor || 0, onde: x.cartao ? `cartão ${x.cartao}` : 'cartão' })) : [];
+      // Mais recentes até hoje primeiro; os futuros (parcelas, recorrentes) depois.
+      const hoje = fmt.todayISO();
+      const futuro = (r) => String(r.data) > hoje;
+      const lista = [...lanc, ...comp].sort((a, b) => (futuro(a) - futuro(b))
+        || (futuro(a) ? String(a.data).localeCompare(String(b.data)) : String(b.data).localeCompare(String(a.data))));
+      lista.lanc = lanc.length;
+      lista.comp = comp.length;
+      return lista;
+    };
+
+    // Mudou nome/ícone de categoria em uso → mostra os registros e pergunta se corrige também.
+    const box = form.querySelector('#corrigir-box');
+    const rodape = form.querySelector('[data-rodape]');
+    let decisao = null; // 'sim' | 'nao' depois que a pessoa escolhe
+    const perguntarCorrecao = (nome, icone) => {
+      const lista = registros();
+      const n = lista.length;
+      const mudouNome = c.nome !== nome;
+      const novo = `${icone ? `${icone} ` : ''}${nome}`;
+      const partes = [lista.lanc && `${lista.lanc} ${lista.lanc === 1 ? 'lançamento' : 'lançamentos'}`,
+        lista.comp && `${lista.comp} ${lista.comp === 1 ? 'compra' : 'compras'} no cartão`].filter(Boolean).join(' e ');
+      box.querySelector('[data-corrigir-texto]').innerHTML = mudouNome
+        ? `Você mudou <b>“${esc(c.nome)}”</b> para <b>“${esc(novo)}”</b>. Há <b>${esc(partes)}</b> ${n === 1 ? 'já feito' : 'já feitos'} com o nome antigo. Quer corrigir também?`
+        : `Você mudou o ícone para <b>${esc(icone || 'nenhum')}</b>. Quer atualizar também ${n === 1 ? 'o registro já feito' : 'os registros já feitos'} (<b>${esc(partes)}</b>)?`;
+      const mostra = 5;
+      box.querySelector('[data-corrigir-lista]').innerHTML = lista.slice(0, mostra).map((r) => `
+        <li class="flex items-center gap-2 px-2.5 py-1.5">
+          <span class="tabular-nums text-slate-400 shrink-0">${r.data ? fmt.date(String(r.data).slice(0, 10)) : '—'}</span>
+          <span class="flex-1 min-w-0 truncate">${esc(r.desc)}${r.onde ? ` <span class="text-slate-400">· ${esc(r.onde)}</span>` : ''}</span>
+          <span class="tabular-nums shrink-0">${fmt.brl(r.valor)}</span>
+        </li>`).join('') + (n > mostra ? `<li class="px-2.5 py-1.5 text-slate-400">e mais ${n - mostra}…</li>` : '');
+      box.querySelector('[data-corrigir="sim"]').textContent = `Sim, corrigir ${n === 1 ? 'o registro' : `os ${n}`}`;
+      box.querySelector('[data-corrigir="nao"]').textContent = mudouNome
+        ? `Não, manter “${c.nome}” nos antigos`
+        : 'Não, só a categoria';
+      box.querySelector('[data-corrigir="nao"]').title = mudouNome
+        ? `Cria a categoria “${nome}” para os próximos e deixa “${c.nome}” como está nos registros já feitos.`
+        : 'Os registros já feitos continuam com o ícone antigo.';
+      rodape.classList.add('hidden');
+      box.classList.remove('hidden');
+      box.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      box.querySelector('[data-corrigir="sim"]').focus();
+    };
+    box.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-corrigir]');
+      if (!b) return;
+      if (b.dataset.corrigir === 'voltar') {
+        box.classList.add('hidden');
+        rodape.classList.remove('hidden');
+        return;
+      }
+      decisao = b.dataset.corrigir;
+      form.requestSubmit();
+    });
+    form.addEventListener('input', () => { // mexeu de novo → volta a perguntar no próximo "Salvar"
+      if (box.classList.contains('hidden')) decisao = null;
+    });
+
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       const erro = form.querySelector('#form-erro');
@@ -123,16 +199,34 @@ Fin.forms.categoria = (() => {
         erro.classList.remove('hidden');
         return;
       }
-      S.upsert('categorias', {
-        ...(c ? { id: c.id } : {}),
+      const mudouNome = !!c && c.nome !== nome;
+      const mudouRegistros = !!c && (mudouNome || (c.icone || null) !== icone);
+      if (mudouRegistros && usos.total > 0 && !decisao) return perguntarCorrecao(nome, icone);
+
+      const investimento = t === 'despesa' ? !!el('investimento')?.checked : undefined;
+      const dados = {
         nome, icone, tipo: t,
         classificacao: el('classificacao').value.trim() || null,
         orcamentoMensal: orcamento,
-        ...(t === 'despesa' ? { investimento: !!el('investimento')?.checked } : {}),
-      });
-      if (c && (c.nome !== nome || c.icone !== icone)) F.moverCategoria(c.nome, nome, t, icone);
+        ...(t === 'despesa' ? { investimento } : {}),
+      };
+      let aviso;
+      if (c && decisao === 'nao' && mudouNome) {
+        // Mantém a categoria antiga nos registros já feitos e cria a nova ao lado.
+        S.upsert('categorias', dados);
+        aviso = `Categoria “${nome}” criada. Os registros antigos continuam em “${c.nome}”.`;
+      } else {
+        S.upsert('categorias', { ...(c ? { id: c.id } : {}), ...dados });
+        if (mudouRegistros && (decisao === 'sim' || usos.total === 0)) F.moverCategoria(c.nome, nome, t, icone);
+        aviso = !c ? 'Categoria criada.'
+          : decisao === 'sim' ? `Categoria atualizada e ${usos.total === 1 ? '1 registro corrigido' : `${usos.total} registros corrigidos`}.`
+          : 'Categoria atualizada.';
+      }
+      if (c && t === 'despesa' && !!c.investimento !== investimento && usos.total > 0 && decisao !== 'nao') {
+        aviso += investimento ? ' Os lançamentos dela agora contam como aporte, não como despesa.' : ' Os lançamentos dela voltam a contar como despesa.';
+      }
       Fin.ui.closeModal();
-      Fin.ui.toast(c ? 'Categoria atualizada.' : 'Categoria criada.');
+      Fin.ui.toast(aviso);
       Fin.router.refresh();
     });
   }
