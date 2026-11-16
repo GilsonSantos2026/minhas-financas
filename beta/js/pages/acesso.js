@@ -34,7 +34,7 @@ Fin.acesso = (() => {
         <div class="relative min-h-full flex items-center justify-center p-4">
           <div class="w-full max-w-sm">
             <div class="flex flex-col items-center text-white mb-5">
-              <div class="marca-mono w-16 h-16 rounded-2xl text-[36px] shadow-lg" aria-hidden="true">V</div>
+              <div class="marca-mono w-16 h-16 rounded-2xl shadow-lg" aria-hidden="true"><svg viewBox="22 21 159 139"><polygon points="24,23 55,23 89,100 74,131" fill="#F3F5F8"/><polygon points="147,23 179,23 119,158 87,158" fill="#C6A45C"/><rect x="102" y="23" width="46" height="3.5" fill="#C6A45C"/><line x1="90" y1="93" x2="101.3" y2="69.5" stroke="#C6A45C" stroke-width="4.5"/><polygon points="110,51 94,66 108,73" fill="#C6A45C"/></svg></div>
               <h1 class="marca-nome text-[28px] mt-3">VALORIS</h1>
               <p class="marca-assinatura text-[11px] mt-1">Financial Intelligence</p>
             </div>

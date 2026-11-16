@@ -283,14 +283,15 @@ html, body { overscroll-behavior-y: none; }
 
 /* ---------- Marca Valoris (Financial Intelligence) ----------
    Navy #101D35 · Premium Gold #C6A45C · Ice White #F3F5F8 · Graphite #26364C.
-   Monograma "V" dourado sobre azul-marinho; nome em serifa com espaçamento largo. */
+   Monograma "V7" (perna esquerda gelo; traço direito, filete e seta em dourado) sobre azul-marinho
+   — mesmo desenho dos ícones (viewBox 22 21 159 139); nome sem serifa, seminegrito, bem espaçado. */
 :root { --ouro: 198 164 92; --navy: 16 29 53; --gelo: 243 245 248; --grafite: 38 54 76; }
 .marca-mono {
   display: grid; place-items: center; flex-shrink: 0;
-  background: rgb(var(--navy)); color: rgb(var(--ouro));
-  font-family: "Palatino Linotype", Palatino, "Book Antiqua", Georgia, "Times New Roman", serif; font-weight: 400; line-height: 1;
-  box-shadow: inset 0 0 0 1.5px rgb(var(--ouro) / .85), inset 0 0 0 4px rgb(var(--navy)), inset 0 0 0 5px rgb(var(--ouro) / .35);
+  background: rgb(var(--navy));
+  box-shadow: inset 0 0 0 1px rgb(var(--ouro) / .35);
 }
-.marca-nome { font-family: "Palatino Linotype", Palatino, "Book Antiqua", Georgia, "Times New Roman", serif; font-weight: 400; letter-spacing: .16em; }
+.marca-mono svg { width: 66%; height: 66%; }
+.marca-nome { font-family: Montserrat, "Segoe UI", Roboto, "Helvetica Neue", Arial, system-ui, sans-serif; font-weight: 600; letter-spacing: .3em; }
 .marca-assinatura { font-weight: 600; letter-spacing: .22em; text-transform: uppercase; color: rgb(var(--ouro)); }
 .marca-assinatura.escura { color: #8a6d2f; } /* dourado escurecido: legível sobre fundo claro */
