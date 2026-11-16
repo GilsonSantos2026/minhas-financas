@@ -436,11 +436,15 @@ Fin.finance = (() => {
     return { lancamentos: lanc, compras: comp, total: lanc + comp };
   }
 
-  /** Troca a categoria (nome/ícone) em todos os lançamentos e compras que a usam. */
-  function moverCategoria(de, para, tipo, icone) {
+  /**
+   * Troca a categoria (nome/ícone) nos lançamentos e compras que a usam.
+   * `ids` (Set, opcional): só esses registros; sem ele, todos.
+   */
+  function moverCategoria(de, para, tipo, icone, ids = null) {
+    const ok = (x) => !ids || ids.has(x.id);
     const troca = (x) => ({ ...x, categoria: para, categoriaIcone: icone ?? null });
-    S.set('lancamentos', bruto().map((l) => (l.categoria === de && l.tipo === tipo ? troca(l) : l)));
-    if (tipo === 'despesa') S.set('cartaoCompras', compras().map((c) => (c.categoria === de ? troca(c) : c)));
+    S.set('lancamentos', bruto().map((l) => (l.categoria === de && l.tipo === tipo && ok(l) ? troca(l) : l)));
+    if (tipo === 'despesa') S.set('cartaoCompras', compras().map((c) => (c.categoria === de && ok(c) ? troca(c) : c)));
   }
 
   /**
