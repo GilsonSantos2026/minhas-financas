@@ -1,0 +1,708 @@
+/**
+ * finance.js — Regras de negócio e cálculos (sem nenhuma tela).
+ *
+ * Convenções importantes:
+ * - Um lançamento pertence ao mês da sua COMPETÊNCIA ("AAAA-MM").
+ * - Valor considerado: o valor pago, se já foi pago; senão, o valor previsto.
+ * - Compras do cartão NÃO entram nas despesas: o gasto já aparece no
+ *   lançamento "Pagamento Fatura". Elas servem para detalhar cada fatura.
+ */
+window.Fin = window.Fin || {};
+
+Fin.finance = (() => {
+  const S = Fin.storage;
+  const fmt = Fin.fmt;
+
+  // bruto() = todos os lançamentos como estão gravados (use para EDITAR e GRAVAR).
+  // lancamentos() = visão do filtro por pessoa (só para CALCULAR e MOSTRAR totais; ver "Casal").
+  const bruto = () => S.list('lancamentos');
+  const lancamentos = () => lente(bruto());
+
+  const dataRef = (l) => l.vencimento || l.data || l.dataPagamento || null;
+  const competencia = (l) => l.competencia || (dataRef(l) || '').slice(0, 7);
+
+  /**
+   * Valor do lançamento: o valor pago quando quitado (pode ter juros/desconto);
+   * senão o previsto. Pagamento parcial conta pelo total devido (o que falta vai para "A pagar").
+   */
+  function valor(l) {
+    // Valor pago 0 em item "pago" = campo não preenchido na planilha → usa o previsto.
+    if (l.status === 'pago' && l.valorPago) return l.valorPago;
+    return l.valorPrevisto ?? l.valorPago ?? 0;
+  }
+
+  /** Status considerando a data de hoje: conta aberta com vencimento passado vira "atrasado". */
+  function statusEfetivo(l) {
+    if (l.status === 'pago' || l.status === 'parcial') return l.status;
+    if (l.status === 'atrasado') return 'atrasado';
+    const d = dataRef(l);
+    return d && d < fmt.todayISO() ? 'atrasado' : 'aberto';
+  }
+
+  const isPago = (l) => statusEfetivo(l) === 'pago';
+
+  function doMes(ym, list = lancamentos()) {
+    return list.filter((l) => competencia(l) === ym);
+  }
+
+  /**
+   * Aporte em investimento = despesa cuja categoria está marcada como "investimento".
+   * Não conta como gasto (o dinheiro continua seu, só mudou de lugar): fica fora das
+   * despesas, do "a pagar" e dos gráficos por categoria; aparece como "Investido no mês".
+   */
+  const catsInvestimento = () => new Set(S.list('categorias').filter((c) => c.tipo === 'despesa' && c.investimento).map((c) => c.nome));
+  const ehAporte = (l, cats = catsInvestimento()) => l.tipo === 'despesa' && cats.has(l.categoria);
+  const aportesDoMes = (ym) => { const cats = catsInvestimento(); return doMes(ym).filter((l) => ehAporte(l, cats)); };
+
+  function resumo(ym, list = doMes(ym)) {
+    const r = { receitas: 0, recebido: 0, despesas: 0, pago: 0, aPagar: 0, qtdAPagar: 0, atrasadas: 0, aportes: 0, qtd: list.length };
+    const cats = catsInvestimento();
+    for (const l of list) {
+      const v = valor(l);
+      const st = statusEfetivo(l);
+      if (cats.size && ehAporte(l, cats)) {
+        r.aportes += v;
+      } else if (l.tipo === 'receita') {
+        r.receitas += v;
+        if (st === 'pago') r.recebido += v;
+        else if (st === 'parcial') r.recebido += l.valorPago || 0;
+      } else {
+        r.despesas += v;
+        if (st === 'pago') r.pago += v;
+        else {
+          const jaPago = st === 'parcial' ? l.valorPago || 0 : 0;
+          if (st === 'parcial') r.pago += jaPago;
+          r.aPagar += Math.max(0, (l.valorPrevisto ?? v) - jaPago);
+          r.qtdAPagar++;
+          if (st === 'atrasado') r.atrasadas++;
+        }
+      }
+    }
+    r.saldo = r.receitas - r.despesas;
+    r.saldoRealizado = r.recebido - r.pago;
+    return r;
+  }
+
+  /** Totais por categoria no mês, do maior para o menor. */
+  function porCategoria(ym, tipo = 'despesa') {
+    const map = new Map();
+    const cats = catsInvestimento();
+    for (const l of doMes(ym)) {
+      if (l.tipo !== tipo || ehAporte(l, cats)) continue;
+      const cur = map.get(l.categoria) || { categoria: l.categoria, icone: l.categoriaIcone, total: 0, qtd: 0 };
+      cur.total += valor(l);
+      cur.qtd++;
+      map.set(l.categoria, cur);
+    }
+    return [...map.values()].sort((a, b) => b.total - a.total);
+  }
+
+  /** Receitas e despesas dos últimos n meses até ym (inclusive). */
+  function historico(ym, n = 6) {
+    const all = lancamentos();
+    const out = [];
+    for (let i = n - 1; i >= 0; i--) {
+      const m = fmt.addMonths(ym, -i);
+      const r = resumo(m, doMes(m, all));
+      out.push({ ym: m, receitas: r.receitas, despesas: r.despesas, saldo: r.saldo, aportes: r.aportes });
+    }
+    return out;
+  }
+
+  /** Despesas ainda não pagas do mês, por vencimento. */
+  function contasAbertas(ym) {
+    const cats = catsInvestimento();
+    return doMes(ym)
+      .filter((l) => l.tipo === 'despesa' && !isPago(l) && !ehAporte(l, cats))
+      .sort((a, b) => (dataRef(a) || '').localeCompare(dataRef(b) || ''));
+  }
+
+  /** Total de cada fatura de cartão com vencimento no mês ym. */
+  function faturas(ym) {
+    const map = new Map();
+    for (const c of S.list('cartaoCompras')) {
+      if (c.fatura !== ym) continue;
+      const cur = map.get(c.cartao) || { cartao: c.cartao, total: 0, qtd: 0 };
+      cur.total += c.valor || 0;
+      cur.qtd++;
+      map.set(c.cartao, cur);
+    }
+    return [...map.values()].sort((a, b) => b.total - a.total);
+  }
+
+  /** Mês inicial: o atual, se tiver lançamentos; senão o último mês com dados. */
+  function mesInicial() {
+    const atual = fmt.currentYM();
+    const meses = [...new Set(bruto().map(competencia))].filter(Boolean).sort();
+    if (!meses.length || meses.includes(atual)) return atual;
+    const anteriores = meses.filter((m) => m <= atual);
+    return anteriores.length ? anteriores[anteriores.length - 1] : meses[0];
+  }
+
+  function categorias(tipo) {
+    return S.list('categorias')
+      .filter((c) => !tipo || c.tipo === tipo)
+      .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  }
+
+  function formasPagamento() {
+    const map = new Map();
+    for (const l of bruto()) if (l.formaPagamento) map.set(l.formaPagamento, l.formaPagamentoIcone);
+    return [...map.entries()].map(([nome, icone]) => ({ nome, icone })).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  }
+
+  /** Alterna entre pago e aberto (preserva o valor/data pagos para poder desfazer). */
+  function togglePago(id) {
+    const l = bruto().find((x) => x.id === id);
+    if (!l) return null;
+    if (isPago(l)) return S.upsert('lancamentos', { id, status: 'aberto' });
+    return S.upsert('lancamentos', {
+      id,
+      status: 'pago',
+      valorPago: l.status === 'parcial' ? l.valorPrevisto ?? l.valorPago : l.valorPago || l.valorPrevisto,
+      dataPagamento: l.dataPagamento || fmt.todayISO(),
+    });
+  }
+
+  /* ================= Cartões de crédito ================= */
+
+  const N = (v) => Fin.parsers.normalize(v);
+  const compras = () => S.list('cartaoCompras');
+  const pad = (n) => String(n).padStart(2, '0');
+
+  /** Lançamento que representa o pagamento de uma fatura (categoria contém "fatura"). */
+  const isPagamentoFatura = (l) => l.tipo === 'despesa' && /fatura/.test(N(l.categoria));
+
+  /**
+   * Em qual fatura (mês de vencimento "AAAA-MM") cai uma compra feita em dataISO.
+   * Compra no dia do fechamento ou depois vai para o ciclo seguinte.
+   */
+  function faturaDaCompra(cfg, dataISO) {
+    const ym = dataISO.slice(0, 7);
+    const dia = Number(dataISO.slice(8, 10));
+    if (!cfg || !cfg.diaFechamento) return fmt.addMonths(ym, 1);
+    const mesFechamento = dia < cfg.diaFechamento ? ym : fmt.addMonths(ym, 1);
+    const venc = cfg.diaVencimento || 10;
+    return venc > cfg.diaFechamento ? mesFechamento : fmt.addMonths(mesFechamento, 1);
+  }
+
+  /** Data de vencimento da fatura do mês ym (ajusta para o último dia, ex.: 31 em fevereiro). */
+  function vencimentoFatura(cfg, ym) {
+    if (!cfg || !cfg.diaVencimento) return null;
+    const [y, m] = ym.split('-').map(Number);
+    const ultimo = new Date(y, m, 0).getDate();
+    return `${ym}-${pad(Math.min(cfg.diaVencimento, ultimo))}`;
+  }
+
+  /** Descobre o dia de vencimento (pelos pagamentos) e o de fechamento (pelas compras importadas). */
+  function inferirConfig(nome, chave) {
+    const k = N(chave);
+    const dias = bruto()
+      .filter((l) => isPagamentoFatura(l) && k && ` ${N(l.descricao)} `.includes(` ${k} `) && l.vencimento)
+      .map((l) => Number(l.vencimento.slice(8, 10)));
+    const moda = (arr) => {
+      const c = {};
+      arr.forEach((d) => (c[d] = (c[d] || 0) + 1));
+      return Number(Object.entries(c).sort((a, b) => b[1] - a[1])[0]?.[0]) || null;
+    };
+    const diaVencimento = moda(dias);
+
+    // Testa todos os dias de fechamento e fica com o que acerta mais faturas.
+    const amostra = compras().filter((c) => c.cartao === nome && c.data && c.fatura && (!c.parcela || c.parcela.atual === 1));
+    let diaFechamento = null;
+    if (diaVencimento && amostra.length >= 5) {
+      let melhor = -1;
+      for (let d = 1; d <= 31; d++) {
+        const cfg = { diaFechamento: d, diaVencimento };
+        const acertos = amostra.filter((c) => faturaDaCompra(cfg, c.data) === c.fatura).length;
+        if (acertos > melhor) { melhor = acertos; diaFechamento = d; }
+      }
+    }
+    return { diaVencimento, diaFechamento };
+  }
+
+  /** Palavra do nome do cartão que aparece na descrição dos pagamentos ("Ourocard Elo" → "ourocard"). */
+  function adivinharChave(nome) {
+    const pagamentos = bruto().filter(isPagamentoFatura).map((l) => ` ${N(l.descricao)} `);
+    const tokens = N(nome).split(' ').filter((t) => t.length >= 3);
+    return tokens.find((t) => pagamentos.some((p) => p.includes(` ${t} `))) || tokens[0] || '';
+  }
+
+  /** Lista de cartões. Cria automaticamente a configuração dos cartões vindos da importação. */
+  function cartoes() {
+    const cfgs = S.list('cartoes');
+    const conhecidos = new Set(cfgs.map((c) => c.nome));
+    const novos = [...new Set(compras().map((c) => c.cartao))].filter((n) => n && !conhecidos.has(n));
+    if (novos.length) {
+      for (const nome of novos) {
+        const palavraChave = adivinharChave(nome);
+        cfgs.push({ id: S.uid(), nome, palavraChave, limite: null, ...inferirConfig(nome, palavraChave) });
+      }
+      S.set('cartoes', cfgs);
+    }
+    return [...cfgs].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  }
+
+  const cartao = (nome) => cartoes().find((c) => c.nome === nome) || null;
+
+  function comprasDaFatura(nome, ym) {
+    return compras().filter((c) => (!nome || c.cartao === nome) && c.fatura === ym);
+  }
+
+  const soma = (arr, f = (x) => x.valor || 0) => Math.round(arr.reduce((s, x) => s + f(x), 0) * 100) / 100;
+
+  /** Lançamento de pagamento da fatura do cartão no mês ym (ou null). */
+  function pagamentoDaFatura(cfg, ym) {
+    const k = N(cfg?.palavraChave);
+    if (!k) return null;
+    return doMes(ym).find((l) => isPagamentoFatura(l) && ` ${N(l.descricao)} `.includes(` ${k} `)) || null;
+  }
+
+  /** Limite comprometido: soma das faturas a partir do mês atual (inclui parcelas futuras). */
+  function limiteUsado(nome) {
+    const atual = fmt.currentYM();
+    return soma(compras().filter((c) => c.cartao === nome && c.fatura >= atual));
+  }
+
+  /** Compras da fatura agrupadas por categoria. nome = null → todos os cartões. */
+  function faturaPorCategoria(nome, ym) {
+    const map = new Map();
+    for (const c of comprasDaFatura(nome, ym)) {
+      const cur = map.get(c.categoria) || { categoria: c.categoria, icone: c.categoriaIcone, total: 0, qtd: 0 };
+      cur.total += c.valor || 0;
+      cur.qtd++;
+      map.set(c.categoria, cur);
+    }
+    return [...map.values()].sort((a, b) => b.total - a.total);
+  }
+
+  /**
+   * Despesas por categoria trocando "Pagamento Fatura" pelas categorias reais das compras.
+   * Se o pagamento for maior que a soma das compras, a diferença aparece como "Fatura (sem detalhe)".
+   */
+  function porCategoriaDetalhada(ym) {
+    const base = porCategoria(ym, 'despesa');
+    const pagFatura = base.filter((c) => /fatura/.test(N(c.categoria)));
+    if (!pagFatura.length) return base;
+    const totalDespesas = base.reduce((s, c) => s + c.total, 0);
+    const totalPagFatura = pagFatura.reduce((s, c) => s + c.total, 0);
+    const map = new Map(base.filter((c) => !pagFatura.includes(c)).map((c) => [c.categoria, { ...c }]));
+
+    // Se as compras somam MAIS que o pagamento lançado (fatura paga em parte, rotativo…),
+    // distribui o valor pago proporcionalmente entre as categorias das compras.
+    // Assim o total detalhado sempre bate com as despesas do mês.
+    const comprasCats = faturaPorCategoria(null, ym).filter((c) => c.total > 0);
+    const somaCompras = comprasCats.reduce((s, c) => s + c.total, 0);
+    // Com filtro por pessoa, as compras seguem sempre a parte dela nos pagamentos da fatura.
+    const fator = (somaCompras > totalPagFatura || pessoaAtiva()) && somaCompras > 0 ? totalPagFatura / somaCompras : 1;
+
+    for (const c of comprasCats) {
+      const cur = map.get(c.categoria) || { categoria: c.categoria, icone: c.icone, total: 0, qtd: 0 };
+      cur.total += c.total * fator;
+      cur.qtd += c.qtd;
+      map.set(c.categoria, cur);
+    }
+    // Créditos/estornos podem deixar uma categoria negativa: ela sai do gráfico e
+    // a diferença é recalculada sobre o que sobrou, para o total bater com as despesas.
+    const lista = [...map.values()].filter((c) => c.total > 0.005);
+    const resto = totalDespesas - lista.reduce((s, c) => s + c.total, 0);
+    if (resto > 0.5) lista.push({ categoria: 'Fatura (sem detalhe)', icone: '💳', total: resto, qtd: 0 });
+    return lista.sort((a, b) => b.total - a.total);
+  }
+
+  /** Cria ou atualiza o lançamento de pagamento da fatura com o total das compras. */
+  function sincronizarPagamento(cfg, ym) {
+    const total = soma(comprasDaFatura(cfg.nome, ym));
+    const pag = pagamentoDaFatura(cfg, ym);
+    if (pag) return S.upsert('lancamentos', { id: pag.id, valorPrevisto: total });
+
+    if (!cfg.palavraChave) S.upsert('cartoes', { id: cfg.id, palavraChave: N(cfg.nome).split(' ')[0] });
+    const cat = categorias('despesa').find((c) => /fatura/.test(N(c.nome)));
+    const venc = vencimentoFatura(cfg, ym) || `${ym}-10`;
+    return S.upsert('lancamentos', {
+      origem: 'app',
+      tipo: 'despesa',
+      descricao: `CARTÃO - ${cfg.nome.toUpperCase()}`,
+      categoria: cat?.nome || 'Pagamento Fatura',
+      categoriaIcone: cat?.icone || '💳',
+      valorPrevisto: total,
+      valorPago: null,
+      status: 'aberto',
+      vencimento: venc,
+      data: venc,
+      dataPagamento: null,
+      competencia: ym,
+      formaPagamento: null,
+      formaPagamentoIcone: null,
+      observacao: 'Gerado pela tela de Cartões',
+    });
+  }
+
+  /**
+   * Cria as parcelas de uma compra. Cada parcela vira um registro na fatura do seu mês.
+   * O centavo que sobra da divisão fica na 1ª parcela.
+   */
+  function criarCompra({ cartao: nome, data, descricao, categoria, categoriaIcone, valorTotal, parcelas, fatura, observacao }) {
+    const n = Math.max(1, Math.min(72, parcelas || 1));
+    const centavos = Math.round(valorTotal * 100);
+    const base = Math.trunc(centavos / n);
+    const grupo = S.uid();
+    const lista = S.list('cartaoCompras');
+    for (let i = 0; i < n; i++) {
+      const v = (i === 0 ? centavos - base * (n - 1) : base) / 100;
+      lista.push({
+        id: S.uid(),
+        grupo,
+        origem: 'app',
+        cartao: nome,
+        data,
+        fatura: fmt.addMonths(fatura, i),
+        descricao,
+        categoria,
+        categoriaIcone: categoriaIcone || null,
+        valor: v,
+        parcela: n > 1 ? { atual: i + 1, total: n } : null,
+        valorTotalCompra: n > 1 ? valorTotal : null,
+        observacao: observacao || null,
+        criadoEm: new Date().toISOString(),
+        criadoPor: Fin.cofre?.membroId?.() || 'm1',
+      });
+    }
+    S.set('cartaoCompras', lista);
+    return grupo;
+  }
+
+  /* ================= Recorrência (parcelado e fixo mensal) ================= */
+
+  /**
+   * Cria n lançamentos ligados por um "grupo", um por mês.
+   * - parcelado: divide o valor (centavos que sobram ficam na 1ª parcela)
+   * - fixo: repete o mesmo valor todo mês
+   * Só o 1º herda status/pagamento informados; os demais nascem "em aberto".
+   */
+  function criarRepetidos(base, modo, n) {
+    const grupo = S.uid();
+    const agora = new Date().toISOString();
+    const centavos = Math.round(base.valorPrevisto * 100);
+    const parte = Math.trunc(centavos / n);
+    const lista = S.list('lancamentos');
+    for (let i = 0; i < n; i++) {
+      const venc = fmt.addMonthsISO(base.vencimento, i);
+      const valorParcela = modo === 'parcelado' ? (i === 0 ? centavos - parte * (n - 1) : parte) / 100 : base.valorPrevisto;
+      lista.push({
+        ...base,
+        id: S.uid(),
+        grupo,
+        criadoPor: base.criadoPor || Fin.cofre?.membroId?.() || 'm1',
+        recorrencia: modo,
+        parcela: { atual: i + 1, total: n },
+        valorPrevisto: valorParcela,
+        vencimento: venc,
+        data: i === 0 ? base.data : venc,
+        competencia: fmt.addMonths(base.competencia, i),
+        status: i === 0 ? base.status : 'aberto',
+        // No parcelado, o "valor pago" digitado refere-se ao total: limita à 1ª parcela.
+        valorPago: i === 0 && base.valorPago != null ? Math.min(base.valorPago, valorParcela) : null,
+        dataPagamento: i === 0 ? base.dataPagamento : null,
+        criadoEm: agora,
+      });
+    }
+    S.set('lancamentos', lista);
+    return grupo;
+  }
+
+  /** Lançamentos do mesmo grupo a partir deste (inclusive), por competência. */
+  const esteEProximos = (l, x) => x.id === l.id || (l.grupo && x.grupo === l.grupo && competencia(x) > competencia(l));
+
+  /** Aplica campos aos PRÓXIMOS do grupo (o próprio lançamento é salvo pelo formulário). */
+  function atualizarProximos(l, campos) {
+    const agora = new Date().toISOString();
+    S.set('lancamentos', bruto().map((x) => (x.id !== l.id && esteEProximos(l, x) ? { ...x, ...campos, atualizadoEm: agora } : x)));
+  }
+
+  /** Exclui só este ou este e os próximos do grupo. Retorna quantos saíram. */
+  function excluirLancamento(l, escopo = 'este') {
+    const antes = bruto();
+    const fica = antes.filter((x) => !(escopo === 'proximos' ? esteEProximos(l, x) : x.id === l.id));
+    S.set('lancamentos', fica);
+    return antes.length - fica.length;
+  }
+
+  /* ================= Categorias e orçamento ================= */
+
+  function usosCategoria(nome, tipo) {
+    const lanc = bruto().filter((l) => l.categoria === nome && l.tipo === tipo).length;
+    const comp = tipo === 'despesa' ? compras().filter((c) => c.categoria === nome).length : 0;
+    return { lancamentos: lanc, compras: comp, total: lanc + comp };
+  }
+
+  /**
+   * Troca a categoria (nome/ícone) nos lançamentos e compras que a usam.
+   * `ids` (Set, opcional): só esses registros; sem ele, todos.
+   */
+  function moverCategoria(de, para, tipo, icone, ids = null) {
+    const ok = (x) => !ids || ids.has(x.id);
+    const troca = (x) => ({ ...x, categoria: para, categoriaIcone: icone ?? null });
+    S.set('lancamentos', bruto().map((l) => (l.categoria === de && l.tipo === tipo && ok(l) ? troca(l) : l)));
+    if (tipo === 'despesa') S.set('cartaoCompras', compras().map((c) => (c.categoria === de && ok(c) ? troca(c) : c)));
+  }
+
+  /**
+   * Orçamento do mês. O gasto de cada categoria considera as compras do cartão
+   * pela categoria de cada compra (e não como "Pagamento Fatura").
+   */
+  function orcamento(ym) {
+    const gastos = new Map(porCategoriaDetalhada(ym).map((c) => [c.categoria, c.total]));
+    const cats = categorias('despesa');
+    const itens = cats
+      .filter((c) => c.orcamentoMensal > 0)
+      .map((c) => {
+        const gasto = gastos.get(c.nome) || 0;
+        return { id: c.id, categoria: c.nome, icone: c.icone, orcado: c.orcamentoMensal, gasto, pct: gasto / c.orcamentoMensal };
+      })
+      .sort((a, b) => b.pct - a.pct);
+    const comOrcamento = new Set(itens.map((i) => i.categoria));
+    const semOrcamento = [...gastos.entries()]
+      .filter(([nome, total]) => !comOrcamento.has(nome) && total > 0 && !/sem detalhe/i.test(nome))
+      .map(([nome, total]) => {
+        const c = cats.find((k) => k.nome === nome);
+        return { id: c?.id || null, categoria: nome, icone: c?.icone || null, gasto: total };
+      })
+      .sort((a, b) => b.gasto - a.gasto);
+    const totalOrcado = itens.reduce((s, i) => s + i.orcado, 0);
+    const totalGasto = itens.reduce((s, i) => s + i.gasto, 0);
+    return { itens, semOrcamento, totalOrcado, totalGasto };
+  }
+
+  /** Média de gasto da categoria nos n meses anteriores a ym (para sugerir orçamento). */
+  function mediaGasto(nome, ym, n = 3) {
+    let soma = 0;
+    for (let i = 1; i <= n; i++) soma += porCategoriaDetalhada(fmt.addMonths(ym, -i)).find((c) => c.categoria === nome)?.total || 0;
+    return Math.round((soma / n) * 100) / 100;
+  }
+
+  /* ================= Conciliação: lançado × pago efetivamente ================= */
+
+  const diasEntre = (a, b) => Math.round((new Date(`${b}T00:00`) - new Date(`${a}T00:00`)) / 86400000);
+
+  /**
+   * Compara o valor LANÇADO com o PAGAMENTO EFETIVADO de um lançamento.
+   * situacao: 'ok' (pago igual) | 'maior' (pago a mais: juros/multa) | 'menor' (pago a menos: desconto)
+   *           | 'parcial' | 'atrasado' (não pago e vencido) | 'pendente' (não pago, a vencer)
+   */
+  function conciliar(l) {
+    const lancado = l.valorPrevisto ?? l.valorPago ?? 0;
+    const st = statusEfetivo(l);
+    const pago = st === 'pago' ? (l.valorPago || lancado) : st === 'parcial' ? (l.valorPago || 0) : 0;
+    const venc = dataRef(l);
+    const pagou = st === 'pago' || st === 'parcial';
+    const diferenca = st === 'pago' ? Math.round((pago - lancado) * 100) / 100 : 0;
+    let situacao;
+    if (st === 'pago') situacao = Math.abs(diferenca) < 0.01 ? 'ok' : diferenca > 0 ? 'maior' : 'menor';
+    else situacao = st === 'parcial' ? 'parcial' : st === 'atrasado' ? 'atrasado' : 'pendente';
+    const diasAtraso = pagou
+      ? (l.dataPagamento && venc ? Math.max(0, diasEntre(venc, l.dataPagamento)) : 0)
+      : (st === 'atrasado' && venc ? Math.max(0, diasEntre(venc, fmt.todayISO())) : 0);
+    return {
+      lancado, pago, diferenca, situacao, diasAtraso,
+      falta: st === 'pago' ? 0 : Math.max(0, Math.round((lancado - pago) * 100) / 100),
+      pagoComAtraso: pagou && diasAtraso > 0,
+      semDataPagamento: pagou && !l.dataPagamento,
+    };
+  }
+
+  /** Conciliação de um período: itens + totais. tipo: 'despesa' | 'receita' | '' (todos). */
+  function conciliacaoPeriodo(ini, fim, tipo = 'despesa') {
+    const itens = lancamentos()
+      .filter((l) => (!tipo || l.tipo === tipo) && competencia(l) >= ini && competencia(l) <= fim)
+      .map((l) => ({ l, c: conciliar(l) }))
+      .sort((a, b) => (dataRef(a.l) || '').localeCompare(dataRef(b.l) || ''));
+    const t = { lancado: 0, pago: 0, acrescimos: 0, descontos: 0, pendente: 0, qtd: itens.length, porSituacao: {}, pagosComAtraso: 0, semData: 0 };
+    for (const { c } of itens) {
+      t.lancado += c.lancado;
+      t.pago += c.pago;
+      if (c.diferenca > 0) t.acrescimos += c.diferenca;
+      if (c.diferenca < 0) t.descontos += -c.diferenca;
+      t.pendente += c.falta;
+      t.porSituacao[c.situacao] = (t.porSituacao[c.situacao] || 0) + 1;
+      if (c.pagoComAtraso) t.pagosComAtraso++;
+      if (c.semDataPagamento) t.semData++;
+    }
+    const conciliados = (t.porSituacao.ok || 0) + (t.porSituacao.maior || 0) + (t.porSituacao.menor || 0);
+    t.percentualPago = t.qtd ? conciliados / t.qtd : 0;
+    return { itens, totais: t };
+  }
+
+  /** Faturas do mês: compras do cartão × pagamento lançado × pago. */
+  /* ================= Rotativo do cartão: fatura paga a menos ================= */
+
+  /** Taxa usada só para dar ideia do custo (o rotativo costuma passar de 10% ao mês). */
+  const TAXA_ROTATIVO_REF = 0.10;
+  /** Itens de fatura que são custo de atraso/rotativo (lidos da descrição das compras). */
+  const RE_ENCARGO = /\b(juros|encargos?|iof|multa|mora|rotativ\w*)\b/;
+
+  /** Pagamento de fatura feito a menos que o lançado → { devido, pago, falta, custoMes } ou null. */
+  function faturaParcial(l) {
+    if (!l || !isPagamentoFatura(l)) return null;
+    const st = statusEfetivo(l);
+    if (st !== 'parcial' && st !== 'pago') return null;
+    const devido = l.valorPrevisto || 0;
+    const pago = l.valorPago || 0;
+    if (!pago || pago >= devido - 0.01) return null;
+    const falta = Math.round((devido - pago) * 100) / 100;
+    return { devido, pago, falta, custoMes: Math.round(falta * TAXA_ROTATIVO_REF * 100) / 100 };
+  }
+
+  /**
+   * Histórico de faturas pagas a menos nos últimos n meses até ym (nome = um cartão ou todos):
+   * { parciais[{ l, competencia, cartao, devido, pago, falta }], totalFalta,
+   *   encargos (soma dos itens de juros/IOF/multa nas faturas), itensEncargo[], pagoAMais (pago > lançado) }.
+   */
+  function rotativo(nome = null, ym = fmt.currentYM(), n = 12) {
+    const ini = fmt.addMonths(ym, -(n - 1));
+    const cfgs = nome ? [cartao(nome)].filter(Boolean) : cartoes();
+    const doCartao = (l) => cfgs.find((c) => c.palavraChave && ` ${N(l.descricao)} `.includes(` ${N(c.palavraChave)} `))?.nome || null;
+    const parciais = [];
+    let pagoAMais = 0;
+    for (const l of bruto()) {
+      const comp = competencia(l);
+      if (!isPagamentoFatura(l) || comp < ini || comp > ym) continue;
+      const cart = doCartao(l);
+      if (nome && cart !== nome) continue;
+      const p = faturaParcial(l);
+      if (p) parciais.push({ l, competencia: comp, cartao: cart, ...p });
+      else if (statusEfetivo(l) === 'pago' && l.valorPago > (l.valorPrevisto || 0) + 0.01) pagoAMais += l.valorPago - l.valorPrevisto;
+    }
+    parciais.sort((a, b) => b.competencia.localeCompare(a.competencia));
+    const itensEncargo = compras().filter((c) => (!nome || c.cartao === nome) && c.fatura >= ini && c.fatura <= ym
+      && (c.valor || 0) > 0 && RE_ENCARGO.test(N(c.descricao)));
+    return {
+      meses: n, parciais,
+      totalFalta: soma(parciais, (p) => p.falta),
+      encargos: soma(itensEncargo),
+      itensEncargo,
+      pagoAMais: Math.round(pagoAMais * 100) / 100,
+    };
+  }
+
+  function conciliacaoFaturas(ym) {
+    return cartoes().map((cfg) => {
+      const compras = soma(comprasDaFatura(cfg.nome, ym));
+      const pag = pagamentoDaFatura(cfg, ym);
+      const c = pag ? conciliar(pag) : null;
+      return {
+        cartao: cfg.nome, compras, pagamento: pag, lancado: c ? c.lancado : 0, pago: c ? c.pago : 0,
+        situacao: c ? c.situacao : null,
+        difComprasLancado: pag ? Math.round((compras - c.lancado) * 100) / 100 : null,
+      };
+    }).filter((f) => f.compras || f.pagamento);
+  }
+
+  /* ================= Casal: autoria, quem pagou e filtro por pessoa ================= */
+
+  /**
+   * Regras (v2026-11-16.1):
+   * - autor(l) = quem lançou (criadoPor); registros antigos, sem autor, são do titular ('m1').
+   * - Receita: quem lançou é quem recebeu.
+   * - Despesa: pagoPor = id da pessoa ou 'casal' (contas dos dois); sem campo = quem lançou.
+   * - Filtro por pessoa (Fin.state.pessoa): a pessoa vê as receitas dela, as despesas que ela
+   *   pagou e a PARTE dela nas contas dos dois (divisão em invConfig 'casal', padrão igual).
+   *   "Ambos" (null) = tudo, como antes. Os valores filtrados são cópias: nunca gravar.
+   */
+  const CASAL = 'casal';
+  const autor = (l) => l?.criadoPor || 'm1';
+  const pagador = (l) => (l?.tipo === 'receita' ? autor(l) : l?.pagoPor || autor(l));
+  const pessoasIds = () => (Fin.cofre?.pessoas?.() || []).map((p) => p.id);
+  const temCasal = () => pessoasIds().length > 1;
+
+  /** Divisão das contas dos dois: { id: porcentagem } (soma 100). */
+  function divisao() {
+    const ids = pessoasIds();
+    if (ids.length < 2) return { [ids[0] || 'm1']: 100 };
+    const cfg = S.list('invConfig').find((c) => c.id === 'casal')?.divisao || {};
+    const dados = ids.map((id) => [id, Number(cfg[id])]).filter(([, v]) => Number.isFinite(v) && v >= 0);
+    const soma = dados.reduce((s, [, v]) => s + v, 0);
+    if (dados.length !== ids.length || soma <= 0) return Object.fromEntries(ids.map((id) => [id, 100 / ids.length]));
+    return Object.fromEntries(dados.map(([id, v]) => [id, (v / soma) * 100]));
+  }
+  const parteDe = (id) => (divisao()[id] || 0) / 100;
+
+  function salvarDivisao(mapa) {
+    const atual = S.list('invConfig').find((c) => c.id === 'casal') || { id: 'casal' };
+    S.upsert('invConfig', { ...atual, id: 'casal', divisao: mapa });
+  }
+
+  /** Pessoa do filtro (null = Ambos). Só vale com 2+ pessoas e id conhecido. */
+  function pessoaAtiva() {
+    const p = Fin.state?.pessoa;
+    if (!p || p === 'todos' || !temCasal()) return null;
+    return pessoasIds().includes(p) ? p : null;
+  }
+
+  /** Quanto do lançamento pertence à pessoa p (0 a 1). */
+  function peso(l, p = pessoaAtiva()) {
+    if (!p) return 1;
+    if (l.tipo === 'receita') return autor(l) === p ? 1 : 0;
+    const pg = pagador(l);
+    if (pg === CASAL) return parteDe(p);
+    return pg === p ? 1 : 0;
+  }
+
+  const r2 = (v) => Math.round(v * 100) / 100;
+  let memoLente = { lista: null, chave: '', out: null };
+  function lente(lista, p = pessoaAtiva()) {
+    if (!p) return lista;
+    const chave = `${p}|${JSON.stringify(divisao())}`;
+    if (memoLente.lista === lista && memoLente.chave === chave) return memoLente.out;
+    const out = [];
+    for (const l of lista) {
+      const w = peso(l, p);
+      if (w <= 0) continue;
+      if (w === 1) { out.push(l); continue; }
+      out.push({
+        ...l,
+        valorPrevisto: l.valorPrevisto != null ? r2(l.valorPrevisto * w) : l.valorPrevisto,
+        valorPago: l.valorPago != null ? r2(l.valorPago * w) : l.valorPago,
+        _parte: w,
+      });
+    }
+    memoLente = { lista, chave, out };
+    return out;
+  }
+
+  /**
+   * Compras do cartão no filtro por pessoa: seguem quem pagou a fatura do mês.
+   * Fator = pagamentos de fatura do mês na visão da pessoa ÷ pagamentos de fatura do mês.
+   */
+  function fatorCompras(ym, p = pessoaAtiva()) {
+    if (!p) return 1;
+    const proporcao = (lista) => {
+      const total = lista.reduce((s, l) => s + valor(l), 0);
+      return total > 0 ? lista.reduce((s, l) => s + valor(l) * peso(l, p), 0) / total : null;
+    };
+    const pagFaturas = bruto().filter(isPagamentoFatura);
+    const doMesmo = proporcao(pagFaturas.filter((l) => competencia(l) === ym));
+    if (doMesmo != null) return doMesmo;
+    // Mês sem pagamento de fatura lançado (ex.: parcelas futuras): usa quem pagou as faturas
+    // nos 12 meses anteriores; sem histórico, a divisão do casal.
+    const ini = fmt.addMonths(ym, -12);
+    const hist = proporcao(pagFaturas.filter((l) => { const c = competencia(l); return c >= ini && c < ym; }));
+    return hist != null ? hist : parteDe(p);
+  }
+
+  /** A pessoa participa deste lançamento? (para filtrar listas mostrando o valor cheio) */
+  const daPessoa = (l, p = pessoaAtiva()) => !p || peso(l, p) > 0;
+
+  return {
+    // casal
+    CASAL, autor, pagador, divisao, parteDe, salvarDivisao, pessoaAtiva, peso, temCasal, fatorCompras, daPessoa,
+    todos: bruto, naVisao: (lista) => lente(lista), visaoDe: (lista, p) => lente(lista, p || null),
+    conciliar, conciliacaoPeriodo, conciliacaoFaturas,
+    criarRepetidos, atualizarProximos, excluirLancamento, usosCategoria, moverCategoria, orcamento, mediaGasto,
+    lancamentos, dataRef, competencia, valor, statusEfetivo, isPago, doMes, resumo, ehAporte, aportesDoMes, catsInvestimento,
+    porCategoria, porCategoriaDetalhada, historico, contasAbertas, faturas, mesInicial, categorias, formasPagamento, togglePago,
+    isPagamentoFatura, faturaDaCompra, vencimentoFatura, inferirConfig, cartoes, cartao, comprasDaFatura, soma,
+    pagamentoDaFatura, limiteUsado, faturaPorCategoria, sincronizarPagamento, criarCompra,
+    faturaParcial, rotativo, TAXA_ROTATIVO_REF,
+  };
+})();

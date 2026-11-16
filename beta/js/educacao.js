@@ -1,0 +1,124 @@
+/**
+ * educacao.js — Conteúdo da aba "Aprender" (educação financeira): artigos curtos, em
+ * linguagem simples. Conteúdo educativo, escrito para o app — não é recomendação de investimento.
+ *
+ * Cada artigo: { id, titulo, resumo, icone, cor, min (leitura), grupo, pontos[3], secoes[{t, p[] | lista[]}] }
+ * Regras de imposto mudam: os textos falam do princípio e mandam conferir a regra atual.
+ */
+window.Fin = window.Fin || {};
+
+Fin.educacao = (() => {
+  const GRUPOS = [
+    ['basico', 'Primeiros passos'],
+    ['investir', 'Investimentos'],
+    ['dividas', 'Cartão e dívidas'],
+  ];
+
+  const ARTIGOS = [
+    {
+      id: 'orcamento', grupo: 'basico', icone: 'pizza', cor: 'blue', min: 3,
+      titulo: 'Orçamento sem sofrimento',
+      resumo: 'Uma divisão simples do salário para saber quanto pode gastar sem culpa.',
+      pontos: ['Anote tudo por um mês antes de cortar qualquer coisa.', 'Uma regra simples: 50% necessidades, 30% desejos, 20% futuro.', 'Ajuste os números à sua realidade — o importante é ter um plano.'],
+      secoes: [
+        { t: 'Comece olhando, não cortando', p: ['O primeiro passo é saber para onde o dinheiro vai. Lance tudo por um mês inteiro — inclusive o cafezinho e as compras no cartão. Só depois disso dá para decidir o que mudar.'] },
+        { t: 'A regra 50-30-20', p: ['É um ponto de partida para dividir o que entra no mês:'], lista: ['50% para necessidades: moradia, contas, mercado, transporte, saúde, escola.', '30% para desejos: lazer, restaurantes, assinaturas, compras.', '20% para o futuro: reserva de emergência, investimentos e quitar dívidas.'] },
+        { t: 'E se não fechar?', p: ['Se as necessidades passam de 50%, tudo bem — muita gente está nessa situação. Comece reduzindo os desejos e guardando qualquer valor, mesmo pequeno, todo mês. O hábito vale mais que o tamanho.'] },
+        { t: 'No app', p: ['Use o Orçamento para pôr limites por categoria e o Início para ver quanto da receita as despesas estão consumindo.'] },
+      ],
+    },
+    {
+      id: 'reserva', grupo: 'basico', icone: 'escudo', cor: 'emerald', min: 3,
+      titulo: 'Reserva de emergência',
+      resumo: 'O colchão que evita dívidas quando algo inesperado acontece.',
+      pontos: ['Guarde de 3 a 12 meses do seu custo essencial.', 'Precisa de segurança e saque rápido, não de rentabilidade alta.', 'Monte a reserva antes de investir em ações ou fundos.'],
+      secoes: [
+        { t: 'Para que serve', p: ['Perda de emprego, conserto do carro, problema de saúde: a reserva paga esses imprevistos sem você precisar do cheque especial, do rotativo do cartão ou de empréstimo — que cobram os juros mais altos do mercado.'] },
+        { t: 'Quanto guardar', p: ['A conta usa o custo ESSENCIAL do mês (moradia, contas, mercado, saúde, escola, parcelas que você já assumiu), não o gasto total.'], lista: ['3 meses: quando a casa tem duas rendas estáveis.', '6 meses: renda estável (CLT, servidor) — o mais comum.', '9 meses: com dependentes ou um único salário.', '12 meses: renda variável (autônomo, comissão, empresa própria).'] },
+        { t: 'Onde deixar', p: ['O dinheiro precisa estar seguro e disponível no mesmo dia ou no dia seguinte. Opções comuns: Tesouro Selic, CDB com liquidez diária de banco grande ou conta remunerada. Evite ações, fundos imobiliários e aplicações com prazo de carência.'] },
+        { t: 'No app', p: ['A aba Investimentos → Reserva calcula o valor ideal a partir das suas despesas e mostra quanto falta.'] },
+      ],
+    },
+    {
+      id: 'renda-fixa', grupo: 'investir', icone: 'cofrinho', cor: 'sky', min: 4,
+      titulo: 'Renda fixa',
+      resumo: 'Você empresta dinheiro e sabe, desde o início, como ele vai render.',
+      pontos: ['Você empresta para o governo ou um banco e recebe juros.', 'Tesouro Direto e CDB são os mais conhecidos.', 'O imposto cai quanto mais tempo o dinheiro fica aplicado.'],
+      secoes: [
+        { t: 'Como funciona', p: ['Na renda fixa você empresta seu dinheiro e recebe juros por isso. A regra de rendimento é combinada na hora: um percentual do CDI, a taxa Selic, a inflação mais uma taxa, ou uma taxa fixa (prefixado).'] },
+        { t: 'Os mais comuns', lista: ['Tesouro Selic: empréstimo ao governo; bom para reserva de emergência.', 'Tesouro IPCA+: protege da inflação; bom para objetivos longos, como aposentadoria. Se vender antes do vencimento, o valor pode oscilar.', 'Tesouro Prefixado: taxa definida na compra; oscila se vendido antes do vencimento.', 'CDB: empréstimo a um banco, geralmente rendendo um percentual do CDI.', 'LCI e LCA: parecidas com o CDB, ligadas aos setores imobiliário e agrícola; costumam ter regras de imposto diferentes.'] },
+        { t: 'Segurança', p: ['Títulos do Tesouro Direto têm a garantia do governo federal. CDB, LCI e LCA têm a proteção do FGC (Fundo Garantidor de Créditos) até um limite por pessoa e por instituição — confira o limite atual no site do FGC antes de concentrar valores altos num só banco.'] },
+        { t: 'Imposto', p: ['Na maior parte da renda fixa, o imposto de renda sobre o lucro diminui com o tempo aplicado (tabela regressiva) e é descontado automaticamente no resgate. Algumas aplicações têm isenção. As regras mudam de tempos em tempos: confira a regra atual antes de aplicar.'] },
+      ],
+    },
+    {
+      id: 'acoes', grupo: 'investir', icone: 'alta', cor: 'violet', min: 4,
+      titulo: 'Ações',
+      resumo: 'Comprar um pedacinho de uma empresa e participar dos resultados dela.',
+      pontos: ['Ação é uma fração de uma empresa negociada na bolsa (B3).', 'O preço sobe e desce todo dia: pense em anos, não em semanas.', 'Diversifique e só use dinheiro que não vai precisar tão cedo.'],
+      secoes: [
+        { t: 'O que é', p: ['Quem compra uma ação vira sócio de uma empresa listada na bolsa. Você ganha de duas formas: quando o preço da ação sobe e quando a empresa distribui parte do lucro (dividendos e juros sobre capital próprio).'] },
+        { t: 'Riscos', p: ['O preço varia todos os dias e pode cair bastante — às vezes por anos. Empresas podem ir mal ou até quebrar. Por isso ações combinam com objetivos de longo prazo e com quem já tem a reserva de emergência montada.'] },
+        { t: 'Boas práticas', lista: ['Diversifique: várias empresas e setores, ou um ETF (fundo que replica um índice, como o Ibovespa).', 'Invista aos poucos, todo mês, em vez de tentar acertar o melhor dia.', 'Desconfie de promessas de ganho rápido e de “dicas quentes”.', 'Entenda o negócio da empresa antes de comprar.'] },
+        { t: 'Imposto', p: ['Lucro na venda de ações e parte dos proventos podem ter imposto de renda, com regras de isenção e de declaração que mudam com o tempo. Guarde as notas de corretagem (o app lê as notas da Rico) e confira as regras atuais na Receita Federal ou com um contador.'] },
+      ],
+    },
+    {
+      id: 'fiis', grupo: 'investir', icone: 'casa', cor: 'orange', min: 4,
+      titulo: 'Fundos imobiliários (FIIs)',
+      resumo: 'Investir em imóveis com pouco dinheiro e receber “aluguéis” todo mês.',
+      pontos: ['Um FII junta o dinheiro de muitos investidores para ter imóveis ou títulos imobiliários.', 'A maioria distribui rendimentos todo mês.', 'A cota oscila na bolsa, como uma ação.'],
+      secoes: [
+        { t: 'Como funciona', p: ['O fundo compra imóveis (shoppings, galpões, lajes corporativas) ou títulos ligados ao setor imobiliário e repassa aos cotistas parte do que recebe. As cotas são compradas e vendidas na B3, pela corretora.'] },
+        { t: 'Tipos principais', lista: ['Tijolo: donos de imóveis físicos; a renda vem de aluguéis.', 'Papel: investem em títulos de dívida imobiliária (como CRI); a renda segue juros e inflação.', 'Fundos de fundos: compram cotas de outros FIIs.'] },
+        { t: 'O que observar', lista: ['Vacância: quanto dos imóveis está vazio.', 'Concentração: depender de um só imóvel ou inquilino é mais arriscado.', 'Liquidez: fundos com pouco volume podem ser difíceis de vender.', 'Rendimento muito acima dos outros costuma vir com mais risco.'] },
+        { t: 'Imposto', p: ['Os rendimentos mensais, em geral, são isentos de imposto de renda para pessoa física, desde que o fundo e o investidor cumpram algumas condições. O lucro na venda das cotas tem imposto. Confira as regras atuais.'] },
+      ],
+    },
+    {
+      id: 'exterior', grupo: 'investir', icone: 'moedas', cor: 'sky', min: 3,
+      titulo: 'Investir no exterior',
+      resumo: 'Stocks, ETFs e REITs em dólar para não depender só do Brasil.',
+      pontos: ['Diversifica país e moeda.', 'O valor em reais muda com o dólar, para cima e para baixo.', 'Tem câmbio, taxas e regras de imposto próprias.'],
+      secoes: [
+        { t: 'Por que', p: ['Parte do patrimônio em outra moeda e em outras economias protege de crises locais. ETFs amplos (que seguem índices como o S&P 500) são um jeito simples de começar.'] },
+        { t: 'O que muda', lista: ['Stocks: ações de empresas estrangeiras.', 'ETFs: cestas de ativos num só papel.', 'REITs: o “FII” dos Estados Unidos.', 'O câmbio na hora de enviar e de trazer o dinheiro afeta o resultado.'] },
+        { t: 'No app', p: ['Contas em US$ (como a Nomad) usam o câmbio de cada operação e o dólar do dia para mostrar o valor em reais.'] },
+      ],
+    },
+    {
+      id: 'cartao', grupo: 'dividas', icone: 'cartao', cor: 'rose', min: 3,
+      titulo: 'Cartão de crédito e rotativo',
+      resumo: 'Por que pagar menos que o total da fatura sai tão caro.',
+      pontos: ['Pague sempre o total da fatura.', 'O rotativo tem os juros mais altos do mercado.', 'Se não der, troque a dívida por um parcelamento ou empréstimo mais barato.'],
+      secoes: [
+        { t: 'O que é o rotativo', p: ['Quando você paga menos que o total, o que falta vira dívida no rotativo, com juros altíssimos, IOF e encargos. No mês seguinte a fatura vem maior — e a bola de neve começa.'] },
+        { t: 'Como sair', lista: ['Pare de usar o cartão até organizar a dívida.', 'Peça ao banco o parcelamento da fatura e compare o custo total (CET).', 'Um empréstimo consignado ou pessoal com juros menores pode quitar o rotativo.', 'Use a reserva de emergência, se tiver — os juros do cartão são maiores que qualquer rendimento.'] },
+        { t: 'No app', p: ['Quando uma fatura é paga abaixo do total, o app avisa no formulário, em Cartões e no sininho, e mostra o histórico de 12 meses.'] },
+      ],
+    },
+    {
+      id: 'dividas', grupo: 'dividas', icone: 'balanca', cor: 'amber', min: 3,
+      titulo: 'Quitar dívidas: bola de neve ou avalanche',
+      resumo: 'Dois métodos para organizar várias dívidas ao mesmo tempo.',
+      pontos: ['Liste todas as dívidas com valor, juros e parcela.', 'Avalanche: quite primeiro a de juros mais altos (economiza mais).', 'Bola de neve: quite primeiro a menor (motiva mais).'],
+      secoes: [
+        { t: 'Organize', p: ['Anote cada dívida com o valor total, a taxa de juros e a parcela. Pague o mínimo de todas e coloque todo o dinheiro extra em uma só.'] },
+        { t: 'Avalanche', p: ['Você ataca primeiro a dívida com os juros mais altos (normalmente cartão e cheque especial). É o método que paga menos juros no total.'] },
+        { t: 'Bola de neve', p: ['Você quita primeiro a menor dívida. Ver uma conta sumir rápido dá ânimo para continuar — o valor que ia para ela passa para a próxima.'] },
+        { t: 'Negocie', p: ['Bancos costumam aceitar renegociação com desconto, principalmente em dívidas antigas. Peça sempre o custo efetivo total (CET) por escrito.'] },
+      ],
+    },
+  ];
+
+  /** Guias que aparecem no "?" de cada parte do app. */
+  const CONTEXTO = {
+    investimentos: ['acoes', 'fiis', 'renda-fixa', 'reserva', 'exterior'],
+    reserva: ['reserva', 'renda-fixa'],
+    cartoes: ['cartao', 'dividas'],
+  };
+
+  const artigo = (id) => ARTIGOS.find((a) => a.id === id) || null;
+
+  return { GRUPOS, ARTIGOS, CONTEXTO, artigo };
+})();

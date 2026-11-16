@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <!-- Política de segurança (CSP): só roda código do próprio site e do login/Drive do Google;
+       nenhum script embutido na página. Ao usar um serviço novo, inclua o endereço aqui. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com https://apis.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://accounts.google.com; img-src 'self' data: blob: https://*.googleusercontent.com https://*.gstatic.com https://*.google.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://www.googleapis.com https://content.googleapis.com https://accounts.google.com https://oauth2.googleapis.com https://economia.awesomeapi.com.br https://olinda.bcb.gov.br https://brapi.dev https://finnhub.io https://cdn.jsdelivr.net https://tessdata.projectnaptha.com; frame-src https://accounts.google.com https://docs.google.com https://drive.google.com https://content.googleapis.com; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#059669" />
+  <title>Minhas Finanças</title>
+
+  <!-- App instalável (PWA) -->
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Finanças" />
+
+  <!-- Bibliotecas hospedadas no próprio site (js/vendor/, baixadas das fontes oficiais e
+       conferidas por hash) — nenhum script de terceiros roda com os dados abertos. -->
+  <!-- Produção ou canal beta (define Fin.PREFIXO das chaves locais): antes de todos -->
+  <script src="js/canal.js"></script>
+  <script src="js/vendor/tailwind-3.4.16.js"></script>
+  <script src="js/tailwind-config.js"></script>
+  <!-- SheetJS: leitura de .xlsx / .xls / .csv / .ods (usado na tela "Dados") -->
+  <script src="js/vendor/xlsx-0.20.3.full.min.js"></script>
+
+  <link rel="stylesheet" href="css/styles.css" />
+  <script src="js/tema.js"></script>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased">
+
+  <div class="md:flex min-h-screen">
+    <!-- Menu lateral (computador) -->
+    <aside class="hidden md:flex md:flex-col w-60 shrink-0 bg-white border-r border-slate-200 sticky top-0 h-screen overflow-y-auto">
+      <div class="flex items-center gap-3 px-5 pt-5 pb-2">
+        <div class="logo-app w-10 h-10 rounded-xl text-white grid place-items-center" aria-hidden="true"><span data-icone="carteira" data-classe="w-6 h-6"></span></div>
+        <span class="min-w-0 leading-tight"><span class="block font-semibold text-lg">Minhas Finanças</span>
+          <span class="inline-block text-[10px] font-semibold uppercase tracking-wide text-prim-700 bg-prim-50 rounded-full px-1.5 py-0.5" data-versao-app>Beta 1.0</span></span>
+      </div>
+      <!-- Barra do topo: olho · notificações · atualizar -->
+      <div class="flex items-center gap-1 px-4 pb-3 topo-claro">
+        <button data-ocultar class="icon-btn !text-slate-500" aria-pressed="false" aria-label="Ocultar valores" title="Ocultar valores">
+          <svg class="olho-aberto w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+          <svg class="olho-fechado w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.9 10.9 0 0 1 12 5c6.5 0 10 7 10 7a17.6 17.6 0 0 1-3.2 4.2M6.6 6.6C3.8 8.4 2 12 2 12s3.5 7 10 7a10.6 10.6 0 0 0 5.4-1.4"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+        </button>
+        <a href="#/educacao" data-aprender class="icon-btn !text-slate-500" aria-label="Aprender: guias de finanças" title="Aprender"><span data-icone="livro" aria-hidden="true"></span></a>
+        <button data-avisos class="icon-btn sino relative" aria-label="Notificações" title="Notificações">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+          <span class="topo-badge" hidden>0</span>
+        </button>
+        <button data-atualizar class="icon-btn atualizar" hidden aria-label="Atualizar o app" title="Atualizar o app">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36L21 8"/><path d="M21 3v5h-5"/></svg>
+          <span class="atualizar-rotulo">Atualizar</span>
+        </button>
+      </div>
+      <button data-new-lancamento class="btn btn-primary mx-4 mb-4">＋ Novo lançamento</button>
+      <nav class="flex flex-col gap-1 px-3" aria-label="Principal">
+        <a href="#/dashboard" data-nav="/dashboard" class="side-link"><span data-icone="casa" aria-hidden="true"></span> Início</a>
+        <a href="#/educacao" data-nav="/educacao" class="side-link"><span data-icone="livro" aria-hidden="true"></span> Aprender <span class="ml-auto text-[10px] font-semibold uppercase tracking-wide text-emerald-700 bg-emerald-50 rounded-full px-1.5 py-0.5">guias</span></a>
+        <a href="#/lancamentos" data-nav="/lancamentos" class="side-link"><span data-icone="recibo" aria-hidden="true"></span> Lançamentos</a>
+        <a href="#/conciliacao" data-nav="/conciliacao" class="side-link"><span data-icone="balanca" aria-hidden="true"></span> Conciliação</a>
+        <a href="#/planilha" data-nav="/planilha" class="side-link"><span data-icone="tabela" aria-hidden="true"></span> Planilha</a>
+        <a href="#/cartoes" data-nav="/cartoes" data-nav-also="/importar-fatura" class="side-link"><span data-icone="cartao" aria-hidden="true"></span> Cartões</a>
+        <a href="#/investimentos" data-nav="/investimentos" class="side-link"><span data-icone="alta" aria-hidden="true"></span> Investimentos</a>
+        <a href="#/relatorios" data-nav="/relatorios" class="side-link"><span data-icone="pizza" aria-hidden="true"></span> Relatórios</a>
+        <a href="#/orcamento" data-nav="/orcamento" class="side-link"><span data-icone="alvo" aria-hidden="true"></span> Orçamento</a>
+        <a href="#/categorias" data-nav="/categorias" class="side-link"><span data-icone="etiqueta" aria-hidden="true"></span> Categorias</a>
+        <a href="#/dados" data-nav="/dados" class="side-link"><span data-icone="cofreDados" aria-hidden="true"></span> Dados e backup</a>
+        <a href="#/configuracoes" data-nav="/configuracoes" class="side-link"><span data-icone="engrenagem" aria-hidden="true"></span> Configurações</a>
+      </nav>
+      <div class="mt-auto px-3 pb-4 space-y-2">
+        <div id="sync-status-lateral" class="px-3"></div>
+        <div class="flex items-center gap-1">
+          <a href="#/configuracoes" data-perfil-chip class="flex-1 min-w-0 flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-slate-50" aria-label="Perfil e configurações"></a>
+          <button data-bloquear class="icon-btn shrink-0 !text-slate-500" aria-label="Bloquear o app" title="Bloquear o app"><span data-icone="cadeado" aria-hidden="true"></span></button>
+        </div>
+      </div>
+    </aside>
+
+    <div class="flex-1 min-w-0">
+      <!-- Cabeçalho (celular) -->
+      <header class="md:hidden bg-gradient-to-r from-prim-600 to-prim-700 text-white">
+        <div class="px-4 py-4 flex items-center gap-3">
+          <a href="#/configuracoes" data-avatar-topo class="shrink-0 rounded-full" aria-label="Perfil e configurações"><span class="w-9 h-9 rounded-xl bg-white/20 grid place-items-center" aria-hidden="true"><span data-icone="carteira" data-classe="w-5 h-5"></span></span></a>
+          <h1 id="page-title" class="text-lg font-semibold flex-1 min-w-0 truncate">Minhas Finanças</h1>
+          <button data-atualizar class="w-10 h-10 rounded-full grid place-items-center hover:bg-white/15 atualizar topo-escuro" hidden aria-label="Atualizar o app" title="Atualizar o app">
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36L21 8"/><path d="M21 3v5h-5"/></svg>
+          </button>
+          <a href="#/educacao" data-aprender class="w-10 h-10 rounded-full grid place-items-center hover:bg-white/15" aria-label="Aprender: guias de finanças" title="Aprender"><span data-icone="livro" data-classe="w-6 h-6" aria-hidden="true"></span></a>
+          <button data-avisos class="w-10 h-10 rounded-full grid place-items-center hover:bg-white/15 sino topo-escuro relative" aria-label="Notificações" title="Notificações">
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+            <span class="topo-badge" hidden>0</span>
+          </button>
+          <button data-ocultar class="w-10 h-10 rounded-full grid place-items-center hover:bg-white/15" aria-pressed="false" aria-label="Ocultar valores" title="Ocultar valores">
+            <svg class="olho-aberto w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg class="olho-fechado w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.9 10.9 0 0 1 12 5c6.5 0 10 7 10 7a17.6 17.6 0 0 1-3.2 4.2M6.6 6.6C3.8 8.4 2 12 2 12s3.5 7 10 7a10.6 10.6 0 0 0 5.4-1.4"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- Cada tela é desenhada aqui pelo roteador -->
+      <main id="view" class="max-w-5xl mx-auto px-4 py-5 md:py-8 pb-28 md:pb-10"></main>
+    </div>
+  </div>
+
+  <!-- Barra inferior (celular) -->
+  <nav class="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white border-t border-slate-200 grid grid-cols-5 pb-[env(safe-area-inset-bottom)]" aria-label="Principal">
+    <a href="#/dashboard" data-nav="/dashboard" class="tab-link"><span data-icone="casa" data-classe="w-6 h-6" aria-hidden="true"></span>Início</a>
+    <a href="#/lancamentos" data-nav="/lancamentos" class="tab-link"><span data-icone="recibo" data-classe="w-6 h-6" aria-hidden="true"></span>Lançamentos</a>
+    <button data-new-lancamento class="tab-link" aria-label="Novo (lançamento ou compra no cartão)">
+      <span class="w-11 h-11 -mt-5 rounded-full bg-prim-600 text-white grid place-items-center shadow-lg" aria-hidden="true"><span data-icone="mais" data-classe="w-6 h-6"></span></span>Novo
+    </button>
+    <a href="#/cartoes" data-nav="/cartoes" data-nav-also="/importar-fatura" class="tab-link"><span data-icone="cartao" data-classe="w-6 h-6" aria-hidden="true"></span>Cartões</a>
+    <a href="#/mais" data-nav="/mais" data-nav-also="/investimentos /conciliacao /planilha /relatorios /orcamento /categorias /dados /configuracoes /educacao" class="tab-link"><span data-icone="menu" data-classe="w-6 h-6" aria-hidden="true"></span>Mais</a>
+  </nav>
+
+  <div id="modal-root"></div>
+  <!-- Telas de acesso (criar acesso / entrar) por cima de tudo -->
+  <div id="acesso-root" class="hidden"></div>
+  <div id="toast" role="status" aria-live="polite"
+    class="hidden fixed left-1/2 -translate-x-1/2 bottom-24 md:bottom-8 z-50 max-w-[90vw] px-4 py-3 rounded-xl shadow-lg text-sm text-white"></div>
+
+  <!-- Ordem importa: dados → regras → componentes → telas → inicialização -->
+  <script src="js/config.js"></script>
+  <script src="js/icones.js"></script>
+  <script src="js/seguranca/cofre.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/membros.js"></script>
+  <script src="js/educacao.js"></script>
+  <script src="js/sugestoes.js"></script>
+  <script src="js/ia.js"></script>
+  <script src="js/parsers.js"></script>
+  <script src="js/column-map.js"></script>
+  <script src="js/importer.js"></script>
+  <script src="js/format.js"></script>
+  <script src="js/finance.js"></script>
+  <script src="js/periodo.js"></script>
+  <script src="js/analise.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/privacidade.js"></script>
+  <script src="js/avisos.js"></script>
+  <script src="js/tour.js"></script>
+  <script src="js/puxar.js"></script>
+  <script src="js/saude.js"></script>
+  <script src="js/router.js"></script>
+  <script src="js/components/lancamento-form.js"></script>
+  <script src="js/components/compra-form.js"></script>
+  <script src="js/components/cartao-form.js"></script>
+  <script src="js/pages/dashboard.js"></script>
+  <script src="js/pages/lancamentos.js"></script>
+  <script src="js/pages/cartoes.js"></script>
+  <script src="js/fatura/leitor.js"></script>
+  <script src="js/fatura/importador.js"></script>
+  <script src="js/pages/importar-fatura.js"></script>
+  <script src="js/components/categoria-form.js"></script>
+  <script src="js/pages/categorias.js"></script>
+  <script src="js/pages/orcamento.js"></script>
+  <script src="js/pages/relatorios.js"></script>
+  <script src="js/pages/conciliacao.js"></script>
+  <script src="js/pages/planilha.js"></script>
+  <script src="js/investimentos/cotacoes.js"></script>
+  <script src="js/investimentos/carteira.js"></script>
+  <script src="js/investimentos/reserva.js"></script>
+  <script src="js/investimentos/formularios.js"></script>
+  <script src="js/investimentos/nomad.js"></script>
+  <script src="js/investimentos/rico.js"></script>
+  <script src="js/investimentos/importar.js"></script>
+  <script src="js/pages/investimentos.js"></script>
+  <script src="js/pages/mais.js"></script>
+  <script src="js/pages/dados.js"></script>
+  <script src="js/pages/configuracoes.js"></script>
+  <script src="js/pages/educacao.js"></script>
+  <script src="js/sync/mesclar.js"></script>
+  <script src="js/sync/drive.js"></script>
+  <script src="js/pages/acesso.js"></script>
+  <script src="js/pwa.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
