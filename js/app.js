@@ -21,6 +21,7 @@ window.Fin = window.Fin || {};
   Fin.router.register('/mais', Fin.pages.mais);
   Fin.router.register('/dados', Fin.pages.dados);
   Fin.router.register('/configuracoes', Fin.pages.configuracoes);
+  Fin.router.register('/educacao', Fin.pages.educacao);
 
   // Ações globais por delegação (funcionam em qualquer tela e no conteúdo redesenhado).
   document.addEventListener('click', (e) => {

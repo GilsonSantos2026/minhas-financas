@@ -139,6 +139,20 @@ Fin.avisos = (() => {
           acao: { href: '#/dados', rotulo: 'Fazer backup' },
         });
       }
+
+      // Titular: sugestões/problemas novos enviados por outra pessoa da casa (v2026-11-16.5).
+      if (Fin.cofre?.ehPrincipal?.() && Fin.sugestoes) {
+        const eu = Fin.cofre.membroId();
+        const novas = Fin.sugestoes.lista().filter((s) => (s.status || 'nova') === 'nova' && s.autor !== eu);
+        if (novas.length) {
+          out.push({
+            id: `sugestao:${novas.map((s) => s.id).sort().join(',').slice(0, 120)}`, nivel: 'info', grupo: 'app', icone: '💬',
+            titulo: novas.length === 1 ? `Nova sugestão: ${novas[0].titulo}` : `${novas.length} sugestões novas`,
+            sub: novas.length === 1 ? `de ${novas[0].autorNome || novas[0].autorUsuario || 'outra pessoa'}` : 'enviadas pelo app',
+            acao: { href: '#/configuracoes', rotulo: 'Ver' },
+          });
+        }
+      }
     }
 
     const dv = Fin.drive?.estado;

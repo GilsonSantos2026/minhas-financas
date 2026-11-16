@@ -254,6 +254,59 @@ Fin.pages.configuracoes = (() => {
     }
   }
 
+  /** Sugestões e problemas: enviar (todos) e caixa de recebidas + e-mail de destino (titular). */
+  function sugestoesHTML() {
+    const SG = Fin.sugestoes;
+    const titular = Fin.cofre.ehPrincipal();
+    const lista = titular ? SG.lista() : SG.lista().filter((s) => s.autor === Fin.cofre.membroId());
+    const statusTag = { nova: ['nova', 'bg-amber-100 text-amber-900'], vista: ['vista', 'bg-slate-100 text-slate-600'], feita: ['✓ feita', 'bg-emerald-50 text-emerald-800'] };
+    const itens = lista.slice(0, 20).map((s) => {
+      const [rot, cls] = statusTag[s.status || 'nova'] || statusTag.nova;
+      const [tipo, ic] = SG.TIPOS[s.tipo] || SG.TIPOS.melhoria;
+      const link = SG.mailto(s);
+      return `
+        <li class="py-3">
+          <details class="group">
+            <summary class="flex items-start gap-3 cursor-pointer list-none" data-sug-ver="${esc(s.id)}">
+              ${Fin.icones.badge(ic, s.tipo === 'problema' ? 'rose' : s.tipo === 'duvida' ? 'sky' : 'emerald', 'w-8 h-8', 'w-4 h-4')}
+              <span class="flex-1 min-w-0">
+                <span class="block text-sm font-medium truncate">${esc(s.titulo)}</span>
+                <span class="block text-xs text-slate-500 truncate">${esc(tipo)} · ${esc(SG.nomeTela(s.tela))} · ${esc(s.autorNome || s.autorUsuario || '—')} · ${new Date(s.criadoEm).toLocaleDateString('pt-BR')}</span>
+              </span>
+              <span class="text-[11px] px-1.5 py-0.5 rounded-full shrink-0 ${cls}">${rot}</span>
+            </summary>
+            <div class="mt-2 ml-11 space-y-2">
+              <pre class="text-xs whitespace-pre-wrap bg-slate-50 rounded-lg p-2.5 text-slate-700 font-sans">${esc(SG.relatorio(s).corpo)}</pre>
+              <div class="flex flex-wrap gap-2">
+                ${link ? `<a href="${esc(link)}" class="btn btn-ghost !py-1 text-xs">${Fin.icone('mensagem', 'w-3.5 h-3.5')} E-mail</a>` : ''}
+                <button data-act="sug-copiar" data-id="${esc(s.id)}" class="btn btn-ghost !py-1 text-xs">Copiar relatório</button>
+                ${titular ? `
+                  ${(s.status || 'nova') !== 'feita' ? `<button data-act="sug-status" data-id="${esc(s.id)}" data-status="feita" class="btn btn-ghost !py-1 text-xs">✓ Marcar como feita</button>` : `<button data-act="sug-status" data-id="${esc(s.id)}" data-status="vista" class="btn btn-ghost !py-1 text-xs">Reabrir</button>`}
+                  <button data-act="sug-excluir" data-id="${esc(s.id)}" class="btn btn-danger-ghost !py-1 text-xs">Excluir</button>` : ''}
+              </div>
+            </div>
+          </details>
+        </li>`;
+    }).join('');
+    const novas = titular ? SG.novas() : 0;
+    return card(`
+      <div class="flex items-start justify-between gap-2 mb-2">
+        ${Fin.icones.titulo('mensagem', 'prim', 'Sugestões e problemas')}
+        ${novas ? `<span data-sug-novas class="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 font-medium shrink-0">${novas} nova${novas > 1 ? 's' : ''}</span>` : ''}
+      </div>
+      <p class="text-sm text-slate-500">Achou um erro, tem uma ideia ou uma dúvida? Mande por aqui: o app monta um relatório organizado${titular ? '' : ' e ele chega a quem administra o app'}.</p>
+      <button data-act="sug-nova" class="btn btn-primary mt-3">${Fin.icone('mensagem', 'w-4 h-4')} Enviar sugestão ou problema</button>
+      ${titular ? `
+        <div class="mt-4 rounded-xl bg-slate-50 p-3">
+          <label class="field"><span>E-mail para receber as sugestões (opcional)</span>
+            <div class="flex gap-2"><input id="sug-email" type="email" class="input" placeholder="seu@email.com" value="${esc(SG.emailDestino())}" autocomplete="email" />
+              <button data-act="sug-email" class="btn btn-ghost shrink-0">Salvar</button></div></label>
+          <p class="text-xs text-slate-500 mt-1">Fica guardado cifrado nos dados do app (não vai para o código do site). Com ele, o botão “Enviar por e-mail” abre o e-mail já preenchido.</p>
+        </div>` : ''}
+      ${itens ? `<h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500 mt-4">${titular ? 'Sugestões recebidas' : 'Enviadas por você'}</h3>
+        <ul class="divide-y divide-slate-100">${itens}</ul>` : ''}`);
+  }
+
   function ajudaHTML() {
     return card(`
       ${Fin.icones.titulo('lupa', 'prim', 'Ajuda', { cls: 'mb-2' })}
@@ -287,6 +340,7 @@ Fin.pages.configuracoes = (() => {
           <div id="cfg-pessoas">${pessoasHTML()}</div>
           ${aparenciaHTML()}
           ${ajudaHTML()}
+          <div id="cfg-sugestoes">${sugestoesHTML()}</div>
           ${atalhosHTML()}
         </div>`;
     };
@@ -359,6 +413,39 @@ Fin.pages.configuracoes = (() => {
       const alvo = e.target.closest('[data-act]');
       const act = alvo?.dataset.act;
       if (act === 'rever-tour') return Fin.tour.iniciar();
+      const redesenharSug = () => { view.querySelector('#cfg-sugestoes').innerHTML = sugestoesHTML(); };
+      const ver = e.target.closest('[data-sug-ver]');
+      if (ver && Fin.cofre.ehPrincipal()) {
+        // Titular abriu uma sugestão nova: passa para "vista" (sem fechar o detalhe).
+        const s = Fin.sugestoes.lista().find((x) => x.id === ver.dataset.sugVer);
+        if (s && (s.status || 'nova') === 'nova') {
+          Fin.sugestoes.marcar(s.id, 'vista');
+          const tag = ver.querySelector('span.rounded-full');
+          if (tag) { tag.textContent = 'vista'; tag.className = 'text-[11px] px-1.5 py-0.5 rounded-full shrink-0 bg-slate-100 text-slate-600'; }
+          const selo = view.querySelector('[data-sug-novas]');
+          const n = Fin.sugestoes.novas();
+          if (selo) { if (n) selo.textContent = `${n} nova${n > 1 ? 's' : ''}`; else selo.remove(); }
+        }
+      }
+      if (act === 'sug-nova') return Fin.sugestoes.abrir((reg) => { redesenharSug(); Fin.sugestoes.enviado(reg); });
+      if (act === 'sug-email') {
+        const v = view.querySelector('#sug-email').value.trim();
+        if (v && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return Fin.ui.toast('Digite um e-mail válido.', 'error');
+        Fin.sugestoes.salvarEmail(v);
+        redesenharSug();
+        return Fin.ui.toast(v ? 'E-mail salvo.' : 'E-mail removido.');
+      }
+      if (act === 'sug-copiar') {
+        const s = Fin.sugestoes.lista().find((x) => x.id === alvo.dataset.id);
+        if (s) Fin.sugestoes.copiar(s).then(() => Fin.ui.toast('Relatório copiado.')).catch(() => Fin.ui.toast('Não foi possível copiar.', 'error'));
+        return;
+      }
+      if (act === 'sug-status') { Fin.sugestoes.marcar(alvo.dataset.id, alvo.dataset.status); return redesenharSug(); }
+      if (act === 'sug-excluir') {
+        if (!confirm('Excluir esta sugestão? Não dá para desfazer.')) return;
+        Fin.sugestoes.excluir(alvo.dataset.id);
+        return redesenharSug();
+      }
       if (act === 'compartilhar') return convidar(view, true);
       if (act === 'convidar') return convidar(view, false);
       if (act === 'acessos-drive') return listarAcessosDrive(view);

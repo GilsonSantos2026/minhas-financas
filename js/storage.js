@@ -23,7 +23,7 @@ Fin.storage = (() => {
   const PREFIX = 'fin:';
   const BASICAS = ['lancamentos', 'cartaoCompras', 'categorias', 'cartoes'];
   const INVEST = ['invContas', 'invAtivos', 'invMovs', 'invMetas', 'invHist', 'invConfig'];
-  const PERFIS = ['membros']; // quem usa o app (nome social, foto, cor) — v2026-11-15.9
+  const PERFIS = ['membros', 'sugestoes']; // quem usa o app (v2026-11-15.9) e sugestões/problemas enviados no app (v2026-11-16.5)
   const COLLECTIONS = [...BASICAS, ...INVEST, ...PERFIS];
   const DADOS = new Set([...COLLECTIONS, 'meta', 'excluidos']); // o que é cifrado e sincronizado
   const SCHEMA_VERSION = 1;

@@ -14,7 +14,7 @@ window.Fin = window.Fin || {};
 
 Fin.mesclar = (() => {
   const COLS = ['lancamentos', 'cartaoCompras', 'categorias', 'cartoes',
-    'invContas', 'invAtivos', 'invMovs', 'invMetas', 'invHist', 'invConfig', 'membros'];
+    'invContas', 'invAtivos', 'invMovs', 'invMetas', 'invHist', 'invConfig', 'membros', 'sugestoes'];
   const DIAS_EXCLUSAO = 180;
   const mod = (it) => it?._mod || it?.atualizadoEm || it?.criadoEm || '';
   const igual = (a, b) => JSON.stringify(a) === JSON.stringify(b);

@@ -13,7 +13,8 @@ Fin.pages.mais = (() => {
     ['#/orcamento', 'alvo', 'orange', 'Orçamento', 'Limites mensais por categoria'],
     ['#/categorias', 'etiqueta', 'amber', 'Categorias', 'Criar, editar, ícones e classificação'],
     ['#/dados', 'cofreDados', 'blue', 'Dados e backup', 'Importar planilha e baixar backup'],
-    ['#/configuracoes', 'engrenagem', 'prim', 'Configurações', 'Seu perfil (nome e foto) e a cor do app'],
+    ['#/educacao', 'livro', 'emerald', 'Aprender', 'Guias rápidos: orçamento, reserva, investimentos e dívidas'],
+    ['#/configuracoes', 'engrenagem', 'prim', 'Configurações', 'Perfil, cor do app, pessoas, ajuda e sugestões'],
   ];
 
   function render(view) {

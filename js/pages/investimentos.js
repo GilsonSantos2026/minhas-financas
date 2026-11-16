@@ -42,6 +42,7 @@ Fin.pages.investimentos = (() => {
       <div class="flex flex-wrap items-center gap-2">
         <div class="mr-auto hidden md:block">${Fin.icones.titulo('alta', 'emerald', 'Investimentos', { cls: 'text-xl', tam: 'w-9 h-9', ic: 'w-5 h-5' })}</div>
         <span data-dolar>${dolarChip()}</span>
+        <button data-act="ajuda" class="btn btn-ghost !py-1.5 !px-2.5 bg-white shadow-sm" aria-label="Guias: o que são ações, FIIs, renda fixa e reserva" title="Guias rápidos">${Fin.icone('livro', 'w-4 h-4')}<span class="font-bold">?</span></button>
         <button data-act="importar" class="btn btn-ghost !py-1.5 bg-white shadow-sm">📥 Importar</button>
         <button data-act="precos" class="btn btn-ghost !py-1.5 bg-white shadow-sm">🏷️ Preços</button>
         <button data-act="novo-mov" class="btn btn-primary !py-1.5">＋ Movimentação</button>
@@ -664,6 +665,7 @@ Fin.pages.investimentos = (() => {
       else if (act === 'novo-provento') FI().mov({ tipo: 'provento', conta: I().contas().find((c) => c.tipo === 'corretora')?.id });
       else if (act === 'precos') FI().precos();
       else if (act === 'importar') Fin.importarInv.abrir();
+      else if (act === 'ajuda') Fin.pages.educacao.ajuda((Fin.state.invAba || 'resumo') === 'reserva' ? 'reserva' : 'investimentos');
       else if (act === 'chaves') FI().cotacoes();
       else if (act === 'carga') FI().carga();
       else if (act === 'nova-conta') FI().conta();
