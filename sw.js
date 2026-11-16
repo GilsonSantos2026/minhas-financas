@@ -3,20 +3,21 @@
  *
  * - Arquivos do app (mesma origem): "rede primeiro" — online você sempre recebe a versão
  *   mais nova; offline, usa a cópia guardada.
- * - Bibliotecas de CDN (Tailwind, SheetJS, PDF.js, OCR): "cache primeiro" — as URLs têm
- *   versão fixa, então a cópia guardada nunca fica velha.
+ * - Bibliotecas (js/vendor/: Tailwind, SheetJS, PDF.js, OCR) e o núcleo/idioma do OCR
+ *   (jsDelivr): "cache primeiro" — os nomes têm versão fixa, então a cópia guardada nunca
+ *   fica velha. Trocar de versão = arquivo com nome novo.
  *
  * Ao publicar uma versão nova do app, troque VERSAO: o app mostra "Nova versão disponível".
  * Os DADOS não passam por aqui (ficam no LocalStorage do navegador).
  */
-const VERSAO = '2026-11-16.12';
+const VERSAO = '2026-11-16.13';
 const CACHE_APP = `financas-app-${VERSAO}`;
 const CACHE_CDN = 'financas-cdn-v1';
 
 const ARQUIVOS_APP = [
   './', './index.html', './manifest.webmanifest', './css/styles.css',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/apple-touch-icon.png', './icons/favicon-32.png',
-  './js/config.js', './js/tema.js', './js/icones.js', './js/membros.js', './js/educacao.js', './js/sugestoes.js', './js/ia.js', './js/seguranca/cofre.js', './js/sync/mesclar.js', './js/sync/drive.js', './js/pages/acesso.js',
+  './js/config.js', './js/tailwind-config.js', './js/tema.js', './js/icones.js', './js/membros.js', './js/educacao.js', './js/sugestoes.js', './js/ia.js', './js/seguranca/cofre.js', './js/sync/mesclar.js', './js/sync/drive.js', './js/pages/acesso.js',
   './js/storage.js', './js/parsers.js', './js/column-map.js', './js/importer.js', './js/format.js', './js/finance.js',
   './js/periodo.js', './js/analise.js', './js/ui.js', './js/charts.js', './js/privacidade.js', './js/avisos.js', './js/tour.js', './js/puxar.js', './js/saude.js', './js/router.js', './js/pwa.js', './js/app.js',
   './js/components/lancamento-form.js', './js/components/compra-form.js', './js/components/cartao-form.js', './js/components/categoria-form.js',
@@ -26,12 +27,15 @@ const ARQUIVOS_APP = [
   './js/fatura/leitor.js', './js/fatura/importador.js',
 ];
 
-// Bibliotecas carregadas sempre (as de PDF/OCR entram no cache no primeiro uso).
+// Bibliotecas do próprio site (js/vendor/, nome com versão → "cache primeiro").
+// Tailwind e SheetJS são carregadas sempre; as de PDF/OCR entram no cache no primeiro uso.
 const CDN_ESSENCIAIS = [
-  'https://cdn.tailwindcss.com/3.4.16',
-  'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js',
+  './js/vendor/tailwind-3.4.16.js',
+  './js/vendor/xlsx-0.20.3.full.min.js',
 ];
-const HOSTS_CDN = ['cdn.tailwindcss.com', 'cdn.sheetjs.com', 'cdnjs.cloudflare.com', 'cdn.jsdelivr.net', 'tessdata.projectnaptha.com', 'unpkg.com'];
+const PASTA_VENDOR = '/js/vendor/';
+// Só o núcleo do OCR e o idioma português ainda vêm de fora (rodam isolados no worker).
+const HOSTS_CDN = ['cdn.jsdelivr.net', 'tessdata.projectnaptha.com'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
@@ -92,6 +96,7 @@ self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
-  if (url.origin === self.location.origin) event.respondWith(redePrimeiro(req));
+  if (url.origin === self.location.origin && url.pathname.includes(PASTA_VENDOR)) event.respondWith(cachePrimeiro(req));
+  else if (url.origin === self.location.origin) event.respondWith(redePrimeiro(req));
   else if (HOSTS_CDN.includes(url.hostname)) event.respondWith(cachePrimeiro(req));
 });

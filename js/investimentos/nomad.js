@@ -14,8 +14,8 @@
 window.Fin = window.Fin || {};
 
 Fin.nomad = (() => {
-  const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-  const PDFJS_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  const PDFJS = 'js/vendor/pdf-3.11.174.min.js';
+  const PDFJS_WORKER = 'js/vendor/pdf-3.11.174.worker.min.js';
   const TICKER = /^[A-Z][A-Z0-9.]{0,6}$/;
   const DATA = /^\d{4}-\d{2}-\d{2}$/;
   const ehNum = (s) => /^-?[\d.,]+$/.test(s) && /\d/.test(s);
@@ -32,7 +32,7 @@ Fin.nomad = (() => {
   async function linhas(file) {
     await Fin.faturaLeitor.loadScript(PDFJS);
     pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
-    const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+    const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer(), isEvalSupported: false }).promise;
     const out = [];
     for (let p = 1; p <= pdf.numPages; p++) {
       const page = await pdf.getPage(p);

@@ -2,6 +2,9 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
+  <!-- Política de segurança (CSP): só roda código do próprio site e do login/Drive do Google;
+       nenhum script embutido na página. Ao usar um serviço novo, inclua o endereço aqui. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com https://apis.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://accounts.google.com; img-src 'self' data: blob: https://*.googleusercontent.com https://*.gstatic.com https://*.google.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://www.googleapis.com https://content.googleapis.com https://accounts.google.com https://oauth2.googleapis.com https://economia.awesomeapi.com.br https://olinda.bcb.gov.br https://brapi.dev https://finnhub.io https://cdn.jsdelivr.net https://tessdata.projectnaptha.com; frame-src https://accounts.google.com https://docs.google.com https://drive.google.com https://content.googleapis.com; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#059669" />
   <title>Minhas Finanças</title>
@@ -15,15 +18,12 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="Finanças" />
 
-  <!-- Tailwind CSS (CDN — ótimo para uso pessoal) -->
-  <script src="https://cdn.tailwindcss.com/3.4.16"></script>
-  <!-- Cor principal do app (tema): "prim" usa as variáveis --p-* trocadas por js/tema.js -->
-  <script>
-    tailwind.config = { theme: { extend: { colors: { prim: Object.fromEntries([50, 100, 200, 500, 600, 700, 800]
-      .map((n) => [n, `rgb(var(--p-${n}) / <alpha-value>)`])) } } } };
-  </script>
+  <!-- Bibliotecas hospedadas no próprio site (js/vendor/, baixadas das fontes oficiais e
+       conferidas por hash) — nenhum script de terceiros roda com os dados abertos. -->
+  <script src="js/vendor/tailwind-3.4.16.js"></script>
+  <script src="js/tailwind-config.js"></script>
   <!-- SheetJS: leitura de .xlsx / .xls / .csv / .ods (usado na tela "Dados") -->
-  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="js/vendor/xlsx-0.20.3.full.min.js"></script>
 
   <link rel="stylesheet" href="css/styles.css" />
   <script src="js/tema.js"></script>
@@ -124,7 +124,6 @@
   <!-- Ordem importa: dados → regras → componentes → telas → inicialização -->
   <script src="js/config.js"></script>
   <script src="js/icones.js"></script>
-  <script>Fin.icones.aplicar(document);</script>
   <script src="js/seguranca/cofre.js"></script>
   <script src="js/storage.js"></script>
   <script src="js/membros.js"></script>

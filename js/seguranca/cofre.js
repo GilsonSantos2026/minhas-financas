@@ -26,7 +26,7 @@ window.Fin = window.Fin || {};
 Fin.cofre = (() => {
   const CHAVE_CONTA = 'fin:conta';
   const CHAVE_EU = 'fin:eu';
-  const ITER_SENHA = 400000;
+  const ITER_SENHA = 600000; // recomendação atual (OWASP) p/ PBKDF2-SHA256; envelopes antigos (400 mil) sobem no próximo login
   const ITER_RECUPERACAO = 100000; // a chave de recuperação já é aleatória e longa
   const ITER_CONVITE = 300000;     // código de convite é mais curto: derivação mais lenta
   const DIAS_CONVITE = 7;
@@ -148,7 +148,28 @@ Fin.cofre = (() => {
     chaveDados = await abrirEnvelope(c, usuario, senha);
     const ent = entradaDe(c, usuario);
     definirEu(ent.usuario, ent.id);
+    await reforcarSenha(c, ent, senha).catch(() => null); // nunca impede a entrada
     return true;
+  }
+
+  /**
+   * Senha protegida com menos rodadas que o padrão atual → re-embrulha a chave de dados com
+   * a MESMA senha e o padrão novo (a pessoa não percebe nada; a recuperação não muda).
+   */
+  async function reforcarSenha(c, ent, senha) {
+    if ((ent.kdf?.iter || 0) >= ITER_SENHA || !chaveDados) return;
+    const sal = aleatorio(16);
+    const kdf = { alg: 'PBKDF2-SHA256', iter: ITER_SENHA, sal: b64(sal) };
+    const dekSenha = await embrulhar(chaveDados, await derivar(senha, sal, ITER_SENHA));
+    const agora = new Date().toISOString();
+    if (ent.id === 'm1') Object.assign(c, { kdf, dekSenha, principalEm: agora });
+    else {
+      const m = (c.membros || []).find((x) => x.id === ent.id);
+      if (!m) return;
+      Object.assign(m, { kdf, dekSenha, atualizadaEm: agora });
+    }
+    c.atualizadaEm = agora;
+    salvarConta(c);
   }
 
   /** Esqueceu a senha: abre com a chave de recuperação e define uma senha nova (só o principal). */

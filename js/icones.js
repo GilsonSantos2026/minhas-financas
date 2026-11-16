@@ -100,3 +100,6 @@ Fin.icones = (() => {
   Fin.icone = icone;
   return { icone, aplicar, badge, titulo, doEmoji, nomes: Object.keys(P) };
 })();
+
+// Troca os ícones do HTML fixo assim que este arquivo carrega (o script fica no fim do <body>).
+Fin.icones.aplicar(document);

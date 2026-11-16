@@ -8,8 +8,8 @@
 window.Fin = window.Fin || {};
 
 Fin.rico = (() => {
-  const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-  const PDFJS_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  const PDFJS = 'js/vendor/pdf-3.11.174.min.js';
+  const PDFJS_WORKER = 'js/vendor/pdf-3.11.174.worker.min.js';
   const num = (s) => { const n = Number(String(s).replace(/\./g, '').replace(',', '.')); return Number.isFinite(n) ? n : null; };
   const ehValor = (s) => /^-?\d{1,3}(\.\d{3})*,\d{2,}$/.test(s);
   const ehQtd = (s) => /^\d{1,3}(\.\d{3})*$|^\d+$/.test(s);
@@ -20,7 +20,7 @@ Fin.rico = (() => {
     pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
     let pdf;
     try {
-      pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer(), password: senha || undefined }).promise;
+      pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer(), password: senha || undefined, isEvalSupported: false }).promise;
     } catch (e) {
       if (e?.name === 'PasswordException') throw Object.assign(new Error(senha ? `${file.name}: senha incorreta.` : `${file.name}: o PDF tem senha — informe a senha das notas.`), { senha: true });
       throw e;

@@ -16,9 +16,9 @@ window.Fin = window.Fin || {};
 
 Fin.faturaLeitor = (() => {
   const P = Fin.parsers;
-  const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-  const PDFJS_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-  const TESSERACT = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+  const PDFJS = 'js/vendor/pdf-3.11.174.min.js';
+  const PDFJS_WORKER = 'js/vendor/pdf-3.11.174.worker.min.js';
+  const TESSERACT = 'js/vendor/tesseract-5.1.1.min.js';
 
   const MESES = { jan: 1, fev: 2, mar: 3, abr: 4, mai: 5, jun: 6, jul: 7, ago: 8, set: 9, out: 10, nov: 11, dez: 12 };
   const RE_DATA = /^(\d{1,2})(?:\/(\d{1,2})|\s+([A-Za-zÇç]{3}))$/;
@@ -47,7 +47,7 @@ Fin.faturaLeitor = (() => {
     let pdf;
     try {
       // Senha (fatura protegida): usada só nesta leitura, na memória — nunca é gravada.
-      pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer(), password: senha || undefined }).promise;
+      pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer(), password: senha || undefined, isEvalSupported: false }).promise;
     } catch (e) {
       if (e?.name === 'PasswordException') {
         const incorreta = e.code === 2; // PasswordResponses: 1 = precisa de senha, 2 = senha incorreta
@@ -75,6 +75,10 @@ Fin.faturaLeitor = (() => {
     await loadScript(TESSERACT);
     onProgress?.('Preparando o reconhecimento de texto (OCR)…');
     const worker = await Tesseract.createWorker('por', 1, {
+      // Worker do próprio site (js/vendor, conferido por hash). O núcleo do OCR e o idioma
+      // continuam vindo do jsDelivr/tessdata, mas rodam isolados no worker (só veem a foto).
+      workerPath: new URL('js/vendor/tesseract-5.1.1.worker.min.js', location.href).href,
+      workerBlobURL: false,
       logger: (m) => m.status === 'recognizing text' && onProgress?.(`Reconhecendo texto… ${Math.round(m.progress * 100)}%`),
     });
     try {
