@@ -38,7 +38,9 @@ Fin.acesso = (() => {
               <h1 class="text-xl font-semibold mt-3">Minhas Finanças</h1>
             </div>
             <div class="bg-white rounded-2xl shadow-xl p-6">${inner}</div>
-            <p class="text-center text-xs text-white/80 mt-4">Seus dados ficam cifrados neste aparelho${Fin.config?.googleClientId ? ' e no seu Google Drive' : ''}.<br><span class="opacity-80">${Fin.config?.versaoApp || ''}</span></p>
+            <p class="text-center text-xs text-white/80 mt-4">Seus dados ficam cifrados neste aparelho${Fin.config?.googleClientId ? ' e no seu Google Drive' : ''}.<br><span class="opacity-80">${Fin.config?.versaoApp || ''}</span>
+              · <a href="privacidade.html" target="_blank" rel="noopener" class="underline hover:text-white">Privacidade</a>
+              · <a href="termos.html" target="_blank" rel="noopener" class="underline hover:text-white">Termos</a></p>
           </div>
         </div>
       </div>`;
@@ -98,6 +100,7 @@ Fin.acesso = (() => {
         ${campoSenha('senha2', 'Repita a senha', 'new-password')}
         ${erroBox}
         <button type="submit" class="btn btn-primary w-full">Criar acesso</button>
+        <p class="text-xs text-slate-500 text-center">Ao criar o acesso, você concorda com os <a href="termos.html" target="_blank" rel="noopener" class="text-prim-700 underline">Termos de uso</a> e a <a href="privacidade.html" target="_blank" rel="noopener" class="text-prim-700 underline">Política de privacidade</a>.</p>
       </form>
       <p class="text-xs text-slate-500 mt-4">Se esquecer a senha, só a <b>chave de recuperação</b> (mostrada a seguir) devolve o acesso.</p>
       ${Fin.config?.googleClientId ? `<div class="border-t border-slate-100 mt-4 pt-4 flex flex-col items-center gap-2">

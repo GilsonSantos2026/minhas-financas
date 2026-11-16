@@ -343,6 +343,7 @@ Fin.pages.configuracoes = (() => {
           <div id="cfg-sugestoes">${sugestoesHTML()}</div>
           ${atalhosHTML()}
           <p class="text-center text-xs text-slate-400 pt-1">Minhas Finanças · <b class="text-slate-500">${esc(Fin.config?.versaoApp || '')}</b> <span data-cfg-build></span></p>
+          <p class="text-center text-xs pt-1"><a href="privacidade.html" target="_blank" rel="noopener" class="text-prim-700 hover:underline">Política de privacidade</a> · <a href="termos.html" target="_blank" rel="noopener" class="text-prim-700 hover:underline">Termos de uso</a></p>
         </div>`;
     };
     const redesenharPerfil = () => {

@@ -10,7 +10,7 @@
  * Ao publicar uma versão nova do app, troque VERSAO: o app mostra "Nova versão disponível".
  * Os DADOS não passam por aqui (ficam no LocalStorage do navegador).
  */
-const VERSAO = 'beta-2026-11-16.1931';
+const VERSAO = 'beta-2026-11-16.1950';
 // Canal beta (…/beta/sw.js): caches com outro prefixo — um canal nunca apaga o cache do outro.
 const BETA = self.location.pathname.includes('/beta/');
 const PFX = BETA ? 'financas-beta' : 'financas';
@@ -18,7 +18,7 @@ const CACHE_APP = `${PFX}-app-${VERSAO}`;
 const CACHE_CDN = `${PFX}-cdn-v1`;
 
 const ARQUIVOS_APP = [
-  './', './index.html', './manifest.webmanifest', './css/styles.css',
+  './', './index.html', './privacidade.html', './termos.html', './manifest.webmanifest', './css/styles.css', './css/legal.css',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/apple-touch-icon.png', './icons/favicon-32.png',
   './js/config.js', './js/canal.js', './js/tailwind-config.js', './js/tema.js', './js/icones.js', './js/membros.js', './js/educacao.js', './js/sugestoes.js', './js/ia.js', './js/seguranca/cofre.js', './js/sync/mesclar.js', './js/sync/drive.js', './js/pages/acesso.js',
   './js/storage.js', './js/parsers.js', './js/column-map.js', './js/importer.js', './js/format.js', './js/finance.js',

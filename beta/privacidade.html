@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; img-src 'self' data:; script-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'" />
+  <title>Política de privacidade · Minhas Finanças</title>
+  <meta name="description" content="Como o app Minhas Finanças trata os seus dados: tudo fica cifrado no seu aparelho e, se você quiser, no seu Google Drive. Não há servidor, anúncios nem rastreamento." />
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png" />
+  <link rel="stylesheet" href="css/legal.css" />
+</head>
+<body>
+  <header>
+    <div class="caixa">
+      <a href="./">‹ Voltar ao app</a>
+      <h1>Política de privacidade</h1>
+      <p>Minhas Finanças · versão de 16 de novembro de 2026</p>
+    </div>
+  </header>
+
+  <main>
+    <section class="resumo" aria-label="Resumo">
+      <b>Em poucas palavras</b>
+      <ul>
+        <li>O app <b>não tem servidor</b>: não coletamos, não guardamos e não vemos os seus dados financeiros.</li>
+        <li>Seus dados ficam <b>cifrados no seu aparelho</b> e, se você ligar, numa cópia também cifrada no <b>seu</b> Google Drive.</li>
+        <li><b>Sem anúncios, sem rastreamento, sem estatísticas de uso</b> e sem venda de dados — de ninguém, para ninguém.</li>
+        <li>Você pode exportar ou apagar tudo a qualquer momento, pelo próprio app.</li>
+      </ul>
+    </section>
+
+    <h2>1. Quem é o responsável</h2>
+    <p>O <b>Minhas Finanças</b> é um aplicativo gratuito de organização financeira pessoal, em fase de testes (Beta), desenvolvido por pessoa física no Brasil.</p>
+    <p>Contato do responsável: <b>e-mail de contato a definir</b>.</p>
+
+    <h2>2. Que dados o app usa e onde eles ficam</h2>
+    <p>Você mesmo registra no app as suas informações financeiras: lançamentos de receitas e despesas, categorias, cartões e compras, orçamentos, investimentos, metas, além de nome e foto de perfil, se quiser. Também pode importar planilhas, faturas em PDF ou fotos de faturas — esses arquivos são lidos <b>no próprio aparelho</b> e não são enviados a lugar nenhum.</p>
+    <ul>
+      <li><b>No aparelho:</b> os dados ficam no armazenamento do navegador, <b>cifrados com AES-256-GCM</b>. A chave é protegida pela sua senha (PBKDF2 com 600 mil rodadas) e por um código de recuperação que só você recebe.</li>
+      <li><b>Sua senha e seu código de recuperação nunca saem do aparelho.</b> Por isso nem o responsável pelo app consegue ler os seus dados — e também não consegue recuperá-los se você perder a senha e o código.</li>
+      <li>Depois de um tempo sem uso (10 minutos, ajustável em Dados e backup), o app se bloqueia sozinho e a chave sai da memória.</li>
+    </ul>
+
+    <h2>3. Google (login e Google Drive) — opcional</h2>
+    <p>Se você escolher <b>conectar o Google Drive</b> (para ter backup automático, usar em mais de um aparelho ou dividir as finanças com outra pessoa), o app pede ao Google acesso limitado à sua conta:</p>
+    <ul>
+      <li><code>drive.appdata</code> — uma <b>pasta oculta exclusiva do app</b> no seu Drive, onde fica o arquivo de dados <b>já cifrado</b>. O app não vê os seus outros arquivos.</li>
+      <li><code>drive.file</code> — só no <b>modo casal</b>: o app cria uma pasta e um arquivo próprios e os compartilha com o Gmail que <b>você</b> indicar. O app só acessa arquivos que ele mesmo criou ou que você escolheu na janela do Google.</li>
+    </ul>
+    <p>Para isso o Google informa ao app um código de acesso temporário, que fica <b>só na memória</b> do aparelho. Os dados do Google são usados <b>exclusivamente</b> para guardar e sincronizar o seu arquivo cifrado: não são usados para publicidade, não são vendidos nem transferidos a terceiros e nenhuma pessoa os lê.</p>
+    <p class="aviso">O uso e a transferência de informações recebidas das APIs do Google pelo Minhas Finanças seguem a <a href="https://developers.google.com/terms/api-services-user-data-policy" rel="noopener">Política de dados do usuário dos serviços de API do Google</a>, incluindo os requisitos de Uso Limitado.</p>
+    <p>Você pode desconectar o Drive no app (Dados e backup) e revogar o acesso a qualquer momento em <a href="https://myaccount.google.com/permissions" rel="noopener">myaccount.google.com/permissions</a>.</p>
+
+    <h2>4. Modo casal (compartilhar com outra pessoa)</h2>
+    <p>Se você convidar alguém, essa pessoa passa a ver e editar <b>todas</b> as finanças da casa. Cada pessoa tem usuário e senha próprios; o convite vale 7 dias e só pode ser usado uma vez. Você pode remover o acesso a qualquer momento em Configurações → Pessoas.</p>
+
+    <h2>5. Serviços externos que o app consulta</h2>
+    <p>O app conversa diretamente do seu aparelho com alguns serviços públicos, <b>sem enviar os seus dados financeiros</b>:</p>
+    <ul>
+      <li><b>Cotação do dólar:</b> AwesomeAPI (economia.awesomeapi.com.br) e Banco Central do Brasil (PTAX).</li>
+      <li><b>Cotações de ativos (opcional):</b> brapi.dev e Finnhub, com a chave que <b>você</b> cadastrar — só o código do ativo (ex.: PETR4) é enviado.</li>
+      <li><b>Leitura de foto de fatura (OCR):</b> o app baixa do jsDelivr o “motor” de reconhecimento de texto e o idioma português; a foto é processada <b>no aparelho</b>.</li>
+      <li><b>Hospedagem:</b> o site é servido pelo GitHub Pages, que, como qualquer servidor web, pode registrar dados técnicos de acesso (como endereço IP e navegador) conforme a <a href="https://docs.github.com/pt/site-policy/privacy-policies/github-general-privacy-statement" rel="noopener">política do GitHub</a>.</li>
+    </ul>
+    <p>Como em qualquer acesso à internet, esses serviços recebem o endereço IP do seu aparelho.</p>
+
+    <h2>6. Recursos com inteligência artificial</h2>
+    <p>“Perguntar à IA” e “Ler com ajuda da IA” <b>não enviam nada</b>: o app só monta um texto que <b>você</b> copia e cola, se quiser, no serviço de IA da sua escolha (como ChatGPT ou Gemini). O texto vai sem nomes de pessoas, contas ou cartões, e números longos (como os de cartão e CPF) são escondidos. A partir daí vale a política de privacidade do serviço que você usar.</p>
+
+    <h2>7. Sugestões e relatos de problemas</h2>
+    <p>Ao enviar uma sugestão pelo app, ele abre o seu próprio e-mail ou WhatsApp com a mensagem pronta; você vê tudo antes de enviar. Recebemos apenas o que você mandar.</p>
+
+    <h2>8. Seus direitos (LGPD)</h2>
+    <p>Como os dados ficam com você, você mesmo exerce os direitos da Lei Geral de Proteção de Dados (Lei 13.709/2018) diretamente no app:</p>
+    <ul>
+      <li><b>Acessar e corrigir:</b> tudo pode ser consultado e editado nas telas do app.</li>
+      <li><b>Portabilidade:</b> Dados e backup → Fazer backup gera um arquivo com todos os seus dados.</li>
+      <li><b>Eliminar:</b> Dados e backup → Apagar todos os dados remove tudo do aparelho. Se usou o Drive, apague também o arquivo no seu Google Drive e revogue o acesso (item 3).</li>
+    </ul>
+    <p>Para qualquer dúvida, use o contato do item 1.</p>
+
+    <h2>9. Público</h2>
+    <p>O app é pensado para adultos que cuidam das próprias finanças e não é direcionado a crianças.</p>
+
+    <h2>10. Segurança</h2>
+    <p>Usamos criptografia forte, bibliotecas hospedadas no próprio site (baixadas das fontes oficiais e conferidas) e uma política de segurança que impede o navegador de rodar código de terceiros. Mesmo assim, nenhum sistema é 100% seguro: proteja o seu aparelho com senha e não compartilhe a senha do app.</p>
+
+    <h2>11. Mudanças nesta política</h2>
+    <p>Se esta política mudar, a data no topo será atualizada e mudanças importantes serão avisadas dentro do app.</p>
+  </main>
+
+  <footer>
+    <a href="termos.html">Termos de uso</a> · <a href="./">Abrir o app</a>
+  </footer>
+</body>
+</html>
