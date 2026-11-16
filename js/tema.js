@@ -39,15 +39,15 @@ Fin.tema = (() => {
   const porId = (id) => TEMAS.find((t) => t.id === id) || TEMAS.find((t) => t.id === PADRAO);
 
   function lerPref() {
-    try { return JSON.parse(localStorage.getItem('fin:prefs') || '{}').tema || PADRAO; } catch { return PADRAO; }
+    try { return JSON.parse(localStorage.getItem(`${Fin.PREFIXO || 'fin:'}prefs`) || '{}').tema || PADRAO; } catch { return PADRAO; }
   }
   function gravarPref(id) {
     // Grava direto (este módulo carrega antes do storage.js).
     try {
-      const p = JSON.parse(localStorage.getItem('fin:prefs') || '{}');
+      const p = JSON.parse(localStorage.getItem(`${Fin.PREFIXO || 'fin:'}prefs`) || '{}');
       if (p.tema === id) return;
       p.tema = id;
-      localStorage.setItem('fin:prefs', JSON.stringify(p));
+      localStorage.setItem(`${Fin.PREFIXO || 'fin:'}prefs`, JSON.stringify(p));
     } catch { /* sem armazenamento: vale só nesta sessão */ }
   }
 

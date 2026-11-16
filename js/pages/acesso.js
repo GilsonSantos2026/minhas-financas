@@ -87,7 +87,7 @@ Fin.acesso = (() => {
   /* ---------------- Telas ---------------- */
 
   function telaCriar() {
-    const temDados = !!localStorage.getItem('fin:lancamentos');
+    const temDados = !!localStorage.getItem(`${Fin.PREFIXO}lancamentos`);
     casca(`
       <h2 class="font-semibold text-lg">Criar acesso</h2>
       <p class="text-sm text-slate-500 mt-1">${temDados ? 'Seus dados atuais serão protegidos (cifrados) com esta senha.' : 'Defina o usuário e a senha para entrar no app.'}</p>
@@ -173,7 +173,7 @@ Fin.acesso = (() => {
     ligarOlhos();
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const bloqueadoAte = Number(sessionStorage.getItem('fin:esperaAte') || 0);
+      const bloqueadoAte = Number(sessionStorage.getItem(`${Fin.PREFIXO}esperaAte`) || 0);
       if (Date.now() < bloqueadoAte) return mostrarErro(`Muitas tentativas. Aguarde ${Math.ceil((bloqueadoAte - Date.now()) / 1000)} s.`);
       // Mesmo clique: já pede a autorização do Google (popups só abrem a partir de um clique).
       Fin.drive?.aoEntrar?.();
@@ -181,15 +181,15 @@ Fin.acesso = (() => {
       try {
         await Fin.cofre.entrar(form.elements.usuario.value, form.elements.senha.value);
         await Fin.storage.abrirCofre();
-        sessionStorage.removeItem('fin:tentativas');
+        sessionStorage.removeItem(`${Fin.PREFIXO}tentativas`);
         concluir();
       } catch (err) {
         ocupado(form, false);
-        const n = Number(sessionStorage.getItem('fin:tentativas') || 0) + 1;
-        sessionStorage.setItem('fin:tentativas', n);
+        const n = Number(sessionStorage.getItem(`${Fin.PREFIXO}tentativas`) || 0) + 1;
+        sessionStorage.setItem(`${Fin.PREFIXO}tentativas`, n);
         if (n >= MAX_TENTATIVAS) {
-          sessionStorage.setItem('fin:esperaAte', Date.now() + ESPERA_MS);
-          sessionStorage.setItem('fin:tentativas', 0);
+          sessionStorage.setItem(`${Fin.PREFIXO}esperaAte`, Date.now() + ESPERA_MS);
+          sessionStorage.setItem(`${Fin.PREFIXO}tentativas`, 0);
         }
         mostrarErro(err.message);
         form.elements.senha.select();

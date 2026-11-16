@@ -20,7 +20,7 @@
 window.Fin = window.Fin || {};
 
 Fin.storage = (() => {
-  const PREFIX = 'fin:';
+  const PREFIX = Fin.PREFIXO || 'fin:'; // 'finbeta:' no canal beta (js/canal.js)
   const BASICAS = ['lancamentos', 'cartaoCompras', 'categorias', 'cartoes'];
   const INVEST = ['invContas', 'invAtivos', 'invMovs', 'invMetas', 'invHist', 'invConfig'];
   const PERFIS = ['membros', 'sugestoes']; // quem usa o app (v2026-11-15.9) e sugestões/problemas enviados no app (v2026-11-16.5)

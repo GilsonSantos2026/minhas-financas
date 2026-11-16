@@ -10,14 +10,17 @@
  * Ao publicar uma versão nova do app, troque VERSAO: o app mostra "Nova versão disponível".
  * Os DADOS não passam por aqui (ficam no LocalStorage do navegador).
  */
-const VERSAO = '2026-11-16.14';
-const CACHE_APP = `financas-app-${VERSAO}`;
-const CACHE_CDN = 'financas-cdn-v1';
+const VERSAO = '2026-11-16.15';
+// Canal beta (…/beta/sw.js): caches com outro prefixo — um canal nunca apaga o cache do outro.
+const BETA = self.location.pathname.includes('/beta/');
+const PFX = BETA ? 'financas-beta' : 'financas';
+const CACHE_APP = `${PFX}-app-${VERSAO}`;
+const CACHE_CDN = `${PFX}-cdn-v1`;
 
 const ARQUIVOS_APP = [
   './', './index.html', './manifest.webmanifest', './css/styles.css',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/apple-touch-icon.png', './icons/favicon-32.png',
-  './js/config.js', './js/tailwind-config.js', './js/tema.js', './js/icones.js', './js/membros.js', './js/educacao.js', './js/sugestoes.js', './js/ia.js', './js/seguranca/cofre.js', './js/sync/mesclar.js', './js/sync/drive.js', './js/pages/acesso.js',
+  './js/config.js', './js/canal.js', './js/tailwind-config.js', './js/tema.js', './js/icones.js', './js/membros.js', './js/educacao.js', './js/sugestoes.js', './js/ia.js', './js/seguranca/cofre.js', './js/sync/mesclar.js', './js/sync/drive.js', './js/pages/acesso.js',
   './js/storage.js', './js/parsers.js', './js/column-map.js', './js/importer.js', './js/format.js', './js/finance.js',
   './js/periodo.js', './js/analise.js', './js/ui.js', './js/charts.js', './js/privacidade.js', './js/avisos.js', './js/tour.js', './js/puxar.js', './js/saude.js', './js/router.js', './js/pwa.js', './js/app.js',
   './js/components/lancamento-form.js', './js/components/compra-form.js', './js/components/cartao-form.js', './js/components/categoria-form.js',
@@ -54,7 +57,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     const nomes = await caches.keys();
-    await Promise.all(nomes.filter((n) => n.startsWith('financas-app-') && n !== CACHE_APP).map((n) => caches.delete(n)));
+    await Promise.all(nomes.filter((n) => n.startsWith(`${PFX}-app-`) && n !== CACHE_APP).map((n) => caches.delete(n)));
     await self.clients.claim();
   })());
 });
@@ -96,6 +99,7 @@ self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
+  if (!BETA && url.origin === self.location.origin && url.pathname.includes('/beta/')) return; // o beta tem o próprio SW
   if (url.origin === self.location.origin && url.pathname.includes(PASTA_VENDOR)) event.respondWith(cachePrimeiro(req));
   else if (url.origin === self.location.origin) event.respondWith(redePrimeiro(req));
   else if (HOSTS_CDN.includes(url.hostname)) event.respondWith(cachePrimeiro(req));

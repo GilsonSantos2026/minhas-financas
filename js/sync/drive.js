@@ -22,8 +22,9 @@ Fin.drive = (() => {
   const ESC_APPDATA = 'https://www.googleapis.com/auth/drive.appdata';
   const ESC_ARQUIVO = 'https://www.googleapis.com/auth/drive.file';
   const escopo = (comArquivo) => (comArquivo ? `${ESC_APPDATA} ${ESC_ARQUIVO}` : ESC_APPDATA);
-  const NOME = 'minhas-financas.dat';
-  const PASTA = 'Minhas Finanças (casa)';
+  // Canal beta: arquivo e pasta próprios no Drive (nunca mexe nos dados do app oficial).
+  const NOME = Fin.ehBeta ? 'minhas-financas-beta.dat' : 'minhas-financas.dat';
+  const PASTA = Fin.ehBeta ? 'Minhas Finanças BETA (casa)' : 'Minhas Finanças (casa)';
   const GIS = 'https://accounts.google.com/gsi/client';
   const GAPI = 'https://apis.google.com/js/api.js';
   const API = 'https://www.googleapis.com/drive/v3/files';
@@ -347,7 +348,7 @@ Fin.drive = (() => {
   }
 
   function prepararCofreRemoto(arq) {
-    localStorage.setItem('fin:cofre', arq.dados); // já está cifrado com a mesma chave
+    localStorage.setItem(`${Fin.PREFIXO}cofre`, arq.dados); // já está cifrado com a mesma chave
   }
 
   async function entrarComRemoto(arq, usuario, senha) {
@@ -355,7 +356,7 @@ Fin.drive = (() => {
     await Fin.cofre.adotarEnvelope(arq.conta, usuario, senha);
     prepararCofreRemoto(arq);
     await S.abrirCofre();
-    [...S.COLLECTIONS, 'meta', 'excluidos'].forEach((k) => localStorage.removeItem(`fin:${k}`));
+    [...S.COLLECTIONS, 'meta', 'excluidos'].forEach((k) => localStorage.removeItem(`${Fin.PREFIXO}${k}`));
     S.setPref('driveConectado', true);
     if (arq._arquivo) S.setPref('driveArquivo', arq._arquivo);
     S.setPref('driveVersao', arq._versao);
@@ -472,7 +473,7 @@ Fin.drive = (() => {
     await Fin.cofre.aceitarConvite(arq.conta, codigo, usuario, senha);
     prepararCofreRemoto(arq);
     await S.abrirCofre();
-    [...S.COLLECTIONS, 'meta', 'excluidos'].forEach((k) => localStorage.removeItem(`fin:${k}`));
+    [...S.COLLECTIONS, 'meta', 'excluidos'].forEach((k) => localStorage.removeItem(`${Fin.PREFIXO}${k}`));
     S.setPref('driveConectado', true);
     S.setPref('driveArquivo', arq._arquivo);
     S.setPref('driveVersao', arq._versao);

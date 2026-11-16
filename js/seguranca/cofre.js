@@ -24,8 +24,8 @@
 window.Fin = window.Fin || {};
 
 Fin.cofre = (() => {
-  const CHAVE_CONTA = 'fin:conta';
-  const CHAVE_EU = 'fin:eu';
+  const CHAVE_CONTA = `${Fin.PREFIXO || 'fin:'}conta`;
+  const CHAVE_EU = `${Fin.PREFIXO || 'fin:'}eu`;
   const ITER_SENHA = 600000; // recomendação atual (OWASP) p/ PBKDF2-SHA256; envelopes antigos (400 mil) sobem no próximo login
   const ITER_RECUPERACAO = 100000; // a chave de recuperação já é aleatória e longa
   const ITER_CONVITE = 300000;     // código de convite é mais curto: derivação mais lenta
