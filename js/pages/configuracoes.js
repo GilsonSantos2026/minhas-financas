@@ -112,7 +112,32 @@ Fin.pages.configuracoes = (() => {
     return card(`
       ${Fin.icones.titulo('usuario', 'prim', 'Pessoas (finanças da casa)', { cls: 'mb-2' })}
       <ul class="divide-y divide-slate-100 mb-3">${linhas}</ul>
+      ${divisaoHTML()}
       ${acoes}`);
+  }
+
+  /** Divisão das contas pagas pelos dois (só com 2 pessoas). Usada no filtro por pessoa. */
+  function divisaoHTML() {
+    const ps = Fin.cofre.pessoas();
+    if (ps.length !== 2) return '';
+    const d = Fin.finance.divisao();
+    const [a, b] = ps;
+    const va = Math.round(d[a.id]);
+    const M = Fin.membros;
+    const nome = (p) => esc(M.primeiroNome(M.porId(p.id)) || p.usuario);
+    return `
+      <div class="rounded-xl bg-slate-50 p-3 mb-3">
+        <div class="text-sm font-medium">Divisão das contas dos dois</div>
+        <p class="text-xs text-slate-500">Quando uma despesa é paga por “Os dois”, quanto fica com cada um (no filtro por pessoa).</p>
+        <div class="flex items-center gap-3 mt-2">
+          ${M.avatar(M.porId(a.id), { tam: 'w-8 h-8', txt: 'text-[10px]' })}
+          <input type="range" min="0" max="100" step="5" value="${va}" data-divisao class="flex-1 accent-prim-600" aria-label="Parte de ${nome(a)} nas contas dos dois" />
+          ${M.avatar(M.porId(b.id), { tam: 'w-8 h-8', txt: 'text-[10px]' })}
+        </div>
+        <div class="flex justify-between text-xs mt-1 tabular-nums">
+          <span><b data-div-a>${va}%</b> ${nome(a)}</span><span>${nome(b)} <b data-div-b>${100 - va}%</b></span>
+        </div>
+      </div>`;
   }
 
   /** Mostra o código do convite (uma vez), com cópia e WhatsApp. */
@@ -273,6 +298,21 @@ Fin.pages.configuracoes = (() => {
       const pn = Fin.membros.primeiroNome(m);
       view.querySelector('#perfil-previa').textContent = `${Fin.membros.saudacao()}${pn ? `, ${pn}` : ''}!`;
       view.querySelector('[data-act="salvar-perfil"]').disabled = false;
+    }, { signal });
+
+    // Divisão das contas dos dois: mostra ao arrastar, grava ao soltar.
+    view.addEventListener('input', (e) => {
+      if (!e.target.matches('[data-divisao]')) return;
+      const v = Number(e.target.value);
+      view.querySelector('[data-div-a]').textContent = `${v}%`;
+      view.querySelector('[data-div-b]').textContent = `${100 - v}%`;
+    }, { signal });
+    view.addEventListener('change', (e) => {
+      if (!e.target.matches('[data-divisao]')) return;
+      const v = Number(e.target.value);
+      const [a, b] = Fin.cofre.pessoas();
+      Fin.finance.salvarDivisao({ [a.id]: v, [b.id]: 100 - v });
+      Fin.ui.toast('Divisão salva.');
     }, { signal });
 
     view.addEventListener('change', async (e) => {

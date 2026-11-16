@@ -25,8 +25,37 @@ Fin.forms.lancamento = (() => {
       `<option value="${NOVA}">＋ Nova categoria…</option>`;
   }
 
+  /**
+   * Modo casal: "Quem pagou?" (só despesas) com as fotos; receita = quem lançou recebeu.
+   * Some quando há uma pessoa só.
+   */
+  function quemHTML(l, v) {
+    if (!F.temCasal()) return '';
+    const M = Fin.membros;
+    const eu = Fin.cofre.membroId();
+    const atual = l ? F.pagador(l) : eu;
+    const autor = l ? M.porId(F.autor(l)) : null;
+    const opcoes = [
+      ...Fin.cofre.pessoas().map((p) => ({ id: p.id, nome: M.primeiroNome(M.porId(p.id)) || p.usuario, av: M.avatar(M.porId(p.id), { tam: 'w-7 h-7', txt: 'text-[10px]' }) })),
+      { id: F.CASAL, nome: 'Os dois', av: `<span class="w-7 h-7 rounded-full grid place-items-center bg-prim-600 text-white shrink-0">${Fin.icone('usuario', 'w-4 h-4')}</span>` },
+    ];
+    return `
+      <fieldset data-quem class="${v.tipo === 'receita' ? 'hidden' : ''}">
+        <legend class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Quem pagou?</legend>
+        <div class="grid grid-cols-3 gap-2">
+          ${opcoes.map((o) => `
+            <label class="quem-opcao">
+              <input type="radio" name="pagoPor" value="${esc(o.id)}" ${o.id === atual ? 'checked' : ''} />
+              <span>${o.av}<span class="truncate">${esc(o.nome)}</span></span>
+            </label>`).join('')}
+        </div>
+        ${autor ? `<p class="text-xs text-slate-500 mt-1.5">Lançado por <b>${esc(M.nome(autor) || autor.usuario)}</b>.</p>` : ''}
+      </fieldset>
+      ${autor && v.tipo === 'receita' ? `<p data-quem-rec class="text-xs text-slate-500 -mt-2">Recebido por <b>${esc(M.nome(autor) || autor.usuario)}</b> (quem lançou).</p>` : ''}`;
+  }
+
   function open(id = null) {
-    const l = id ? F.lancamentos().find((x) => x.id === id) : null;
+    const l = id ? F.todos().find((x) => x.id === id) : null; // registro real (não a visão filtrada)
     if (id && !l) return Fin.ui.toast('Lançamento não encontrado.', 'error');
 
     const hoje = fmt.todayISO();
@@ -58,6 +87,8 @@ Fin.forms.lancamento = (() => {
             <label><input type="radio" name="tipo" value="despesa" ${v.tipo !== 'receita' ? 'checked' : ''}><span>Despesa</span></label>
             <label><input type="radio" name="tipo" value="receita" ${v.tipo === 'receita' ? 'checked' : ''}><span>Receita</span></label>
           </div>
+
+          ${quemHTML(l, v)}
 
           <label class="field"><span>Descrição *</span>
             <input name="descricao" class="input" required maxlength="120" value="${esc(v.descricao)}" placeholder="Ex.: Conta de luz" /></label>
@@ -309,7 +340,11 @@ Fin.forms.lancamento = (() => {
       const n = e.target.name;
       if (n === 'ateModo' && e.target.value === 'ate' && !el('ate').value && mesInicio()) el('ate').value = dezembro(mesInicio());
       if (['recorrente', 'repeticao', 'ateModo', 'ate', 'vezes', 'vencimento', 'competencia'].includes(n)) setTimeout(syncRepeticao);
-      if (n === 'tipo') { el('categoria').innerHTML = categoriaOptions(e.target.value, el('categoria').value); atualizarPagamento(); }
+      if (n === 'tipo') {
+        el('categoria').innerHTML = categoriaOptions(e.target.value, el('categoria').value);
+        form.querySelector('[data-quem]')?.classList.toggle('hidden', e.target.value === 'receita');
+        atualizarPagamento();
+      }
       if (n === 'status') syncPago();
       if (n === 'vencimento' || n === 'dataPagamento' || n === 'categoria') atualizarPagamento();
       if (n === 'competencia') competenciaTocada = true;
@@ -373,6 +408,10 @@ Fin.forms.lancamento = (() => {
         formaPagamentoIcone: forma?.icone ?? null,
         observacao: el('observacao').value.trim() || null,
       };
+      // Modo casal: quem pagou (despesa). Receita não tem o campo (quem lançou recebeu).
+      if (F.temCasal()) {
+        comuns.pagoPor = tipo === 'despesa' ? form.querySelector('input[name="pagoPor"]:checked')?.value || Fin.cofre.membroId() : null;
+      }
       const dados = {
         ...(l ? { id: l.id } : { origem: 'app' }),
         ...comuns,

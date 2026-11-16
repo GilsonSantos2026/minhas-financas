@@ -174,6 +174,49 @@ Fin.ui = (() => {
     lastFocus?.focus?.();
   }
 
+  /* ---------- Modo casal: filtro Ambos / pessoa ---------- */
+
+  /**
+   * Seletor no topo das telas de totais e gráficos (só aparece com 2+ pessoas).
+   * Ambos = tudo; pessoa = receitas dela + o que ela pagou + a parte dela nas contas dos dois.
+   */
+  function filtroPessoa() {
+    const F = Fin.finance;
+    if (!F?.temCasal?.()) return '';
+    const M = Fin.membros;
+    const ativo = F.pessoaAtiva();
+    const pessoas = Fin.cofre.pessoas();
+    const btn = (id, rotulo, av) => `<button type="button" data-filtro-pessoa="${fmt.esc(id)}" aria-pressed="${(ativo || 'todos') === id}">${av}${fmt.esc(rotulo)}</button>`;
+    const doisAv = `<span class="w-6 h-6 rounded-full grid place-items-center bg-slate-100 text-slate-600 shrink-0">${Fin.icone('usuario', 'w-3.5 h-3.5')}</span>`;
+    const pct = ativo ? Math.round(F.parteDe(ativo) * 100) : null;
+    const nomeAtivo = ativo ? (M.primeiroNome(M.porId(ativo)) || '') : '';
+    return `
+      <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <div class="filtro-pessoa" role="group" aria-label="Ver finanças de">
+          ${btn('todos', 'Ambos', doisAv)}
+          ${pessoas.map((p) => btn(p.id, M.primeiroNome(M.porId(p.id)) || p.usuario, M.avatar(M.porId(p.id), { tam: 'w-6 h-6', txt: 'text-[9px]' }))).join('')}
+        </div>
+        ${ativo ? `<p class="text-xs text-slate-500">Só de ${fmt.esc(nomeAtivo)}: as receitas, o que pagou e <b>${pct}%</b> das contas dos dois.
+          <a href="#/configuracoes" class="text-prim-700 hover:underline">Divisão</a></p>` : ''}
+      </div>`;
+  }
+
+  /** Mini-avatar de quem lançou/pagou (listas). Vazio com uma pessoa só. */
+  function autorMini(l) {
+    const F = Fin.finance;
+    if (!F?.temCasal?.()) return '';
+    const M = Fin.membros;
+    const pg = F.pagador(l);
+    if (pg === F.CASAL) {
+      return `<span class="autor-mini rounded-full grid place-items-center bg-prim-600 text-white shrink-0" title="Pago pelos dois">${Fin.icone('usuario', 'w-2.5 h-2.5')}</span>`;
+    }
+    const m = M.porId(pg);
+    const nome = M.nome(m) || m.usuario;
+    const autor = F.autor(l);
+    const dica = l.tipo === 'receita' ? `Recebido por ${nome}` : autor !== pg ? `Pago por ${nome} · lançado por ${M.nome(M.porId(autor))}` : `Pago por ${nome}`;
+    return `<span title="${fmt.esc(dica)}" class="inline-flex shrink-0">${M.avatar(m, { tam: 'autor-mini', txt: '' })}</span>`;
+  }
+
   /* ---------- Confirmação de ação perigosa ---------- */
 
   /**
@@ -342,5 +385,5 @@ Fin.ui = (() => {
       </div>`;
   }
 
-  return { toast, openModal, closeModal, confirmar, monthNav, statusPill, pagamentoLinha, alertaRotativo, catIcon, emptyState };
+  return { toast, openModal, closeModal, confirmar, filtroPessoa, autorMini, monthNav, statusPill, pagamentoLinha, alertaRotativo, catIcon, emptyState };
 })();

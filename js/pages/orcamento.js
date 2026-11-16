@@ -70,6 +70,7 @@ Fin.pages.orcamento = (() => {
 
     view.innerHTML = `
       <div class="space-y-4">
+        ${Fin.ui.filtroPessoa()}
         ${Fin.ui.monthNav(ym)}
         ${o.itens.length ? `
           <section class="bg-white rounded-2xl shadow-sm p-4 sm:p-5">

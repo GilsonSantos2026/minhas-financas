@@ -61,7 +61,7 @@ Fin.avisos = (() => {
       const atrasadas = [];
       const breve = [];
       const receitas = [];
-      for (const l of F.lancamentos()) {
+      for (const l of F.todos()) {
         if (F.ehAporte(l, cats)) continue;
         const st = F.statusEfetivo(l);
         if (st === 'pago') continue;

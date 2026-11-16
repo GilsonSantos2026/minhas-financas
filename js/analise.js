@@ -144,9 +144,13 @@ Fin.analise = (() => {
       out.push({ data: F.dataRef(l), descricao: l.descricao || l.categoria, categoria: l.categoria, icone: l.categoriaIcone, valor: F.valor(l), origem: l.formaPagamento || 'Lançamento', id: l.id, tipoItem: 'lancamento' });
     }
     if (tipo === 'despesa' && detalhar) {
+      const fatores = new Map();
       for (const c of S.list('cartaoCompras')) {
         if (!noPeriodo(c.fatura, ini, fim) || !(c.valor > 0)) continue;
-        out.push({ data: c.data, descricao: c.descricao, categoria: c.categoria, icone: c.categoriaIcone, valor: c.valor, origem: `💳 ${c.cartao}`, parcela: c.parcela, id: c.id, tipoItem: 'compra' });
+        // filtro por pessoa: a compra segue quem pagou a fatura daquele mês
+        const f = fatores.get(c.fatura) ?? fatores.set(c.fatura, F.fatorCompras(c.fatura)).get(c.fatura);
+        if (f <= 0) continue;
+        out.push({ data: c.data, descricao: c.descricao, categoria: c.categoria, icone: c.categoriaIcone, valor: Math.round(c.valor * f * 100) / 100, origem: `💳 ${c.cartao}`, parcela: c.parcela, id: c.id, tipoItem: 'compra' });
       }
     }
     return (categoria ? out.filter((i) => i.categoria === categoria) : out).sort((a, b) => b.valor - a.valor);

@@ -35,7 +35,7 @@ Fin.pages.lancamentos = (() => {
   }
 
   function resumoHTML(lista) {
-    const r = F.resumo(null, lista);
+    const r = F.resumo(null, F.naVisao(lista)); // filtro por pessoa: totais = parte dela
     const item = (label, v, cls = '') => `
       <div class="bg-white rounded-2xl shadow-sm p-3 text-center min-w-0">
         <div class="text-[11px] sm:text-xs text-slate-500">${label}</div>
@@ -56,7 +56,7 @@ Fin.pages.lancamentos = (() => {
           aria-label="Editar ${esc(l.descricao || l.categoria)}">
         ${Fin.ui.catIcon(l.categoriaIcone, l.categoria, l.tipo)}
         <div class="flex-1 min-w-0">
-          <div class="text-sm font-medium truncate">${esc(l.descricao || l.categoria)}</div>
+          <div class="text-sm font-medium flex items-center gap-1.5 min-w-0">${Fin.ui.autorMini(l)}<span class="truncate">${esc(l.descricao || l.categoria)}</span></div>
           <div class="text-xs text-slate-500 truncate">${sub}</div>
         </div>
         <div class="text-right shrink-0 flex flex-col items-end gap-0.5">
@@ -189,14 +189,16 @@ Fin.pages.lancamentos = (() => {
 
   function render(view, { signal }) {
     const ym = Fin.state.mes;
-    const todos = F.lancamentos();
-    const base = multiMes() ? Fin.periodo.filtrar(todos, filtros.periodo, ym) : F.doMes(ym);
+    // Filtro por pessoa: itens em que ela participa, com o valor cheio (para conferir).
+    const todos = F.todos().filter((l) => F.daPessoa(l));
+    const base = multiMes() ? Fin.periodo.filtrar(todos, filtros.periodo, ym) : F.doMes(ym, todos);
     const cats = [...new Set(base.map((l) => l.categoria))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
     if (filtros.categoria && !cats.includes(filtros.categoria)) filtros.categoria = '';
     const opt = (v, label, cur) => `<option value="${esc(v)}" ${v === cur ? 'selected' : ''}>${esc(label)}</option>`;
 
     view.innerHTML = `
       <div class="space-y-4">
+        ${Fin.ui.filtroPessoa()}
         ${multiMes()
           ? `<div class="bg-white rounded-2xl shadow-sm px-4 py-3 flex items-center justify-between gap-3">
                <div><div class="font-semibold">${Fin.periodo.rotulo(filtros.periodo, ym)}</div>

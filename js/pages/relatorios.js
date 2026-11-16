@@ -226,6 +226,7 @@ Fin.pages.relatorios = (() => {
 
     view.innerHTML = `
       <div class="space-y-4">
+        ${Fin.ui.filtroPessoa()}
         ${st.preset === 'custom' ? '' : `${Fin.ui.monthNav(fim)}`}
         ${filtrosHTML(ini, fim, ant)}
         ${kpisHTML(comp)}

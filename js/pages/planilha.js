@@ -74,7 +74,7 @@ Fin.pages.planilha = (() => {
       <tr data-edit="${l.id}" class="cursor-pointer ${i % 2 ? 'bg-slate-50/60' : ''} hover:bg-emerald-50/60">
         <td>${fmt.monthShort(F.competencia(l))}</td>
         <td class="tabular-nums">${fmt.date(F.dataRef(l))}</td>
-        <td class="!whitespace-normal">${esc(l.descricao || '—')}${l.grupo && l.parcela ? ` <span class="text-slate-400 text-[11px]">${l.recorrencia === 'fixo' ? '🔁 ' : ''}${l.parcela.atual}/${l.parcela.total}</span>` : ''}</td>
+        <td class="!whitespace-normal">${Fin.ui.autorMini(l) ? `<span class="inline-flex align-middle mr-1">${Fin.ui.autorMini(l)}</span>` : ''}${esc(l.descricao || '—')}${l.grupo && l.parcela ? ` <span class="text-slate-400 text-[11px]">${l.recorrencia === 'fixo' ? '🔁 ' : ''}${l.parcela.atual}/${l.parcela.total}</span>` : ''}</td>
         <td>${l.categoriaIcone ? `<span aria-hidden="true">${l.categoriaIcone}</span> ` : ''}${esc(l.categoria || '')}</td>
         <td class="${rec ? 'text-emerald-700' : 'text-slate-600'}">${rec ? 'Receita' : 'Despesa'}</td>
         <td class="num font-semibold ${rec ? 'text-emerald-700' : ''}">${rec ? '' : '−'}${fmt.brl(c.lancado)}</td>
@@ -114,7 +114,8 @@ Fin.pages.planilha = (() => {
       view.innerHTML = Fin.ui.emptyState('📑', 'Nada para conferir', 'Crie lançamentos ou importe sua planilha.');
       return;
     }
-    const todos = F.lancamentos();
+    // Filtro por pessoa: itens em que ela participa, com o valor cheio (para conferir).
+    const todos = F.todos().filter((l) => F.daPessoa(l));
     const noPeriodo = Fin.periodo.filtrar(todos, st.periodo, Fin.state.mes, st.custom);
     const cats = [...new Set(noPeriodo.map((l) => l.categoria).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
     const formas = [...new Set(noPeriodo.map((l) => l.formaPagamento || '—'))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
@@ -133,6 +134,7 @@ Fin.pages.planilha = (() => {
           ${Fin.icones.titulo('tabela', 'slate', 'Planilha de conferência', { cls: 'text-xl', tam: 'w-9 h-9', ic: 'w-5 h-5' })}
           <p class="text-sm text-slate-500">Todos os lançamentos, receitas e despesas, em linhas — filtre e confira.</p>
         </header>
+        ${Fin.ui.filtroPessoa()}
         <section class="bg-white rounded-2xl shadow-sm p-3 space-y-2">
           <div class="flex flex-wrap items-center gap-2">
             <div class="chips flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Período">
@@ -182,7 +184,7 @@ Fin.pages.planilha = (() => {
     const draw = () => {
       const lista = ordenar(filtrar(todos));
       ultimaLista = lista;
-      const t = totais(lista);
+      const t = totais(F.naVisao(lista)); // filtro por pessoa: totais = parte dela
       const tile = (r, v, sub, cls = '') => `<div class="bg-white rounded-2xl shadow-sm p-3 min-w-0">
         <div class="text-[11px] text-slate-500">${r}</div><div class="font-semibold tabular-nums truncate ${cls}">${v}</div>
         <div class="text-[11px] text-slate-500 truncate">${sub}</div></div>`;

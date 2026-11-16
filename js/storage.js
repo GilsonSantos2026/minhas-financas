@@ -383,6 +383,8 @@ Fin.storage = (() => {
       items[i] = saved;
     } else {
       saved = { ...item, id: item.id || uid(), criadoEm: now };
+      // modo casal: quem lançou (registros antigos, sem o campo, são do titular)
+      if ((collection === 'lancamentos' || collection === 'cartaoCompras') && !saved.criadoPor) saved.criadoPor = Fin.cofre?.membroId?.() || 'm1';
       items.push(saved);
     }
     set(collection, items);

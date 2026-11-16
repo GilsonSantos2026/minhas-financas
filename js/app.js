@@ -5,7 +5,8 @@ window.Fin = window.Fin || {};
 
 (() => {
   // Estado compartilhado entre telas (o mês inicial é definido após o desbloqueio).
-  Fin.state = { mes: Fin.fmt.currentYM(), cartao: null, detalharFaturas: true };
+  Fin.state = { mes: Fin.fmt.currentYM(), cartao: null, detalharFaturas: true, pessoa: null };
+  try { Fin.state.pessoa = Fin.storage.prefs().filtroPessoa || null; } catch { /* sem prefs */ }
 
   Fin.router.register('/dashboard', Fin.pages.dashboard);
   Fin.router.register('/lancamentos', Fin.pages.lancamentos);
@@ -31,6 +32,16 @@ window.Fin = window.Fin || {};
       const l = Fin.finance.togglePago(toggle.dataset.togglePago);
       if (l) Fin.ui.toast(l.status === 'pago' ? (l.tipo === 'receita' ? 'Marcado como recebido.' : 'Marcado como pago.') : 'Marcado como em aberto.');
       Fin.router.refresh();
+      return;
+    }
+
+    // Modo casal: filtro Ambos / pessoa (vale para todas as telas de totais e gráficos).
+    const fp = t.closest('[data-filtro-pessoa]');
+    if (fp) {
+      const v = fp.dataset.filtroPessoa;
+      Fin.state.pessoa = v === 'todos' ? null : v;
+      Fin.storage.setPref('filtroPessoa', Fin.state.pessoa);
+      Fin.router.render();
       return;
     }
 

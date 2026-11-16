@@ -318,6 +318,7 @@ Fin.pages.dashboard = (() => {
     view.innerHTML = `
       <div class="space-y-4">
         ${saudacaoHTML()}
+        ${Fin.ui.filtroPessoa()}
         ${lembrete}
         ${Fin.ui.monthNav(ym)}
         ${hero(r)}

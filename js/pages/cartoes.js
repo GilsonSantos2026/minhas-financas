@@ -61,7 +61,7 @@ Fin.pages.cartoes = (() => {
     const custo = Math.round((h.encargos + h.pagoAMais) * 100) / 100;
     const vezes = h.parciais.length;
     if (!vezes && !custo) {
-      const pagos = F.lancamentos().filter((l) => F.isPagamentoFatura(l) && F.statusEfetivo(l) === 'pago'
+      const pagos = F.todos().filter((l) => F.isPagamentoFatura(l) && F.statusEfetivo(l) === 'pago'
         && F.pagamentoDaFatura(cfg, F.competencia(l))?.id === l.id).length;
       return pagos >= 3 ? `<p class="text-xs text-emerald-800 bg-emerald-50 rounded-xl px-3 py-2"><span aria-hidden="true">✓</span> Fatura paga inteira nos últimos 12 meses — sem juros de rotativo.</p>` : '';
     }

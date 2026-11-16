@@ -228,3 +228,15 @@ details[open] .chev { transform: rotate(90deg); }
 
 /* Saudação no Início */
 .saudacao-data::first-letter { text-transform: uppercase; }
+
+/* Modo casal: "Quem pagou?" e filtro por pessoa */
+.quem-opcao { position: relative; display: block; cursor: pointer; min-width: 0; }
+.quem-opcao input { position: absolute; opacity: 0; pointer-events: none; }
+.quem-opcao > span { display: flex; align-items: center; gap: 0.5rem; padding: 0.45rem 0.6rem; border: 1.5px solid #e2e8f0; border-radius: 0.85rem; font-size: 0.85rem; font-weight: 500; color: #334155; background: #fff; min-width: 0; }
+.quem-opcao input:checked + span { border-color: rgb(var(--p-600)); background: rgb(var(--p-50)); color: rgb(var(--p-800)); font-weight: 600; }
+.quem-opcao input:focus-visible + span { outline: 2px solid rgb(var(--p-500)); outline-offset: 1px; }
+.filtro-pessoa { display: inline-flex; gap: 0.25rem; background: #fff; border-radius: 9999px; padding: 0.25rem; box-shadow: 0 1px 2px rgb(0 0 0 / 0.06); max-width: 100%; overflow-x: auto; }
+.filtro-pessoa button { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.75rem 0.3rem 0.3rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 500; color: #475569; white-space: nowrap; }
+.filtro-pessoa button[aria-pressed="true"] { background: rgb(var(--p-600)); color: #fff; }
+.filtro-pessoa button:not([aria-pressed="true"]):hover { background: #f1f5f9; }
+.autor-mini { width: 1.15rem; height: 1.15rem; font-size: 0.55rem; }

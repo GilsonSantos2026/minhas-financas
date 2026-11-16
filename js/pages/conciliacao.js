@@ -157,6 +157,7 @@ Fin.pages.conciliacao = (() => {
 
     view.innerHTML = `
       <div class="space-y-4">
+        ${Fin.ui.filtroPessoa()}
         ${Fin.ui.monthNav(fim)}
         <div class="bg-white rounded-2xl shadow-sm p-3 flex flex-wrap items-center gap-3 justify-between">
           <div class="chips flex gap-2" role="tablist" aria-label="Período">

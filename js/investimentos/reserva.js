@@ -69,7 +69,7 @@ Fin.reserva = (() => {
       if (cartao) c.cartao += v;
       m.set(k, c);
     };
-    for (const l of F.doMes(ym)) {
+    for (const l of F.doMes(ym, F.todos())) {
       if (l.tipo !== 'despesa' || F.isPagamentoFatura(l) || F.ehAporte(l, cats)) continue;
       add(l.categoria, F.valor(l), false);
     }
@@ -88,7 +88,7 @@ Fin.reserva = (() => {
   function janela() {
     const atual = fmt.currentYM();
     const cont = new Map();
-    for (const l of F.lancamentos()) {
+    for (const l of F.todos()) {
       const ym = F.competencia(l);
       if (!ym || ym >= atual) continue;
       const c = cont.get(ym) || { d: 0, r: 0 };
@@ -141,7 +141,7 @@ Fin.reserva = (() => {
     for (const c of S.list('cartaoCompras')) {
       if (c.parcela?.total > 1 && c.fatura >= atual && c.fatura <= ate && !essenciais.has(c.categoria) && (c.valor || 0) > 0) futuras += c.valor;
     }
-    for (const l of F.lancamentos()) {
+    for (const l of F.todos()) {
       const comp = F.competencia(l);
       if (l.tipo === 'despesa' && l.recorrencia === 'parcelado' && comp >= atual && comp <= ate && !F.isPago(l) && !essenciais.has(l.categoria)) futuras += F.valor(l);
     }
@@ -158,7 +158,7 @@ Fin.reserva = (() => {
     const conta = temInv ? Fin.inv.contas().find((c) => c.tipo === 'saldo' && c.classe === 'reserva') || null : null;
 
     // Capacidade de poupança: mediana da sobra (receitas − despesas) nos meses da janela.
-    const sobras = meses.map((ym) => { const r = F.resumo(ym); return r.receitas - r.despesas; });
+    const sobras = meses.map((ym) => { const r = F.resumo(ym, F.doMes(ym, F.todos())); return r.receitas - r.despesas; });
     const sobraMediana = r2(percentil(sobras, 0.5));
     const sugerido = sobraMediana > 0 ? Math.max(50, Math.round((sobraMediana * 0.5) / 50) * 50) : null;
     const naoEssencialMediana = r2(percentil(mesesInfo.map((m) => m.outros), 0.5));
