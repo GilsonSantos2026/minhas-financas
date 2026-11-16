@@ -217,7 +217,7 @@ Fin.avisos = (() => {
     return `
       <li class="flex items-center gap-1 py-1.5 -mx-2">
         <label class="shrink-0 p-2 cursor-pointer" title="Selecionar para dispensar">
-          <input type="checkbox" data-dispensar="${esc(a.id)}" class="accent-emerald-600 w-4 h-4 block" aria-label="Selecionar “${esc(a.titulo)}” para dispensar">
+          <input type="checkbox" data-dispensar="${esc(a.id)}" class="accent-prim-600 w-4 h-4 block" aria-label="Selecionar “${esc(a.titulo)}” para dispensar">
         </label>
         <div class="flex-1 min-w-0 flex items-center gap-3 py-1 pr-2 rounded-xl ${a.acao.edit ? 'hover:bg-slate-50 cursor-pointer' : ''}" ${clicavel}>
           <span class="w-9 h-9 shrink-0 rounded-full grid place-items-center text-base font-bold ${COR[a.nivel]}" aria-hidden="true">${esc(a.icone)}</span>
@@ -245,7 +245,7 @@ Fin.avisos = (() => {
         const at = doGrupo.filter((a) => a.nivel === 'critico');
         const resto = doGrupo.filter((a) => a.nivel !== 'critico');
         if (at.length > MAX_LISTA) {
-          mais = `<a href="#/planilha" data-ver-atrasadas class="block text-center text-sm text-emerald-700 font-medium pt-2 hover:underline">Ver todas as ${at.length} atrasadas na Planilha →</a>`;
+          mais = `<a href="#/planilha" data-ver-atrasadas class="block text-center text-sm text-prim-700 font-medium pt-2 hover:underline">Ver todas as ${at.length} atrasadas na Planilha →</a>`;
           doGrupo = [...at.slice(0, MAX_LISTA), ...resto];
         }
       }
@@ -274,7 +274,7 @@ Fin.avisos = (() => {
         </div>
         ${itens.length ? `
           <div class="flex items-center gap-2 mt-2 text-xs text-slate-500">
-            <label class="inline-flex items-center gap-2 cursor-pointer px-0.5"><input type="checkbox" data-selecionar-todos class="accent-emerald-600 w-4 h-4"> Selecionar todas</label>
+            <label class="inline-flex items-center gap-2 cursor-pointer px-0.5"><input type="checkbox" data-selecionar-todos class="accent-prim-600 w-4 h-4"> Selecionar todas</label>
             <span class="ml-auto hidden sm:inline">Marque as que você já viu e não quer mais ver</span>
           </div>
           ${secoes}
@@ -289,11 +289,11 @@ Fin.avisos = (() => {
           </div>`}
         ${ocultos ? `
           <p class="text-xs text-slate-500 mt-3">${ocultos} aviso${ocultos > 1 ? 's' : ''} dispensado${ocultos > 1 ? 's' : ''} (continua${ocultos > 1 ? 'm' : ''} valendo, só não aparece${ocultos > 1 ? 'm' : ''}).
-            <button data-restaurar class="text-emerald-700 font-medium hover:underline">Mostrar de novo</button></p>` : ''}
+            <button data-restaurar class="text-prim-700 font-medium hover:underline">Mostrar de novo</button></p>` : ''}
         ${pwa.suportado ? `
           <div class="flex flex-wrap items-center gap-2 border-t border-slate-100 mt-4 pt-3 text-xs text-slate-500">
             <span class="flex-1">Versão do app: <span data-versao>…</span>${pwa.novaVersao ? ' · <b class="text-amber-800">nova versão disponível</b>' : ''}</span>
-            ${pwa.novaVersao ? '' : '<button data-procurar class="text-emerald-700 font-medium hover:underline">Procurar atualização</button>'}
+            ${pwa.novaVersao ? '' : '<button data-procurar class="text-prim-700 font-medium hover:underline">Procurar atualização</button>'}
           </div>` : ''}
       </div>`, 'Notificações');
 

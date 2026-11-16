@@ -51,13 +51,13 @@ Fin.forms.categoria = (() => {
 
           ${t === 'despesa' ? `
             <label class="flex items-start gap-3 bg-emerald-50/60 rounded-xl p-3 cursor-pointer">
-              <input type="checkbox" name="investimento" class="accent-emerald-600 w-4 h-4 mt-0.5" ${c?.investimento ? 'checked' : ''} />
+              <input type="checkbox" name="investimento" class="accent-prim-600 w-4 h-4 mt-0.5" ${c?.investimento ? 'checked' : ''} />
               <span class="text-sm"><b>📈 É aporte em investimento</b><br>
                 <span class="text-slate-500">Não conta como despesa: aparece como “Investido no mês” e é conferido na aba Investimentos.</span></span>
             </label>
             <label class="field"><span>Orçamento mensal (R$)</span>
               <input name="orcamento" class="input tabular-nums" inputmode="decimal" value="${c?.orcamentoMensal ? fmt.decimalInput(c.orcamentoMensal) : ''}" placeholder="Sem limite" /></label>
-            ${media > 0 ? `<button type="button" data-media class="text-sm text-emerald-700 font-medium hover:underline -mt-2">
+            ${media > 0 ? `<button type="button" data-media class="text-sm text-prim-700 font-medium hover:underline -mt-2">
               Usar a média dos últimos 3 meses: ${fmt.brl(media)}</button>` : ''}` : ''}
 
           ${c ? `<p class="text-xs text-slate-500">Usada em ${usos.total} ${usos.total === 1 ? 'registro' : 'registros'}. Renomear atualiza todos eles.</p>` : ''}

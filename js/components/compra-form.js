@@ -71,7 +71,7 @@ Fin.forms.compra = (() => {
               <input name="fatura" type="month" class="input" value="${fatura}" /></label>`}
           </div>
 
-          <p id="compra-resumo" class="text-sm text-slate-600 bg-emerald-50 rounded-xl px-3 py-2 ${c ? 'hidden' : ''}"></p>
+          <p id="compra-resumo" class="text-sm text-slate-600 bg-prim-50 rounded-xl px-3 py-2 ${c ? 'hidden' : ''}"></p>
 
           <label class="field"><span>Observação</span>
             <textarea name="observacao" rows="2" class="input" maxlength="500">${esc(c?.observacao)}</textarea></label>

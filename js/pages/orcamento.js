@@ -63,7 +63,7 @@ Fin.pages.orcamento = (() => {
               <span class="text-base" aria-hidden="true">${s.icone || '🏷️'}</span>
               <span class="text-sm flex-1 min-w-0 truncate">${esc(s.categoria)}</span>
               <span class="text-sm tabular-nums text-slate-700">${fmt.brl(s.gasto)}</span>
-              <button data-definir="${esc(s.categoria)}" class="text-xs font-semibold text-emerald-700 hover:underline shrink-0">Definir</button>
+              <button data-definir="${esc(s.categoria)}" class="text-xs font-semibold text-prim-700 hover:underline shrink-0">Definir</button>
             </li>`).join('')}
         </ul>
       </section>` : '';
@@ -88,7 +88,7 @@ Fin.pages.orcamento = (() => {
             'Defina um limite mensal por categoria e acompanhe aqui quanto já foi gasto. Comece pelas categorias abaixo.')}
         ${semOrc}
         <p class="text-xs text-slate-500 px-1">Compras no cartão contam pela categoria de cada compra.
-          <a href="#/categorias" class="text-emerald-700 font-medium hover:underline">Gerenciar categorias</a></p>
+          <a href="#/categorias" class="text-prim-700 font-medium hover:underline">Gerenciar categorias</a></p>
       </div>`;
 
     // Clique em [data-orc] (linha com orçamento) é tratado em app.js (vale também no Início).

@@ -462,7 +462,7 @@ Fin.importarInv = (() => {
       const tabDiffs = (diffs, origem, rotRef) => (diffs.length ? `
         <div class="table-wrap max-h-64 overflow-auto border border-slate-100 rounded-lg"><table class="w-full"><thead><tr>
           <th>Ajustar</th><th>Ativo</th><th class="text-right">No app</th><th class="text-right">${rotRef}</th></tr></thead>
-          <tbody>${diffs.map((d, i) => `<tr><td>${d.ativo ? `<input type="checkbox" data-ajuste="${origem}:${i}" class="accent-emerald-600" checked aria-label="Ajustar ${esc(d.ticker)}">` : ''}</td>
+          <tbody>${diffs.map((d, i) => `<tr><td>${d.ativo ? `<input type="checkbox" data-ajuste="${origem}:${i}" class="accent-prim-600" checked aria-label="Ajustar ${esc(d.ticker)}">` : ''}</td>
             <td class="font-medium">${esc(d.ticker)}</td><td class="num">${fmt.qtd(d.app)}</td><td class="num">${fmt.qtd(d.ref)}</td></tr>`).join('')}</tbody></table></div>`
         : '<p class="text-sm text-emerald-700">✓ Todas as quantidades conferem.</p>');
       const corpo = form.querySelector('[data-corpo]');

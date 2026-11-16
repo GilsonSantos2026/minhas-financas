@@ -280,7 +280,7 @@ Fin.pages.dados = (() => {
         </table></div>
         ${S.hasData() ? `
           <p class="text-sm text-amber-800 bg-amber-50 rounded-lg px-3 py-2"><span aria-hidden="true">!</span> Os dados atuais deste aparelho serão <b>substituídos</b> pelos do backup.</p>
-          <label class="flex items-start gap-2 text-sm"><input id="restore-copia" type="checkbox" checked class="mt-0.5 w-4 h-4 accent-emerald-600">
+          <label class="flex items-start gap-2 text-sm"><input id="restore-copia" type="checkbox" checked class="mt-0.5 w-4 h-4 accent-prim-600">
             <span>Baixar antes uma cópia dos dados atuais (recomendado)</span></label>` : ''}
         <div class="flex gap-2 justify-end">
           <button data-act="restore-cancel" class="btn btn-ghost">Cancelar</button>
@@ -334,7 +334,7 @@ Fin.pages.dados = (() => {
     const { protegido } = await Fin.pwa.armazenamento();
     if (protegido === null) el.innerHTML = 'Este navegador não oferece essa proteção. Mantenha backups em dia.';
     else if (protegido) el.innerHTML = '<span class="text-emerald-800 font-medium"><span aria-hidden="true">✓</span> Dados protegidos contra limpeza automática.</span>';
-    else el.innerHTML = '<span class="text-slate-600">Ainda não protegido.</span> <button data-act="proteger" class="ml-1 text-emerald-700 font-semibold hover:underline">Proteger agora</button>';
+    else el.innerHTML = '<span class="text-slate-600">Ainda não protegido.</span> <button data-act="proteger" class="ml-1 text-prim-700 font-semibold hover:underline">Proteger agora</button>';
   }
 
   /* ---------------- Painel: upload ---------------- */

@@ -124,7 +124,7 @@ Fin.pages.conciliacao = (() => {
               <td class="num">${fmt.brl(f.compras)}</td>
               <td class="num">${f.pagamento ? fmt.brl(f.lancado) : '<span class="text-rose-700">não lançado</span>'}</td>
               <td class="num">${f.pagamento ? fmt.brl(f.pago) : '—'}</td>
-              <td>${f.situacao ? pill(s, f.situacao) : `<a href="#/cartoes" data-ir-cartao="${esc(f.cartao)}" class="text-emerald-700 text-xs font-semibold hover:underline">Lançar</a>`}
+              <td>${f.situacao ? pill(s, f.situacao) : `<a href="#/cartoes" data-ir-cartao="${esc(f.cartao)}" class="text-prim-700 text-xs font-semibold hover:underline">Lançar</a>`}
                 ${f.difComprasLancado && Math.abs(f.difComprasLancado) >= 0.01 ? `<div class="text-[11px] text-slate-500 mt-0.5">compras ${f.difComprasLancado > 0 ? '+' : '−'}${fmt.brl(Math.abs(f.difComprasLancado))} vs lançado</div>` : ''}</td>
             </tr>`).join('')}
           </tbody>
@@ -175,7 +175,7 @@ Fin.pages.conciliacao = (() => {
         <section class="space-y-2">
           <div class="flex items-center justify-between gap-2 px-1">
             ${Fin.icones.titulo('balanca', 'sky', `Lançamentos × ${rec ? 'recebimentos' : 'pagamentos'}`)}
-            <button data-act="csv" class="text-xs font-semibold text-emerald-700 hover:underline">⬇️ Exportar CSV</button>
+            <button data-act="csv" class="text-xs font-semibold text-prim-700 hover:underline">⬇️ Exportar CSV</button>
           </div>
           ${filtrosHTML(totais, s)}
           ${visiveis.length

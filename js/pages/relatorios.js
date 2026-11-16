@@ -64,7 +64,7 @@ Fin.pages.relatorios = (() => {
       <div class="flex flex-wrap items-center justify-between gap-2 mt-3 text-xs text-slate-500">
         <span><b class="text-slate-700">${rotuloPeriodo(ini, fim)}</b> · comparado a ${rotuloPeriodo(ant.ini, ant.fim)}</span>
         <label class="inline-flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" id="rel-detalhar" class="accent-emerald-600 w-4 h-4" ${Fin.state.detalharFaturas ? 'checked' : ''}>
+          <input type="checkbox" id="rel-detalhar" class="accent-prim-600 w-4 h-4" ${Fin.state.detalharFaturas ? 'checked' : ''}>
           Detalhar faturas do cartão
         </label>
       </div>`, '!p-3 sm:!p-4');
@@ -145,7 +145,7 @@ Fin.pages.relatorios = (() => {
       </div>
       ${cats.length ? `<ul class="space-y-0.5">${linhas}</ul>
         <p class="text-xs text-slate-400 mt-2">Toque numa categoria para ver o histórico e os maiores lançamentos.</p>
-        ${cats.length > 10 ? `<button data-act="todas" class="mt-2 text-sm text-emerald-700 font-medium hover:underline">${st.todas ? 'Mostrar só as 10 maiores' : `Ver todas as ${cats.length} categorias`}</button>` : ''}`
+        ${cats.length > 10 ? `<button data-act="todas" class="mt-2 text-sm text-prim-700 font-medium hover:underline">${st.todas ? 'Mostrar só as 10 maiores' : `Ver todas as ${cats.length} categorias`}</button>` : ''}`
       : '<p class="text-sm text-slate-500 py-3">Nada neste período.</p>'}`);
   }
 

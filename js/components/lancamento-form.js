@@ -49,8 +49,8 @@ Fin.forms.lancamento = (() => {
                 ${l.recorrencia === 'fixo' ? `Recorrente · mês <b>${l.parcela?.atual}/${l.parcela?.total}</b>` : `Parcela <b>${l.parcela?.atual}/${l.parcela?.total}</b>`}</p>
               <fieldset class="flex flex-wrap gap-x-4 gap-y-1">
                 <legend class="sr-only">Aplicar alterações a</legend>
-                <label class="inline-flex items-center gap-1.5"><input type="radio" name="escopo" value="este" checked class="accent-emerald-600"> Só este</label>
-                <label class="inline-flex items-center gap-1.5"><input type="radio" name="escopo" value="proximos" class="accent-emerald-600"> Este e os próximos</label>
+                <label class="inline-flex items-center gap-1.5"><input type="radio" name="escopo" value="este" checked class="accent-prim-600"> Só este</label>
+                <label class="inline-flex items-center gap-1.5"><input type="radio" name="escopo" value="proximos" class="accent-prim-600"> Este e os próximos</label>
               </fieldset>
             </div>` : ''}
 
@@ -105,7 +105,7 @@ Fin.forms.lancamento = (() => {
                   <button type="button" data-ate-12 class="chip !py-1.5 !text-xs">12 meses</button>
                 </div>
               </div>
-              <p id="rep-resumo" class="text-xs text-slate-700 bg-emerald-50 rounded-lg px-3 py-2" aria-live="polite"></p>
+              <p id="rep-resumo" class="text-xs text-slate-700 bg-prim-50 rounded-lg px-3 py-2" aria-live="polite"></p>
             </div>
           </section>`}
 
@@ -128,7 +128,7 @@ Fin.forms.lancamento = (() => {
                   <input name="valorPago" class="input tabular-nums" inputmode="decimal" value="${fmt.decimalInput(v.valorPago)}" placeholder="0,00" /></label>
               </div>
               <div class="flex flex-wrap items-center gap-2">
-                <button type="button" data-usar-lancado class="text-xs font-semibold text-emerald-700 hover:underline">Usar o valor lançado</button>
+                <button type="button" data-usar-lancado class="text-xs font-semibold text-prim-700 hover:underline">Usar o valor lançado</button>
                 <span id="pg-diff" class="text-xs ml-auto"></span>
               </div>
               <div id="pg-rotativo"></div>

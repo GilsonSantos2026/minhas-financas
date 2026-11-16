@@ -46,7 +46,7 @@ Fin.pages.cartoes = (() => {
         ${Math.abs(diff) >= 0.01 ? `
           <div class="flex flex-wrap items-center gap-2 text-xs text-slate-600 border-t border-slate-200 pt-2">
             <span class="flex-1 min-w-[12rem]">Compras somam ${fmt.brl(total)} (${diff > 0 ? '+' : '−'}${fmt.brl(Math.abs(diff))} em relação ao lançamento).</span>
-            ${podeAtualizar ? `<button data-act="sync" class="text-emerald-700 font-semibold hover:underline">Atualizar para ${fmt.brl(total)}</button>` : ''}
+            ${podeAtualizar ? `<button data-act="sync" class="text-prim-700 font-semibold hover:underline">Atualizar para ${fmt.brl(total)}</button>` : ''}
           </div>` : ''}
       </div>
       ${F.faturaParcial(pag) ? Fin.ui.alertaRotativo(F.faturaParcial(pag)) : ''}`;
@@ -181,7 +181,7 @@ Fin.pages.cartoes = (() => {
               </div>
               <button data-act="config" class="icon-btn shrink-0" aria-label="Configurar cartão" title="Configurar cartão">⚙️</button>
             </div>
-            ${!cfg.diaFechamento || !cfg.diaVencimento ? `<p class="text-sm bg-amber-50 rounded-xl px-3 py-2"><span aria-hidden="true">!</span> Configure os dias de fechamento e vencimento para o app calcular as faturas. <button data-act="config" class="text-emerald-700 font-semibold hover:underline">Configurar</button></p>` : ''}
+            ${!cfg.diaFechamento || !cfg.diaVencimento ? `<p class="text-sm bg-amber-50 rounded-xl px-3 py-2"><span aria-hidden="true">!</span> Configure os dias de fechamento e vencimento para o app calcular as faturas. <button data-act="config" class="text-prim-700 font-semibold hover:underline">Configurar</button></p>` : ''}
             ${pagamentoHTML(cfg, ym, total)}
             ${rotativoHTML(cfg)}
             ${limiteHTML(cfg)}

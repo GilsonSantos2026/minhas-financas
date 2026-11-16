@@ -28,7 +28,7 @@ Fin.acesso = (() => {
 
   function casca(inner) {
     root.innerHTML = `
-      <div class="fixed inset-0 z-[60] overflow-y-auto bg-gradient-to-br from-emerald-600 to-teal-700">
+      <div class="fixed inset-0 z-[60] overflow-y-auto bg-gradient-to-br from-prim-600 to-prim-800">
         ${desenhoFundo()}
         <div class="relative min-h-full flex items-center justify-center p-4">
           <div class="w-full max-w-sm">
@@ -37,7 +37,7 @@ Fin.acesso = (() => {
               <h1 class="text-xl font-semibold mt-3">Minhas Finanças</h1>
             </div>
             <div class="bg-white rounded-2xl shadow-xl p-6">${inner}</div>
-            <p class="text-center text-xs text-emerald-50/80 mt-4">Seus dados ficam cifrados neste aparelho${Fin.config?.googleClientId ? ' e no seu Google Drive' : ''}.</p>
+            <p class="text-center text-xs text-white/80 mt-4">Seus dados ficam cifrados neste aparelho${Fin.config?.googleClientId ? ' e no seu Google Drive' : ''}.</p>
           </div>
         </div>
       </div>`;
@@ -100,7 +100,7 @@ Fin.acesso = (() => {
       </form>
       <p class="text-xs text-slate-500 mt-4">Se esquecer a senha, só a <b>chave de recuperação</b> (mostrada a seguir) devolve o acesso.</p>
       ${Fin.config?.googleClientId ? `<div class="border-t border-slate-100 mt-4 pt-4 text-center">
-        <button data-ir="drive" class="text-sm text-emerald-700 font-semibold hover:underline">Já uso o app em outro aparelho</button></div>` : ''}`);
+        <button data-ir="drive" class="text-sm text-prim-700 font-semibold hover:underline">Já uso o app em outro aparelho</button></div>` : ''}`);
     const form = root.querySelector('#ac-form');
     ligarOlhos();
     medidorForca(form);
@@ -135,7 +135,7 @@ Fin.acesso = (() => {
         <button data-acao="copiar" class="btn btn-ghost">Copiar</button>
         <button data-acao="baixar" class="btn btn-ghost">Baixar .txt</button>
       </div>
-      <label class="flex items-start gap-2 text-sm mt-4"><input id="ac-ok" type="checkbox" class="mt-0.5 w-4 h-4 accent-emerald-600">
+      <label class="flex items-start gap-2 text-sm mt-4"><input id="ac-ok" type="checkbox" class="mt-0.5 w-4 h-4 accent-prim-600">
         <span>Guardei minha chave de recuperação em local seguro.</span></label>
       <button data-acao="continuar" class="btn btn-primary w-full mt-4" disabled>Continuar</button>`);
     root.querySelector('#ac-ok').addEventListener('change', (e) => { root.querySelector('[data-acao="continuar"]').disabled = !e.target.checked; });

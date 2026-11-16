@@ -75,11 +75,11 @@ Fin.pages.investimentos = (() => {
           </div>
           <div id="inv-evolucao" class="w-full min-w-0 overflow-hidden"></div>
           <p class="text-xs text-slate-400 mt-1">Últimos 12 meses. Meses sem patrimônio registrado mostram só o aplicado ·
-            <button data-act="foto" class="text-emerald-700 font-medium hover:underline">informar mês passado</button></p>`)}
+            <button data-act="foto" class="text-prim-700 font-medium hover:underline">informar mês passado</button></p>`)}
         ${card(`
           <div class="flex items-center justify-between gap-3 mb-3">
             ${T3('pizza', 'violet', 'Alocação por classe')}
-            <button data-act="alocacao" class="text-sm text-emerald-700 font-medium hover:underline">% ideal</button>
+            <button data-act="alocacao" class="text-sm text-prim-700 font-medium hover:underline">% ideal</button>
           </div>
           ${alocacaoHTML(I().alocacao(r))}`)}
       </div>
@@ -115,7 +115,7 @@ Fin.pages.investimentos = (() => {
     const total = r.patrimonio || 1;
     return `
       <div class="flex items-center justify-between mb-2">${T3('banco', 'sky', 'Por conta')}
-        <button data-act="nova-conta" class="text-sm text-emerald-700 font-medium hover:underline">＋ Conta</button></div>
+        <button data-act="nova-conta" class="text-sm text-prim-700 font-medium hover:underline">＋ Conta</button></div>
       <ul class="divide-y divide-slate-100">${contas.map((c) => `
         <li><button data-conta="${c.id}" class="w-full flex items-center gap-2 py-2 text-left text-sm hover:bg-slate-50 rounded">
           <span aria-hidden="true">${c.icone || '🏦'}</span><span class="flex-1 truncate">${esc(c.nome)}
@@ -141,7 +141,7 @@ Fin.pages.investimentos = (() => {
     const [ic, cls, txt] = statusReserva(rv);
     return `
       <div class="flex items-center justify-between mb-2">${T3('escudo', 'emerald', 'Reserva de emergência')}
-        <button data-aba="reserva" class="text-sm text-emerald-700 font-medium hover:underline">Ver →</button></div>
+        <button data-aba="reserva" class="text-sm text-prim-700 font-medium hover:underline">Ver →</button></div>
       <div class="text-2xl font-semibold tabular-nums">${fmt.brl(rv.atual)}</div>
       <div class="mt-1"><span class="pill ${cls}"><span aria-hidden="true">${ic}</span>${mesesTxt(rv.cobertura)} · ${txt}</span></div>
       <p class="text-xs text-slate-500 mt-2">Ideal: <b class="tabular-nums">${fmt.brl(rv.ideal)}</b> (${rv.mesesAlvo} meses × ${fmt.brl(rv.base)} de custo essencial).</p>`;
@@ -160,8 +160,8 @@ Fin.pages.investimentos = (() => {
     const pctMin = rv.ideal > 0 ? Math.min(1, rv.minimo / rv.ideal) : 0;
     const chegada = rv.prazo ? fmt.monthLong(fmt.addMonths(fmt.currentYM(), rv.prazo)).toLowerCase() : '';
     const perfis = Fin.reserva.PERFIS.map((p) => `
-      <label class="flex items-start gap-3 rounded-xl border ${p.meses === rv.mesesAlvo ? 'border-emerald-500 bg-emerald-50/50' : 'border-slate-200'} p-3 cursor-pointer">
-        <input type="radio" name="rv-meses" value="${p.meses}" ${p.meses === rv.mesesAlvo ? 'checked' : ''} class="accent-emerald-600 mt-1">
+      <label class="flex items-start gap-3 rounded-xl border ${p.meses === rv.mesesAlvo ? 'border-prim-500 bg-prim-50/50' : 'border-slate-200'} p-3 cursor-pointer">
+        <input type="radio" name="rv-meses" value="${p.meses}" ${p.meses === rv.mesesAlvo ? 'checked' : ''} class="accent-prim-600 mt-1">
         <span class="flex-1 min-w-0">
           <span class="block text-sm font-semibold">${p.meses} meses · ${p.nome}</span>
           <span class="block text-xs text-slate-500">${p.desc}</span>
@@ -172,7 +172,7 @@ Fin.pages.investimentos = (() => {
     const cats = rv.categorias.map((c) => `
       <tr class="${c.essencial ? '' : 'text-slate-400'}">
         <td><label class="inline-flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" data-rv-cat="${esc(c.nome)}" ${c.essencial ? 'checked' : ''} class="accent-emerald-600 w-4 h-4">
+          <input type="checkbox" data-rv-cat="${esc(c.nome)}" ${c.essencial ? 'checked' : ''} class="accent-prim-600 w-4 h-4">
           <span class="truncate max-w-[11rem]">${c.icone ? `${c.icone} ` : ''}${esc(c.nome)}</span></label></td>
         <td class="num">${fmt.brl(c.mediana)}</td>
         <td class="num">${fmt.brl(c.p75)}</td>
@@ -264,7 +264,7 @@ Fin.pages.investimentos = (() => {
             <tbody>${cats}</tbody>
           </table>
         </div>
-        ${Object.keys(rv.cfg.essenciais || {}).length ? '<button data-act="rv-padrao" class="text-xs text-emerald-700 font-medium hover:underline mt-2">Voltar à classificação das categorias</button>' : ''}`)}`;
+        ${Object.keys(rv.cfg.essenciais || {}).length ? '<button data-act="rv-padrao" class="text-xs text-prim-700 font-medium hover:underline mt-2">Voltar à classificação das categorias</button>' : ''}`)}`;
   }
 
   function aportesHTML(a) {
@@ -320,8 +320,8 @@ Fin.pages.investimentos = (() => {
     return `
       <div class="flex flex-wrap gap-3 text-sm px-1">
         <span class="text-slate-500 mr-auto">${r.abertas.length} ativos · ${r.contasSaldo.length} contas por saldo</span>
-        <button data-act="carga" class="text-emerald-700 font-semibold hover:underline">📥 Carregar posição (colar lista)</button>
-        <button data-act="precos" class="text-emerald-700 font-semibold hover:underline">🏷️ Atualizar preços</button>
+        <button data-act="carga" class="text-prim-700 font-semibold hover:underline">📥 Carregar posição (colar lista)</button>
+        <button data-act="precos" class="text-prim-700 font-semibold hover:underline">🏷️ Atualizar preços</button>
       </div>
       ${blocos}
       ${fechados.length ? `<details class="bg-white rounded-2xl shadow-sm p-4"><summary class="cursor-pointer text-sm font-medium">Posições encerradas (${fechados.length})</summary>
@@ -372,7 +372,7 @@ Fin.pages.investimentos = (() => {
         ${card(`${T3('barras', 'blue', 'Por ativo (12 meses)', 'mb-3')}${pv.porAtivo.length ? Fin.charts.hbars(pv.porAtivo.slice(0, 10)) : '<p class="text-sm text-slate-500">Nenhum provento nos últimos 12 meses.</p>'}`)}
       </div>
       ${card(`<div class="flex items-center justify-between mb-2">${T3('lista', 'slate', 'Meus proventos')}
-        <button data-act="novo-provento" class="text-sm text-emerald-700 font-semibold hover:underline">＋ Provento</button></div>
+        <button data-act="novo-provento" class="text-sm text-prim-700 font-semibold hover:underline">＋ Provento</button></div>
         ${pv.lista.length ? `<div class="table-wrap"><table class="w-full"><thead><tr><th>Data</th><th>Ativo</th><th>Tipo</th><th class="text-right">Valor</th><th class="text-right">Em R$</th><th>Situação</th></tr></thead>
         <tbody>${pv.lista.slice(0, 60).map((p) => `<tr data-mov="${p.mov.id}" class="cursor-pointer hover:bg-emerald-50/60">
           <td class="tabular-nums">${fmt.date(p.data)}</td><td class="font-medium">${esc(p.ativo?.ticker || '—')}</td>
@@ -404,7 +404,7 @@ Fin.pages.investimentos = (() => {
         <div class="col-span-2 lg:col-span-1">${tile('Último mês', ult ? `<span class="${sinal(ult.rent)}">${pctS(ult.rent)}</span>` : '—', ult ? fmt.monthLong(ult.ym) : 'sem dados')}</div>
       </div>
       ${card(`<div class="flex items-center justify-between gap-2 mb-2 flex-wrap">${T3('linha', 'emerald', 'Rentabilidade mês a mês')}
-        <button data-act="foto" class="text-sm text-emerald-700 font-semibold hover:underline">＋ Patrimônio de mês passado</button></div>
+        <button data-act="foto" class="text-sm text-prim-700 font-semibold hover:underline">＋ Patrimônio de mês passado</button></div>
         ${hist.some((m) => m.rent != null) ? `<div class="table-wrap"><table class="w-full"><thead><tr><th>Ano</th>${['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'].map((m) => `<th class="text-right">${m}</th>`).join('')}<th class="text-right">Ano</th></tr></thead>
           <tbody>${anos.map((y) => {
             const meses = Array.from({ length: 12 }, (_, i) => porYm.get(`${y}-${String(i + 1).padStart(2, '0')}`));
@@ -472,7 +472,7 @@ Fin.pages.investimentos = (() => {
     return `
       <div class="flex items-center justify-between px-1">${T3('alvo', 'orange', 'Metas')}
         <span class="flex gap-3">${limite && ms.length > limite ? '<button data-aba="metas" class="text-sm text-slate-500 hover:underline">ver todas</button>' : ''}
-        <button data-act="nova-meta" class="text-sm text-emerald-700 font-semibold hover:underline">＋ Meta</button></span></div>
+        <button data-act="nova-meta" class="text-sm text-prim-700 font-semibold hover:underline">＋ Meta</button></span></div>
       ${lista.length ? `<div class="grid grid-cols-1 lg:grid-cols-3 gap-3 items-start">${lista.map((p) => `
         <button data-meta="${p.meta.id}" class="block w-full text-left bg-white rounded-2xl shadow-sm p-4 hover:ring-2 hover:ring-emerald-200 min-w-0">
           <div class="flex items-center gap-2"><span class="font-medium truncate flex-1">${esc(p.meta.nome)}</span>

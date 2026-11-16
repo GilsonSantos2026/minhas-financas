@@ -26,6 +26,24 @@ Fin.pages.dashboard = (() => {
   }
 
   /** Resumo do mês: saldo previsto + receitas, despesas e a pagar num só cartão compacto. */
+  /** "Boa tarde, Gilson!" com a foto de quem entrou neste aparelho. */
+  function saudacaoHTML() {
+    const M = Fin.membros;
+    if (!M) return '';
+    const m = M.atual();
+    const nome = M.primeiroNome(m);
+    const data = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+    const semPerfil = !m.nome && !m.foto;
+    return `
+      <div class="flex items-center gap-3">
+        <a href="#/configuracoes" class="shrink-0 rounded-full" aria-label="Perfil e configurações">${M.avatar(m, { tam: 'w-11 h-11', txt: 'text-sm', anel: 'ring-2 ring-white shadow-sm' })}</a>
+        <div class="min-w-0 flex-1">
+          <p class="text-lg font-semibold text-slate-900 leading-tight truncate">${M.saudacao()}${nome ? `, ${fmt.esc(nome)}` : ''}!</p>
+          <p class="text-xs text-slate-500 saudacao-data">${data}${semPerfil ? ` · <a href="#/configuracoes" class="text-prim-700 font-medium hover:underline">Pôr seu nome e foto</a>` : ''}</p>
+        </div>
+      </div>`;
+  }
+
   function hero(r) {
     const negativo = r.saldo < 0;
     const uso = r.receitas > 0 ? r.despesas / r.receitas : null; // quanto da receita as despesas consomem
@@ -60,7 +78,7 @@ Fin.pages.dashboard = (() => {
         <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-xs text-slate-500">
           <span>Despesas = <b class="text-slate-700">${uso == null ? '—' : `${Math.round(uso * 100)}%`}</b> da receita · ${textoUso}</span>
           ${r.aportes > 0 ? `<span class="inline-flex items-center gap-1">${Fin.icone('cofrinho', 'w-4 h-4 text-emerald-700')} investido no mês <b class="text-emerald-700 tabular-nums">${fmt.brl(r.aportes)}</b></span>` : ''}
-          ${patrimonio != null ? `<a href="#/investimentos" class="inline-flex items-center gap-1 text-emerald-700 font-medium hover:underline md:ml-auto">${Fin.icone('alta', 'w-4 h-4')} patrimônio <span class="tabular-nums">${fmt.brl(patrimonio)}</span> →</a>` : ''}
+          ${patrimonio != null ? `<a href="#/investimentos" class="inline-flex items-center gap-1 text-prim-700 font-medium hover:underline md:ml-auto">${Fin.icone('alta', 'w-4 h-4')} patrimônio <span class="tabular-nums">${fmt.brl(patrimonio)}</span> →</a>` : ''}
         </div>
       </div>`);
   }
@@ -84,7 +102,7 @@ Fin.pages.dashboard = (() => {
         </div>
       </li>`).join('');
     const mais = contas.length > 6
-      ? `<a href="#/lancamentos" data-filtro-status="pendentes" class="block text-center text-sm text-emerald-700 font-medium pt-3 hover:underline">Ver todas (${contas.length})</a>`
+      ? `<a href="#/lancamentos" data-filtro-status="pendentes" class="block text-center text-sm text-prim-700 font-medium pt-3 hover:underline">Ver todas (${contas.length})</a>`
       : '';
     return `<ul class="divide-y divide-slate-100">${rows}</ul>${mais}`;
   }
@@ -137,7 +155,7 @@ Fin.pages.dashboard = (() => {
     return card(`
       <div class="flex items-center justify-between gap-3 mb-1">
         ${titulo('alvo', 'orange', 'Orçamento do mês')}
-        <a href="#/orcamento" class="text-sm text-emerald-700 font-medium hover:underline">Ver tudo (${o.itens.length})</a>
+        <a href="#/orcamento" class="text-sm text-prim-700 font-medium hover:underline">Ver tudo (${o.itens.length})</a>
       </div>
       <ul class="grid md:grid-cols-2 md:gap-x-8 divide-y md:divide-y-0 divide-slate-100">${top.map(Fin.pages.orcamento.linhaHTML).join('')}</ul>`);
   }
@@ -199,7 +217,7 @@ Fin.pages.dashboard = (() => {
         </div>
         <ul class="divide-y divide-slate-100 min-w-0">${pilares}</ul>
       </div>
-      ${faltam.length ? `<p class="text-xs text-slate-400 mt-1">Fora do cálculo neste mês: ${faltam.map((k) => nomes[k]).join(', ')}.${faltam.includes('reserva') ? ' <a href="#/investimentos?aba=reserva" class="text-emerald-700 font-medium hover:underline">Criar reserva</a>' : ''}</p>` : ''}
+      ${faltam.length ? `<p class="text-xs text-slate-400 mt-1">Fora do cálculo neste mês: ${faltam.map((k) => nomes[k]).join(', ')}.${faltam.includes('reserva') ? ' <a href="#/investimentos?aba=reserva" class="text-prim-700 font-medium hover:underline">Criar reserva</a>' : ''}</p>` : ''}
       <div id="chart-saude" class="w-full min-w-0 overflow-hidden mt-3"></div>
       <div class="flex flex-wrap gap-4 text-xs text-slate-600 mt-1">${Fin.saude.FAIXAS.map((x) => `
         <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm" style="background:${x.cor};opacity:.6"></span><span aria-hidden="true">${x.icone}</span>${x.nome} ${x.id === 'bom' ? '(80+)' : x.id === 'atencao' ? '(40–79)' : '(até 39)'}</span>`).join('')}
@@ -299,6 +317,7 @@ Fin.pages.dashboard = (() => {
 
     view.innerHTML = `
       <div class="space-y-4">
+        ${saudacaoHTML()}
         ${lembrete}
         ${Fin.ui.monthNav(ym)}
         ${hero(r)}
@@ -311,13 +330,13 @@ Fin.pages.dashboard = (() => {
             </div>
             <div id="chart-hist" class="w-full min-w-0 overflow-hidden"></div>
             <p class="text-xs text-slate-400 mt-1">Últimos 6 meses · toque em um mês para abri-lo ·
-              <a href="#/relatorios" class="text-emerald-700 font-medium hover:underline">Ver relatórios</a></p>
+              <a href="#/relatorios" class="text-prim-700 font-medium hover:underline">Ver relatórios</a></p>
             ${tabelaHistorico(hist)}`)}
           ${card(`
             <div class="flex items-start justify-between gap-3 flex-wrap mb-3">
               ${titulo('pizza', 'orange', 'Despesas por categoria')}
               <label class="inline-flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
-                <input type="checkbox" id="detalhar-faturas" class="accent-emerald-600 w-4 h-4" ${Fin.state.detalharFaturas ? 'checked' : ''} />
+                <input type="checkbox" id="detalhar-faturas" class="accent-prim-600 w-4 h-4" ${Fin.state.detalharFaturas ? 'checked' : ''} />
                 Detalhar faturas do cartão
               </label>
             </div>

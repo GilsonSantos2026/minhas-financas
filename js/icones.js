@@ -49,6 +49,10 @@ Fin.icones = (() => {
     banco: '<path d="M3 9.5 12 4l9 5.5"/><path d="M4.5 10v7.5M9.5 10v7.5M14.5 10v7.5M19.5 10v7.5"/><path d="M3 20.5h18"/>',
     lista: '<path d="M9 6.5h11M9 12h11M9 17.5h11"/><circle cx="4.5" cy="6.5" r="1" fill="currentColor"/><circle cx="4.5" cy="12" r="1" fill="currentColor"/><circle cx="4.5" cy="17.5" r="1" fill="currentColor"/>',
     check: '<circle cx="12" cy="12" r="8.5"/><path d="m8 12.5 2.8 2.8L16.5 9.5"/>',
+    engrenagem: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+    usuario: '<circle cx="12" cy="8" r="4"/><path d="M4.5 20.5c1.3-3.7 4.2-5.5 7.5-5.5s6.2 1.8 7.5 5.5"/>',
+    camera: '<path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1.5-2.5h6L16.5 7h2A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z"/><circle cx="12" cy="12.5" r="3.5"/>',
+    paleta: '<path d="M12 3.5a8.5 8.5 0 1 0 0 17c1.1 0 1.8-.8 1.8-1.7 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-.9.8-1.7 1.7-1.7h2a4 4 0 0 0 4-4c0-4-3.8-7.2-8.5-7.2z"/><circle cx="7.5" cy="11.5" r="1.1" fill="currentColor"/><circle cx="10" cy="7.5" r="1.1" fill="currentColor"/><circle cx="14.5" cy="7.5" r="1.1" fill="currentColor"/><circle cx="17" cy="11" r="1.1" fill="currentColor"/>',
     cofrinho: '<path d="M4.5 11.5c0-3.6 3.4-6 7.5-6 1.7 0 3.2.4 4.4 1.1L19 5.5l-.4 3.1c.8.8 1.4 1.8 1.6 2.9H21.5v3.5h-1.6c-.5 1.2-1.4 2.2-2.4 2.9V20h-3v-1.6c-.8.2-1.6.2-2.5.2s-1.7 0-2.5-.2V20H6.5v-2.6c-1.3-1.2-2-2.7-2-4.4z"/><circle cx="16" cy="10.5" r=".7" fill="currentColor"/><path d="M10 8.5h3"/>',
   };
 
@@ -73,6 +77,7 @@ Fin.icones = (() => {
       emerald: 'bg-emerald-50 text-emerald-700', blue: 'bg-blue-50 text-blue-700', orange: 'bg-orange-50 text-orange-700',
       amber: 'bg-amber-50 text-amber-700', rose: 'bg-rose-50 text-rose-700', slate: 'bg-slate-100 text-slate-600',
       violet: 'bg-violet-50 text-violet-700', sky: 'bg-sky-50 text-sky-700',
+      prim: 'bg-prim-50 text-prim-700', // cor do app (tema)
     };
     return `<span class="${tam} shrink-0 rounded-xl grid place-items-center ${cores[cor] || cores.slate}" aria-hidden="true">${icone(nome, ic)}</span>`;
   }

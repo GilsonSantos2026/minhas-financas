@@ -1,5 +1,11 @@
 /* Estilos complementares ao Tailwind. */
 
+/* Cor principal do app (tema): trocada por js/tema.js. Padrão = esmeralda. */
+:root {
+  --p-50: 236 253 245; --p-100: 209 250 229; --p-200: 167 243 208; --p-500: 16 185 129;
+  --p-600: 5 150 105; --p-700: 4 120 87; --p-800: 6 95 70;
+}
+
 .btn {
   display: inline-flex;
   align-items: center;
@@ -12,8 +18,8 @@
   transition: background-color 0.15s, opacity 0.15s;
 }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.btn-primary { background: #059669; color: #fff; }
-.btn-primary:hover:not(:disabled) { background: #047857; }
+.btn-primary { background: rgb(var(--p-600)); color: #fff; }
+.btn-primary:hover:not(:disabled) { background: rgb(var(--p-700)); }
 .btn-ghost { background: #f1f5f9; color: #334155; }
 .btn-ghost:hover { background: #e2e8f0; }
 .btn-danger-ghost { background: transparent; color: #be123c; }
@@ -35,7 +41,7 @@
   font-size: 0.875rem;
   min-width: 0;
 }
-.input:focus { outline: 2px solid #10b981; outline-offset: -1px; border-color: #10b981; }
+.input:focus { outline: 2px solid rgb(var(--p-500)); outline-offset: -1px; border-color: rgb(var(--p-500)); }
 .field { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; }
 .field > span { font-size: 0.75rem; font-weight: 500; color: #475569; }
 
@@ -45,7 +51,7 @@
 .seg span { display: block; text-align: center; padding: 0.5rem; border-radius: 0.55rem; font-weight: 600; font-size: 0.875rem; color: #64748b; cursor: pointer; }
 .seg label:first-child input:checked + span { background: #fff; color: #be123c; box-shadow: 0 1px 2px rgb(0 0 0 / 0.08); }
 .seg label:last-child input:checked + span { background: #fff; color: #047857; box-shadow: 0 1px 2px rgb(0 0 0 / 0.08); }
-.seg input:focus-visible + span { outline: 2px solid #10b981; }
+.seg input:focus-visible + span { outline: 2px solid rgb(var(--p-500)); }
 /* Seletor de 3 opções (situação do pagamento): neutro, com "Pago" em verde */
 .seg.seg-3 { grid-template-columns: repeat(3, 1fr); }
 .seg.seg-3 label input:checked + span { background: #fff; color: #334155; box-shadow: 0 1px 2px rgb(0 0 0 / 0.08); }
@@ -53,7 +59,7 @@
 .seg.seg-3 label:nth-child(3) input:checked + span { color: #92400e; }
 
 /* Seletor neutro (sem as cores de despesa/receita) */
-.seg.seg-neutro label input:checked + span { background: #fff; color: #047857; box-shadow: 0 1px 2px rgb(0 0 0 / 0.08); }
+.seg.seg-neutro label input:checked + span { background: #fff; color: rgb(var(--p-700)); box-shadow: 0 1px 2px rgb(0 0 0 / 0.08); }
 
 /* Interruptor (liga/desliga) */
 .toggle {
@@ -65,9 +71,9 @@
   content: ''; position: absolute; top: 0.2rem; left: 0.2rem; width: 1.2rem; height: 1.2rem;
   border-radius: 9999px; background: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / 0.2); transition: transform 0.15s;
 }
-.toggle:checked { background: #059669; }
+.toggle:checked { background: rgb(var(--p-600)); }
 .toggle:checked::after { transform: translateX(1.15rem); }
-.toggle:focus-visible { outline: 2px solid #10b981; outline-offset: 2px; }
+.toggle:focus-visible { outline: 2px solid rgb(var(--p-500)); outline-offset: 2px; }
 
 /* Etiqueta de status (ícone + texto) */
 .pill {
@@ -80,21 +86,21 @@
 /* Itens clicáveis da lista */
 [data-edit] { cursor: pointer; }
 .lanc-item:hover { background: #f8fafc; }
-[data-edit]:focus-visible { outline: 2px solid #10b981; outline-offset: -2px; }
+[data-edit]:focus-visible { outline: 2px solid rgb(var(--p-500)); outline-offset: -2px; }
 
 /* Marca do app (carteira) */
-.logo-app { background: linear-gradient(135deg, #10b981, #047857); box-shadow: 0 2px 8px rgb(5 150 105 / 0.35); }
+.logo-app { background: linear-gradient(135deg, rgb(var(--p-500)), rgb(var(--p-700))); box-shadow: 0 2px 8px rgb(var(--p-600) / 0.35); }
 
 /* Navegação */
 .side-link > span[aria-hidden] svg { color: #94a3b8; transition: color 0.15s; }
-.side-link:hover > span[aria-hidden] svg, .side-link.is-active > span[aria-hidden] svg { color: #047857; }
+.side-link:hover > span[aria-hidden] svg, .side-link.is-active > span[aria-hidden] svg { color: rgb(var(--p-700)); }
 .tab-link > span:first-child svg { display: block; }
 .side-link { display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 0.9rem; border-radius: 0.75rem; font-size: 0.9rem; color: #475569; }
 .side-link:hover { background: #f1f5f9; }
-.side-link.is-active { background: #ecfdf5; color: #047857; font-weight: 600; }
+.side-link.is-active { background: rgb(var(--p-50)); color: rgb(var(--p-700)); font-weight: 600; }
 .tab-link { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 0.1rem; padding: 0.45rem 0 0.5rem; font-size: 0.6875rem; color: #64748b; }
 .tab-link > span:first-child { font-size: 1.2rem; }
-.tab-link.is-active { color: #047857; font-weight: 600; }
+.tab-link.is-active { color: rgb(var(--p-700)); font-weight: 600; }
 
 /* Seletor de cartões (chips com rolagem lateral no celular) */
 .chips { scrollbar-width: none; }
@@ -105,7 +111,7 @@
   background: #fff; color: #475569; box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
 }
 .chip:hover { background: #f8fafc; }
-.chip.is-active { background: #047857; color: #fff; }
+.chip.is-active { background: rgb(var(--p-700)); color: #fff; }
 
 /* Ocultar valores (botão "olho"): desfoca tudo que é dinheiro */
 .vlr { transition: filter 0.15s; }
@@ -128,7 +134,7 @@
   border-radius: 9999px; background: #e11d48; color: #fff; font-size: 0.65rem; font-weight: 700; line-height: 1.15rem;
   text-align: center; box-shadow: 0 0 0 2px #fff; pointer-events: none;
 }
-.topo-escuro .topo-badge { box-shadow: 0 0 0 2px #059669; }
+.topo-escuro .topo-badge { box-shadow: 0 0 0 2px rgb(var(--p-600)); }
 .atualizar { color: #94a3b8; transition: background-color 0.2s, color 0.2s; }
 .topo-escuro.atualizar { color: rgb(255 255 255 / 0.55); }
 .atualizar-rotulo { display: none; font-size: 0.8125rem; font-weight: 600; }
@@ -161,15 +167,15 @@
 
 .dropzone:hover,
 .dropzone.is-dragging {
-  border-color: #10b981;
-  background: #ecfdf5;
+  border-color: rgb(var(--p-500));
+  background: rgb(var(--p-50));
 }
 
 .spinner {
   width: 1.1rem;
   height: 1.1rem;
   border: 2px solid #cbd5e1;
-  border-top-color: #059669;
+  border-top-color: rgb(var(--p-600));
   border-radius: 9999px;
   animation: spin 0.8s linear infinite;
 }
@@ -195,7 +201,7 @@
 .planilha thead th:first-child, .planilha tfoot td:first-child { background: #f1f5f9; z-index: 1; }
 .planilha tbody tr { background: #fff; }
 .planilha tbody tr.bg-slate-50\/60 { background: #f8fafc; }
-.planilha tbody tr:hover { background: #ecfdf5; }
+.planilha tbody tr:hover { background: rgb(var(--p-50)); }
 
 details > summary { list-style: none; cursor: pointer; }
 details > summary::-webkit-details-marker { display: none; }
@@ -214,3 +220,11 @@ details[open] .chev { transform: rotate(90deg); }
   .modal-fundo-livre { background: transparent !important; pointer-events: none; }
   .modal-fundo-livre > .modal-panel { pointer-events: auto; }
 }
+/* Configurações → Cor do app (bolinhas) */
+.tema-bolinha { background: var(--cor); transition: transform 0.12s, box-shadow 0.12s; box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.08); }
+.tema-bolinha:hover { transform: scale(1.06); }
+.tema-bolinha.is-ativo { box-shadow: 0 0 0 3px #fff, 0 0 0 5.5px var(--cor); }
+.tema-bolinha:focus-visible { outline: 2px solid #0f172a; outline-offset: 5px; }
+
+/* Saudação no Início */
+.saudacao-data::first-letter { text-transform: uppercase; }

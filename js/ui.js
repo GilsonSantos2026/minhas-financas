@@ -259,7 +259,7 @@ Fin.ui = (() => {
         <button data-month="-1" class="icon-btn" aria-label="Mês anterior">‹</button>
         <div class="text-center">
           <div class="font-semibold">${fmt.monthLong(ym)}</div>
-          ${ym !== atual ? '<button data-month="0" class="text-xs text-emerald-700 hover:underline">voltar para o mês atual</button>' : '<div class="text-xs text-slate-400">mês atual</div>'}
+          ${ym !== atual ? '<button data-month="0" class="text-xs text-prim-700 hover:underline">voltar para o mês atual</button>' : '<div class="text-xs text-slate-400">mês atual</div>'}
         </div>
         <button data-month="1" class="icon-btn" aria-label="Próximo mês">›</button>
       </div>`;
@@ -332,8 +332,8 @@ Fin.ui = (() => {
       <div class="bg-white rounded-2xl shadow-sm p-8 text-center">
         ${Fin.icones?.doEmoji(icon)
           ? `<div class="relative mx-auto mb-3 w-16 h-16" aria-hidden="true">
-              <span class="absolute -right-2 -top-1 text-emerald-200">${Fin.icone('moedas', 'w-6 h-6')}</span>
-              <span class="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-600 grid place-items-center">${Fin.icone(Fin.icones.doEmoji(icon), 'w-8 h-8')}</span>
+              <span class="absolute -right-2 -top-1 text-prim-200">${Fin.icone('moedas', 'w-6 h-6')}</span>
+              <span class="w-16 h-16 rounded-2xl bg-prim-50 text-prim-600 grid place-items-center">${Fin.icone(Fin.icones.doEmoji(icon), 'w-8 h-8')}</span>
             </div>`
           : `<div class="text-4xl mb-2" aria-hidden="true">${icon}</div>`}
         <h2 class="font-semibold">${title}</h2>

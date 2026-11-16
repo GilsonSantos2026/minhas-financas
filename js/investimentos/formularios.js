@@ -314,9 +314,9 @@ Fin.forms.inv = (() => {
         ${p.realizado ? `<span class="text-slate-500">Lucro realizado</span><span class="text-right">${fmt.brl(p.realizado)}</span>` : ''}
       </div>` : ''}
       <div class="flex flex-wrap gap-3 text-sm">
-        <button type="button" data-novo-mov="compra" class="text-emerald-700 font-semibold hover:underline">＋ Compra</button>
-        <button type="button" data-novo-mov="venda" class="text-emerald-700 font-semibold hover:underline">＋ Venda</button>
-        <button type="button" data-novo-mov="provento" class="text-emerald-700 font-semibold hover:underline">＋ Provento</button>
+        <button type="button" data-novo-mov="compra" class="text-prim-700 font-semibold hover:underline">＋ Compra</button>
+        <button type="button" data-novo-mov="venda" class="text-prim-700 font-semibold hover:underline">＋ Venda</button>
+        <button type="button" data-novo-mov="provento" class="text-prim-700 font-semibold hover:underline">＋ Provento</button>
         <button type="button" data-ver-movs class="text-slate-500 hover:underline ml-auto">${n} movimentações →</button>
       </div>`, { excluir: true });
     panel.querySelectorAll('[data-novo-mov]').forEach((b) => b.addEventListener('click', () => mov({ ativo: a.id, tipo: b.dataset.novoMov })));
@@ -352,7 +352,7 @@ Fin.forms.inv = (() => {
       <div class="flex flex-wrap items-center gap-2 bg-emerald-50 rounded-xl p-3 text-sm">
         <span class="flex-1 min-w-[12rem]">${Fin.cotacoes.temChaves() ? 'Cotações automáticas ligadas.' : 'Ligue as cotações automáticas (brapi para B3, Finnhub para EUA).'}</span>
         <button type="button" data-auto class="btn btn-primary !py-1.5">${Fin.cotacoes.temChaves() ? '↻ Atualizar agora' : 'Configurar'}</button>
-        <button type="button" data-chaves class="text-emerald-700 font-medium hover:underline">⚙️ Chaves</button>
+        <button type="button" data-chaves class="text-prim-700 font-medium hover:underline">⚙️ Chaves</button>
       </div>
       <p class="text-sm text-slate-500">Ou informe à mão o preço atual de cada ativo (fechamento do dia anterior serve). Campo vazio = mantém o preço guardado.</p>
       <label class="field"><span>Data dos preços</span><input name="data" type="date" class="input" value="${fmt.todayISO()}"></label>
@@ -444,7 +444,7 @@ Fin.forms.inv = (() => {
         ${opt('patrimonio', 'Patrimônio total', mt?.tipo)}${opt('classes', 'Algumas classes (ex.: exterior)', mt?.tipo)}
         ${opt('proventos', 'Média mensal de proventos (12 meses)', mt?.tipo)}${opt('conta', 'Uma conta', mt?.tipo)}</select></label>
       <fieldset data-g="classes" class="grid grid-cols-2 gap-1 text-sm">${I().CLASSES.map((c) => `
-        <label class="flex items-center gap-2"><input type="checkbox" name="cls" value="${c.id}" class="accent-emerald-600" ${sel.has(c.id) ? 'checked' : ''}>${c.icone} ${c.nome}</label>`).join('')}</fieldset>
+        <label class="flex items-center gap-2"><input type="checkbox" name="cls" value="${c.id}" class="accent-prim-600" ${sel.has(c.id) ? 'checked' : ''}>${c.icone} ${c.nome}</label>`).join('')}</fieldset>
       <label class="field" data-g="conta"><span>Conta</span><select name="conta" class="input">${contas.map((c) => opt(c.id, c.nome, mt?.conta)).join('')}</select></label>
       <div class="grid grid-cols-2 gap-3">
         <label class="field"><span>Objetivo (R$) *</span><input name="alvo" class="input tabular-nums" inputmode="decimal" value="${numInput(mt?.alvo)}"></label>

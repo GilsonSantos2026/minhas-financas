@@ -162,7 +162,7 @@ Fin.pages.planilha = (() => {
           <p id="pl-info" class="text-xs text-slate-500"></p>
           <div class="flex gap-3">
             <button data-act="limpar" class="text-xs font-semibold text-slate-500 hover:underline">Limpar filtros</button>
-            <button data-act="csv" class="text-xs font-semibold text-emerald-700 hover:underline">⬇️ Exportar para Excel (CSV)</button>
+            <button data-act="csv" class="text-xs font-semibold text-prim-700 hover:underline">⬇️ Exportar para Excel (CSV)</button>
           </div>
         </div>
 

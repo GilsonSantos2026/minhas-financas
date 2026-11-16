@@ -121,11 +121,11 @@ Fin.pages.importarFatura = (() => {
     return `
       <li class="px-3 sm:px-4 py-3 ${l.incluir ? '' : 'bg-slate-50'}" data-n="${l.n}">
         <div class="flex items-start gap-3">
-          <input type="checkbox" data-f="incluir" class="mt-1 w-5 h-5 accent-emerald-600 shrink-0" ${l.incluir ? 'checked' : ''}
+          <input type="checkbox" data-f="incluir" class="mt-1 w-5 h-5 accent-prim-600 shrink-0" ${l.incluir ? 'checked' : ''}
                  aria-label="Importar ${esc(l.descricao)}" />
           <div class="flex-1 min-w-0 space-y-1.5">
             <div class="flex items-start gap-2">
-              <input data-f="descricao" value="${esc(l.descricao)}" class="flex-1 min-w-0 text-sm font-medium bg-transparent border-0 border-b border-transparent focus:border-emerald-500 focus:outline-none px-0 py-0.5 ${l.incluir ? '' : 'text-slate-400 line-through'}" aria-label="Descrição" />
+              <input data-f="descricao" value="${esc(l.descricao)}" class="flex-1 min-w-0 text-sm font-medium bg-transparent border-0 border-b border-transparent focus:border-prim-500 focus:outline-none px-0 py-0.5 ${l.incluir ? '' : 'text-slate-400 line-through'}" aria-label="Descrição" />
               <span class="text-sm font-semibold tabular-nums whitespace-nowrap ${l.valor < 0 ? 'text-emerald-700' : ''} ${l.incluir ? '' : 'text-slate-400'}">${fmt.brl(l.valor)}</span>
             </div>
             <div class="flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
@@ -171,7 +171,7 @@ Fin.pages.importarFatura = (() => {
           ${htmlConferencia()}
 
           <label class="flex items-start gap-2 text-sm">
-            <input id="fat-futuras" type="checkbox" class="mt-0.5 w-4 h-4 accent-emerald-600" ${st.futuras ? 'checked' : ''} />
+            <input id="fat-futuras" type="checkbox" class="mt-0.5 w-4 h-4 accent-prim-600" ${st.futuras ? 'checked' : ''} />
             <span>Criar as parcelas futuras das compras parceladas
               <span class="text-slate-500">(${futuras.length} ${futuras.length === 1 ? 'parcela' : 'parcelas'} nas próximas faturas; as que já existem são ignoradas)</span></span>
           </label>
@@ -181,7 +181,7 @@ Fin.pages.importarFatura = (() => {
         <div class="flex items-center justify-between px-1">
           <h3 class="text-xs font-medium text-slate-500 uppercase tracking-wide">${st.linhas.length} itens na fatura</h3>
           <div class="flex gap-3 text-xs font-medium">
-            <button data-act="todos" class="text-emerald-700 hover:underline">Marcar todos</button>
+            <button data-act="todos" class="text-prim-700 hover:underline">Marcar todos</button>
             <button data-act="nenhum" class="text-slate-500 hover:underline">Desmarcar todos</button>
           </div>
         </div>
