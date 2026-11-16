@@ -38,7 +38,7 @@ Fin.acesso = (() => {
               <h1 class="text-xl font-semibold mt-3">Minhas Finanças</h1>
             </div>
             <div class="bg-white rounded-2xl shadow-xl p-6">${inner}</div>
-            <p class="text-center text-xs text-white/80 mt-4">Seus dados ficam cifrados neste aparelho${Fin.config?.googleClientId ? ' e no seu Google Drive' : ''}.</p>
+            <p class="text-center text-xs text-white/80 mt-4">Seus dados ficam cifrados neste aparelho${Fin.config?.googleClientId ? ' e no seu Google Drive' : ''}.<br><span class="opacity-80">${Fin.config?.versaoApp || ''}</span></p>
           </div>
         </div>
       </div>`;

@@ -342,6 +342,7 @@ Fin.pages.configuracoes = (() => {
           ${ajudaHTML()}
           <div id="cfg-sugestoes">${sugestoesHTML()}</div>
           ${atalhosHTML()}
+          <p class="text-center text-xs text-slate-400 pt-1">Minhas Finanças · <b class="text-slate-500">${esc(Fin.config?.versaoApp || '')}</b> <span data-cfg-build></span></p>
         </div>`;
     };
     const redesenharPerfil = () => {
@@ -355,6 +356,8 @@ Fin.pages.configuracoes = (() => {
       }
     };
     desenhar();
+    // versão técnica (build) ao lado do "Beta 1.0"
+    Fin.pwa?.versao?.().then((v) => { const el = view.querySelector('[data-cfg-build]'); if (el && v) el.textContent = `· build ${v}`; }).catch(() => {});
 
     view.addEventListener('input', (e) => {
       if (e.target.id !== 'perfil-nome') return;

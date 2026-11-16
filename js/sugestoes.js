@@ -134,7 +134,7 @@ Fin.sugestoes = (() => {
         autorNome: Fin.membros?.nome?.(m) || '',
         autorUsuario: Fin.cofre?.usuario?.() || '',
         tecnico,
-        versao: tecnico ? await Promise.race([Fin.pwa?.versao?.() ?? null, new Promise((r) => setTimeout(() => r(null), 2500))]) : null,
+        versao: tecnico ? `${Fin.config?.versaoApp || ''} (${await Promise.race([Fin.pwa?.versao?.() ?? null, new Promise((r) => setTimeout(() => r(null), 2500))]) || '—'})` : null,
         aparelho: tecnico ? aparelho() : null,
         status: 'nova',
       });

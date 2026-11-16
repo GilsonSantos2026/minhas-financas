@@ -352,7 +352,7 @@ Fin.avisos = (() => {
     desenhar();
     const ver = await Fin.pwa?.versao?.().catch(() => null);
     const alvo = panel.querySelector('[data-versao]');
-    if (alvo) alvo.textContent = ver || '—';
+    if (alvo) alvo.textContent = `${Fin.config?.versaoApp || ''}${ver ? ` (${ver})` : ''}` || '—';
   }
 
   async function procurar() {
@@ -362,7 +362,7 @@ Fin.avisos = (() => {
       const achou = await Fin.pwa.procurar();
       if (!achou) {
         const v = await Fin.pwa.versao().catch(() => null);
-        Fin.ui.toast(`O app já está na versão mais nova${v ? ` (${v})` : ''}.`);
+        Fin.ui.toast(`O app já está na versão mais nova: ${Fin.config?.versaoApp || ''}${v ? ` (${v})` : ''}.`);
       }
     } catch {
       Fin.ui.toast('Não foi possível procurar atualização (sem internet?).', 'erro');

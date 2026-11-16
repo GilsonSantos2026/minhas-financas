@@ -265,3 +265,10 @@ details[open] .chev { transform: rotate(90deg); }
 .cal-dia.sel { background: rgb(var(--p-600)) !important; }
 .cal-dia.sel .n, .cal-dia.sel .r, .cal-dia.sel .d { color: #fff; }
 .cal-dia.fora { visibility: hidden; }
+
+/* Puxar para atualizar (js/puxar.js): o gesto nativo recarregava a página e trancava o app */
+html, body { overscroll-behavior-y: none; }
+.puxar { position: fixed; top: 0; left: 50%; z-index: 45; transform: translate(-50%, -56px); opacity: 0; pointer-events: none; padding-top: env(safe-area-inset-top); }
+.puxar-bola { width: 2.6rem; height: 2.6rem; border-radius: 9999px; background: #fff; color: rgb(var(--p-600)); display: grid; place-items: center; box-shadow: 0 4px 14px rgb(15 23 42 / 0.18); }
+.puxar.pronto .puxar-bola { background: rgb(var(--p-600)); color: #fff; }
+.puxar.girando .puxar-bola svg { animation: spin 0.8s linear infinite; }

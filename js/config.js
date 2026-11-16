@@ -15,4 +15,6 @@ Fin.config = {
   // Modo casal: o seletor de arquivos do Google (Picker) usa o número do projeto (início do Client ID).
   // googlePickerKey: chave de API "de navegador", restrita ao site e à Picker API — só se o Google exigir.
   googlePickerKey: '',
+  // Versão "de produto" mostrada ao usuário (marco). A versão técnica de cada publicação é a do sw.js.
+  versaoApp: 'Beta 1.0',
 };
