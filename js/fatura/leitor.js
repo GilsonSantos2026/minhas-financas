@@ -41,10 +41,20 @@ Fin.faturaLeitor = (() => {
 
   /* ---------------- Extração de texto com posição ---------------- */
 
-  async function itensDoPdf(file, onProgress) {
+  async function itensDoPdf(file, onProgress, senha = null) {
     await loadScript(PDFJS);
     pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
-    const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+    let pdf;
+    try {
+      // Senha (fatura protegida): usada só nesta leitura, na memória — nunca é gravada.
+      pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer(), password: senha || undefined }).promise;
+    } catch (e) {
+      if (e?.name === 'PasswordException') {
+        const incorreta = e.code === 2; // PasswordResponses: 1 = precisa de senha, 2 = senha incorreta
+        throw Object.assign(new Error(incorreta ? 'Senha incorreta.' : 'Esta fatura tem senha.'), { senha: true, incorreta });
+      }
+      throw e;
+    }
     const itens = [];
     for (let p = 1; p <= pdf.numPages; p++) {
       onProgress?.(`Lendo página ${p} de ${pdf.numPages}…`);
@@ -294,9 +304,9 @@ Fin.faturaLeitor = (() => {
    * Lê o arquivo e devolve { info, itens, conferencia }.
    * itens: [{ data, descricao, valor, parcela, tipo, portador }]
    */
-  async function ler(file, onProgress) {
-    const isPdf = /pdf$/i.test(file.type) || /\.pdf$/i.test(file.name);
-    const brutos = isPdf ? await itensDoPdf(file, onProgress) : await itensDaImagem(file, onProgress);
+  async function ler(file, onProgress, { senha = null } = {}) {
+    const isPdf = /pdf$/i.test(file.type) || /.pdf$/i.test(file.name);
+    const brutos = isPdf ? await itensDoPdf(file, onProgress, senha) : await itensDaImagem(file, onProgress);
     if (!brutos.length) throw new Error(isPdf ? 'Este PDF não tem texto (pode ser uma imagem escaneada). Tente enviar como foto.' : 'Nenhum texto reconhecido na imagem.');
 
     onProgress?.('Identificando os lançamentos…');

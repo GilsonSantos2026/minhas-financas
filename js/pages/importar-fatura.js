@@ -211,7 +211,55 @@ Fin.pages.importarFatura = (() => {
     if (st.etapa === 'revisao') window.scrollTo(0, y);
   }
 
-  async function processar(file) {
+  /**
+   * Fatura com senha: pede a senha numa janela. A senha fica só na memória durante a leitura
+   * e não é gravada em lugar nenhum. Resolve com a senha digitada ou null (cancelou).
+   */
+  function pedirSenha(nome, incorreta) {
+    return new Promise((resolve) => {
+      let fim = false;
+      const terminar = (v) => { if (fim) return; fim = true; obs.disconnect(); Fin.ui.closeModal(); resolve(v); };
+      const panel = Fin.ui.openModal(`
+        <form class="p-5 space-y-4" novalidate autocomplete="off">
+          <div class="flex items-start gap-3">
+            ${Fin.icones.badge('cadeado', 'amber', 'w-10 h-10', 'w-5 h-5')}
+            <div class="min-w-0 flex-1">
+              <h2 class="font-semibold text-lg leading-tight">Fatura protegida por senha</h2>
+              <p class="text-sm text-slate-500 truncate">${esc(nome)}</p>
+            </div>
+          </div>
+          <p class="text-sm text-slate-600">Veja no e-mail do banco qual é a senha — costuma ser parte do CPF (ex.: os 5 primeiros números) ou a data de nascimento.</p>
+          <label class="field"><span>Senha do PDF</span>
+            <div class="relative">
+              <input name="senha" type="password" class="input pr-16" autocomplete="off" inputmode="text" />
+              <button type="button" data-ver class="absolute right-1 top-1/2 -translate-y-1/2 px-2 py-1 text-xs text-slate-500 hover:text-slate-800">mostrar</button>
+            </div></label>
+          ${incorreta ? '<p class="text-sm text-rose-700 bg-rose-50 rounded-lg px-3 py-2" role="alert">Senha incorreta. Tente de novo.</p>' : ''}
+          <p class="text-xs text-slate-500">${Fin.icone('cadeado', 'w-3.5 h-3.5 inline -mt-0.5')} A senha é usada só para abrir este arquivo agora e <b>não fica guardada</b>.</p>
+          <div class="flex justify-end gap-2">
+            <button type="button" data-cancelar class="btn btn-ghost">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Abrir fatura</button>
+          </div>
+        </form>`, 'Senha da fatura');
+      const obs = new MutationObserver(() => { if (!document.body.contains(panel)) terminar(null); });
+      obs.observe(document.getElementById('modal-root'), { childList: true });
+      const input = panel.querySelector('[name=senha]');
+      setTimeout(() => input.focus(), 50);
+      panel.querySelector('[data-ver]').addEventListener('click', (e) => {
+        const ver = input.type === 'password';
+        input.type = ver ? 'text' : 'password';
+        e.currentTarget.textContent = ver ? 'ocultar' : 'mostrar';
+      });
+      panel.querySelector('[data-cancelar]').addEventListener('click', () => terminar(null));
+      panel.querySelector('form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (!input.value) return input.focus();
+        terminar(input.value);
+      });
+    });
+  }
+
+  async function processar(file, senha = null) {
     if (!file) return;
     if (!/pdf$|^image\//i.test(file.type) && !/\.(pdf|png|jpe?g|webp)$/i.test(file.name)) {
       Fin.ui.toast('Envie um PDF ou uma imagem (JPG/PNG).', 'error');
@@ -228,7 +276,8 @@ Fin.pages.importarFatura = (() => {
         st.progresso = msg;
         const el = document.getElementById('fat-prog');
         if (el) el.textContent = msg;
-      });
+      }, { senha });
+      senha = null; // não guarda
       if (!leitura.itens.length) throw new Error('Não encontrei lançamentos nesta fatura.');
       st.leitura = leitura;
       st.cartao = I().sugerirCartao(leitura.info);
@@ -238,6 +287,15 @@ Fin.pages.importarFatura = (() => {
       draw();
       window.scrollTo(0, 0);
     } catch (err) {
+      senha = null;
+      if (err?.senha) {
+        // PDF protegido: pede a senha e tenta de novo (cancelar volta para a escolha do arquivo).
+        st.etapa = 'upload';
+        draw();
+        const nova = await pedirSenha(file.name, err.incorreta);
+        if (nova) return processar(file, nova);
+        return Fin.ui.toast('Importação cancelada.');
+      }
       console.error(err);
       st.etapa = 'upload';
       draw();
