@@ -323,7 +323,7 @@ Fin.storage = (() => {
   async function lerBackup(texto, credenciais = null) {
     let obj;
     try { obj = JSON.parse(texto); } catch { throw new Error('O arquivo não é um backup válido (JSON ilegível).'); }
-    if (!obj || obj.app !== BACKUP_APP) throw new Error('Este arquivo não é um backup do Minhas Finanças.');
+    if (!obj || obj.app !== BACKUP_APP) throw new Error('Este arquivo não é um backup do Valoris (Minhas Finanças).');
 
     let fonte = obj;
     if (obj.cifrado) {

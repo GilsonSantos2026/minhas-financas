@@ -17,7 +17,7 @@ Fin.acesso = (() => {
   const MAX_TENTATIVAS = 5;
   const ESPERA_MS = 30000;
 
-  /** Ícones de finanças espalhados, bem discretos, no fundo verde da tela de acesso. */
+  /** Ícones de finanças espalhados, bem discretos, no fundo (cor do tema) da tela de acesso. */
   function desenhoFundo() {
     const itens = [
       ['moedas', 6, 8, 64, -12], ['cifrao', 80, 6, 52, 10], ['alta', 12, 72, 72, 0], ['cartao', 78, 66, 68, -8],
@@ -34,11 +34,14 @@ Fin.acesso = (() => {
         <div class="relative min-h-full flex items-center justify-center p-4">
           <div class="w-full max-w-sm">
             <div class="flex flex-col items-center text-white mb-5">
-              <img src="icons/icon-192.png" alt="" class="w-16 h-16 rounded-2xl shadow-lg">
-              <h1 class="text-xl font-semibold mt-3">Minhas Finanças</h1>
+              <div class="marca-mono w-16 h-16 rounded-2xl shadow-lg" aria-hidden="true"><svg viewBox="22 21 159 139"><polygon points="24,23 55,23 89,100 74,131" fill="#F3F5F8"/><polygon points="147,23 179,23 119,158 87,158" fill="#C6A45C"/><rect x="102" y="23" width="46" height="3.5" fill="#C6A45C"/><line x1="90" y1="93" x2="101.3" y2="69.5" stroke="#C6A45C" stroke-width="4.5"/><polygon points="110,51 94,66 108,73" fill="#C6A45C"/></svg></div>
+              <h1 class="marca-nome text-[28px] mt-3">VALORIS</h1>
+              <p class="marca-assinatura text-[11px] mt-1">Financial Intelligence</p>
             </div>
             <div class="bg-white rounded-2xl shadow-xl p-6">${inner}</div>
-            <p class="text-center text-xs text-white/80 mt-4">Seus dados ficam cifrados neste aparelho${Fin.config?.googleClientId ? ' e no seu Google Drive' : ''}.<br><span class="opacity-80">${Fin.config?.versaoApp || ''}</span></p>
+            <p class="text-center text-xs text-white/80 mt-4">Seus dados ficam cifrados neste aparelho${Fin.config?.googleClientId ? ' e no seu Google Drive' : ''}.<br><span class="opacity-80">${Fin.config?.versaoApp || ''}</span>
+              · <a href="privacidade.html" target="_blank" rel="noopener" class="underline hover:text-white">Privacidade</a>
+              · <a href="termos.html" target="_blank" rel="noopener" class="underline hover:text-white">Termos</a></p>
           </div>
         </div>
       </div>`;
@@ -98,6 +101,7 @@ Fin.acesso = (() => {
         ${campoSenha('senha2', 'Repita a senha', 'new-password')}
         ${erroBox}
         <button type="submit" class="btn btn-primary w-full">Criar acesso</button>
+        <p class="text-xs text-slate-500 text-center">Ao criar o acesso, você concorda com os <a href="termos.html" target="_blank" rel="noopener" class="text-prim-700 underline">Termos de uso</a> e a <a href="privacidade.html" target="_blank" rel="noopener" class="text-prim-700 underline">Política de privacidade</a>.</p>
       </form>
       <p class="text-xs text-slate-500 mt-4">Se esquecer a senha, só a <b>chave de recuperação</b> (mostrada a seguir) devolve o acesso.</p>
       ${Fin.config?.googleClientId ? `<div class="border-t border-slate-100 mt-4 pt-4 flex flex-col items-center gap-2">
@@ -145,7 +149,7 @@ Fin.acesso = (() => {
       const a = e.target.closest('[data-acao]')?.dataset.acao;
       if (a === 'copiar') { try { await navigator.clipboard.writeText(codigo); Fin.ui.toast('Chave copiada.'); } catch { Fin.ui.toast('Selecione e copie a chave manualmente.', 'error'); } }
       if (a === 'baixar') {
-        const txt = `Minhas Finanças — chave de recuperação\nUsuário: ${Fin.cofre.usuario()}\nCriada em: ${new Date().toLocaleString('pt-BR')}\n\n${codigo}\n\nGuarde este arquivo fora do aparelho. Quem tiver esta chave consegue redefinir sua senha.\n`;
+        const txt = `Valoris — chave de recuperação\nUsuário: ${Fin.cofre.usuario()}\nCriada em: ${new Date().toLocaleString('pt-BR')}\n\n${codigo}\n\nGuarde este arquivo fora do aparelho. Quem tiver esta chave consegue redefinir sua senha.\n`;
         const a2 = document.createElement('a');
         a2.href = URL.createObjectURL(new Blob([txt], { type: 'text/plain' }));
         a2.download = 'minhas-financas-chave-recuperacao.txt';

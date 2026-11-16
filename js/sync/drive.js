@@ -142,7 +142,7 @@ Fin.drive = (() => {
     },
     async criarEm(pasta, texto) {
       const m = multipart({ name: NOME, parents: [pasta], mimeType: 'application/json',
-        description: 'Dados cifrados do app Minhas Finanças. Não edite nem apague.' }, texto);
+        description: 'Dados cifrados do app Valoris. Não edite nem apague.' }, texto);
       return (await req(`${UPLOAD}?uploadType=multipart&fields=id,version,modifiedTime`, {
         method: 'POST', headers: { 'Content-Type': m.tipo }, body: m.corpo,
       })).json();
@@ -426,7 +426,7 @@ Fin.drive = (() => {
     await garantirToken();
     const quem = Fin.membros?.nome?.() || Fin.cofre.usuario() || '';
     await drive().compartilhar(c.pasta, email.trim(),
-      `${quem} compartilhou as finanças da casa com você no app Minhas Finanças. Abra o app, toque em “Recebi um convite” e use o código que ${quem || 'a pessoa'} vai te passar.`);
+      `${quem} compartilhou as finanças da casa com você no app Valoris. Abra o app, toque em “Recebi um convite” e use o código que ${quem || 'a pessoa'} vai te passar.`);
   }
 
   /** Quem tem acesso à pasta no Drive (para o titular conferir/remover). */

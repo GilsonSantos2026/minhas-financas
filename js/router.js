@@ -33,7 +33,7 @@ Fin.router = (() => {
     view.innerHTML = '';
     page.render(view, { signal: controller.signal });
 
-    document.title = `${Fin.ehBeta ? '[BETA] ' : ''}${page.title} · Minhas Finanças`;
+    document.title = `${Fin.ehBeta ? '[BETA] ' : ''}${page.title} · Valoris`;
     document.getElementById('page-title').textContent = page.title;
     document.querySelectorAll('[data-nav]').forEach((a) => {
       const active = a.dataset.nav === path || (a.dataset.navAlso || '').split(' ').includes(path);
