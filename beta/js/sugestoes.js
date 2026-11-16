@@ -51,7 +51,7 @@ Fin.sugestoes = (() => {
       ...(s.tipo === 'problema' && s.esperado ? ['', 'O que eu esperava:', s.esperado] : []),
       ...(s.tipo === 'problema' && s.passos ? ['', 'Como acontece (passo a passo):', s.passos] : []),
     ];
-    return { assunto: `[Minhas Finanças] ${tipo}: ${s.titulo}`, corpo: linhas.join('\n') };
+    return { assunto: `[Valoris] ${tipo}: ${s.titulo}`, corpo: linhas.join('\n') };
   }
 
   function mailto(s) {

@@ -1,14 +1,14 @@
 {
-  "name": "Minhas Finanças BETA",
-  "short_name": "Finanças β",
-  "description": "Controle pessoal de receitas, despesas, cartões e orçamento. Os dados ficam só no seu aparelho.",
+  "name": "Valoris BETA",
+  "short_name": "Valoris β",
+  "description": "Inteligência financeira pessoal: controle de gastos, cartões, orçamento, investimentos e evolução patrimonial. Os dados ficam cifrados no seu aparelho.",
   "lang": "pt-BR",
   "id": "./",
   "start_url": "./index.html#/dashboard",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#f1f5f9",
+  "background_color": "#F3F5F8",
   "theme_color": "#f59e0b",
   "categories": ["finance", "productivity"],
   "icons": [
@@ -17,8 +17,8 @@
     { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "shortcuts": [
-    { "name": "Minhas Finanças BETA", "url": "./index.html#/lancamentos?novo=1", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
-    { "name": "Minhas Finanças BETA", "url": "./index.html#/cartoes", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
-    { "name": "Minhas Finanças BETA", "url": "./index.html#/relatorios", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
+    { "name": "Novo lançamento", "url": "./index.html#/lancamentos?novo=1", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Cartões", "url": "./index.html#/cartoes", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Relatórios", "url": "./index.html#/relatorios", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
   ]
 }

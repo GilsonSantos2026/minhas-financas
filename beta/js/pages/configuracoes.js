@@ -144,7 +144,7 @@ Fin.pages.configuracoes = (() => {
   function mostrarConvite(codigo, expira, email) {
     const quem = Fin.membros.primeiroNome() || Fin.cofre.usuario();
     const site = location.origin + location.pathname;
-    const msg = `${quem} te convidou para as finanças da casa no app Minhas Finanças.\n\n1) Abra ${site}\n2) Toque em "Recebi um convite (finanças da casa)"\n3) Entre com o seu Gmail${email ? ` (${email})` : ''} e escolha o arquivo "${Fin.drive.NOME}" na pasta "${Fin.drive.PASTA}"\n4) Código do convite: ${codigo}\n\nO código vale até ${new Date(expira).toLocaleDateString('pt-BR')} e só pode ser usado uma vez.`;
+    const msg = `${quem} te convidou para as finanças da casa no app Valoris.\n\n1) Abra ${site}\n2) Toque em "Recebi um convite (finanças da casa)"\n3) Entre com o seu Gmail${email ? ` (${email})` : ''} e escolha o arquivo "${Fin.drive.NOME}" na pasta "${Fin.drive.PASTA}"\n4) Código do convite: ${codigo}\n\nO código vale até ${new Date(expira).toLocaleDateString('pt-BR')} e só pode ser usado uma vez.`;
     const panel = Fin.ui.openModal(`
       <div class="p-5 space-y-4">
         <div class="flex items-center justify-between gap-2">
@@ -342,7 +342,7 @@ Fin.pages.configuracoes = (() => {
           ${ajudaHTML()}
           <div id="cfg-sugestoes">${sugestoesHTML()}</div>
           ${atalhosHTML()}
-          <p class="text-center text-xs text-slate-400 pt-1">Minhas Finanças · <b class="text-slate-500">${esc(Fin.config?.versaoApp || '')}</b> <span data-cfg-build></span></p>
+          <p class="text-center text-xs text-slate-400 pt-1">Valoris Financial Intelligence · <b class="text-slate-500">${esc(Fin.config?.versaoApp || '')}</b> <span data-cfg-build></span></p>
           <p class="text-center text-xs pt-1"><a href="privacidade.html" target="_blank" rel="noopener" class="text-prim-700 hover:underline">Política de privacidade</a> · <a href="termos.html" target="_blank" rel="noopener" class="text-prim-700 hover:underline">Termos de uso</a></p>
         </div>`;
     };
@@ -405,7 +405,7 @@ Fin.pages.configuracoes = (() => {
       if (tema) {
         const t = Fin.tema.aplicar(tema.dataset.tema);
         // guarda no perfil (sincroniza com os outros aparelhos da mesma pessoa)
-        try { if (Fin.membros.atual().tema !== t.id) Fin.membros.salvarAtual({ tema: t.id }); } catch (err) { console.warn('[tema]', err); }
+        try { if (Fin.membros.atual().tema !== t.id) Fin.membros.salvarAtual({ tema: t.id, temaMarca: 1 }); } catch (err) { console.warn('[tema]', err); }
         view.querySelectorAll('[data-tema]').forEach((b) => {
           const on = b.dataset.tema === t.id;
           b.classList.toggle('is-ativo', on);

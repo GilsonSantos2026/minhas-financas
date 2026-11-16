@@ -17,7 +17,7 @@ Fin.acesso = (() => {
   const MAX_TENTATIVAS = 5;
   const ESPERA_MS = 30000;
 
-  /** Ícones de finanças espalhados, bem discretos, no fundo verde da tela de acesso. */
+  /** Ícones de finanças espalhados, bem discretos, no fundo (cor do tema) da tela de acesso. */
   function desenhoFundo() {
     const itens = [
       ['moedas', 6, 8, 64, -12], ['cifrao', 80, 6, 52, 10], ['alta', 12, 72, 72, 0], ['cartao', 78, 66, 68, -8],
@@ -34,8 +34,9 @@ Fin.acesso = (() => {
         <div class="relative min-h-full flex items-center justify-center p-4">
           <div class="w-full max-w-sm">
             <div class="flex flex-col items-center text-white mb-5">
-              <img src="icons/icon-192.png" alt="" class="w-16 h-16 rounded-2xl shadow-lg">
-              <h1 class="text-xl font-semibold mt-3">Minhas Finanças</h1>
+              <div class="marca-mono w-16 h-16 rounded-2xl text-[36px] shadow-lg" aria-hidden="true">V</div>
+              <h1 class="marca-nome text-[28px] mt-3">VALORIS</h1>
+              <p class="marca-assinatura text-[11px] mt-1">Financial Intelligence</p>
             </div>
             <div class="bg-white rounded-2xl shadow-xl p-6">${inner}</div>
             <p class="text-center text-xs text-white/80 mt-4">Seus dados ficam cifrados neste aparelho${Fin.config?.googleClientId ? ' e no seu Google Drive' : ''}.<br><span class="opacity-80">${Fin.config?.versaoApp || ''}</span>
@@ -148,7 +149,7 @@ Fin.acesso = (() => {
       const a = e.target.closest('[data-acao]')?.dataset.acao;
       if (a === 'copiar') { try { await navigator.clipboard.writeText(codigo); Fin.ui.toast('Chave copiada.'); } catch { Fin.ui.toast('Selecione e copie a chave manualmente.', 'error'); } }
       if (a === 'baixar') {
-        const txt = `Minhas Finanças — chave de recuperação\nUsuário: ${Fin.cofre.usuario()}\nCriada em: ${new Date().toLocaleString('pt-BR')}\n\n${codigo}\n\nGuarde este arquivo fora do aparelho. Quem tiver esta chave consegue redefinir sua senha.\n`;
+        const txt = `Valoris — chave de recuperação\nUsuário: ${Fin.cofre.usuario()}\nCriada em: ${new Date().toLocaleString('pt-BR')}\n\n${codigo}\n\nGuarde este arquivo fora do aparelho. Quem tiver esta chave consegue redefinir sua senha.\n`;
         const a2 = document.createElement('a');
         a2.href = URL.createObjectURL(new Blob([txt], { type: 'text/plain' }));
         a2.download = 'minhas-financas-chave-recuperacao.txt';

@@ -1,19 +1,19 @@
 /* legal.css — Páginas públicas de Política de privacidade e Termos de uso (sem Tailwind, sem scripts). */
 :root {
-  --fundo: #f1f5f9; --papel: #fff; --texto: #1e293b; --suave: #475569; --linha: #e2e8f0;
-  --marca: #047857; --marca-fundo: #ecfdf5; --aviso: #fffbeb; --aviso-borda: #fde68a;
+  --fundo: #F3F5F8; --papel: #fff; --texto: #1e293b; --suave: #475569; --linha: #e2e8f0;
+  --marca: #26364C; --marca-fundo: #eef1f6; --ouro: #C6A45C; --aviso: #fffbeb; --aviso-borda: #fde68a;
 }
 @media (prefers-color-scheme: dark) {
   :root { --fundo: #0f172a; --papel: #1e293b; --texto: #e2e8f0; --suave: #94a3b8; --linha: #334155;
-    --marca: #34d399; --marca-fundo: #064e3b; --aviso: #422006; --aviso-borda: #854d0e; }
+    --marca: #C6A45C; --marca-fundo: #17243d; --ouro: #C6A45C; --aviso: #422006; --aviso-borda: #854d0e; }
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--fundo); color: var(--texto); font: 16px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-header { background: linear-gradient(135deg, #047857, #059669); color: #fff; padding: 28px 16px 56px; }
+header { background: #101D35; color: #F3F5F8; border-bottom: 2px solid #C6A45C; padding: 28px 16px 56px; }
 header .caixa, main { max-width: 760px; margin: 0 auto; }
-header a { color: #d1fae5; text-decoration: none; font-size: 14px; }
-header h1 { margin: 10px 0 4px; font-size: 28px; line-height: 1.2; }
-header p { margin: 0; color: #d1fae5; font-size: 14px; }
+header a { color: #C6A45C; text-decoration: none; font-size: 14px; }
+header h1 { margin: 10px 0 4px; font-size: 28px; line-height: 1.2; font-family: "Palatino Linotype", Palatino, Georgia, serif; font-weight: 400; letter-spacing: .02em; }
+header p { margin: 0; color: #C6A45C; letter-spacing: .08em; font-size: 14px; }
 main { background: var(--papel); border-radius: 18px; margin-top: -36px; padding: 24px 20px 32px; box-shadow: 0 6px 24px rgb(0 0 0 / .08); }
 @media (min-width: 640px) { main { padding: 32px 40px 40px; } }
 h2 { font-size: 19px; margin: 28px 0 6px; padding-top: 8px; border-top: 1px solid var(--linha); }

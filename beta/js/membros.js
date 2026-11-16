@@ -129,7 +129,13 @@ Fin.membros = (() => {
   /** Ao entrar: aplica a cor salva no perfil (vinda de outro aparelho) e desenha o avatar. */
   function aoDesbloquear() {
     const m = atual();
-    if (m.tema && m.tema !== Fin.tema?.atual()) Fin.tema.aplicar(m.tema);
+    let tema = m.tema;
+    // Perfil ainda com o verde de fábrica (de antes da marca Valoris) → passa à cor da marca uma vez.
+    if (tema && Fin.tema && tema === Fin.tema.ANTIGO_PADRAO && !m.temaMarca) {
+      tema = Fin.tema.PADRAO;
+      try { salvarAtual({ tema, temaMarca: 1 }); } catch { /* bloqueado: tenta na próxima */ }
+    }
+    if (tema && tema !== Fin.tema?.atual()) Fin.tema.aplicar(tema);
     desenharTopo();
   }
 

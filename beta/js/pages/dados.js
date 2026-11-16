@@ -714,7 +714,7 @@ Fin.pages.dados = (() => {
     Fin.finance.cartoes();
     const file = new File([await Fin.storage.exportBackup()], nomeBackup(), { type: 'application/json' });
     try {
-      await navigator.share({ files: [file], title: 'Backup Minhas Finanças' });
+      await navigator.share({ files: [file], title: 'Backup Valoris' });
       Fin.storage.registrarBackup();
       Fin.ui.toast('Backup enviado.');
       draw();

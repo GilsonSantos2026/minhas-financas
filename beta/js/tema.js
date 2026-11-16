@@ -16,6 +16,8 @@ Fin.tema = (() => {
   const NIVEIS = [50, 100, 200, 500, 600, 700, 800];
   // [id, nome, 50, 100, 200, 500, 600, 700, 800]
   const LISTA = [
+    // Cor da marca Valoris: Navy #101D35 (800) e Graphite #26364C; o dourado #C6A45C fica em --ouro (styles.css).
+    ['valoris', 'Valoris', '#eef1f6', '#dde3ec', '#bcc6d6', '#3d5275', '#1f2e4a', '#17243d', '#101d35'],
     ['esmeralda', 'Esmeralda', '#ecfdf5', '#d1fae5', '#a7f3d0', '#10b981', '#059669', '#047857', '#065f46'],
     ['marinho', 'Azul-marinho', '#eff5fb', '#dbe8f4', '#b9d2e9', '#3f7bb0', '#2d6596', '#24527b', '#1d4263'],
     ['roxo', 'Roxo', '#faf5ff', '#f3e8ff', '#e9d5ff', '#a855f7', '#9333ea', '#7e22ce', '#6b21a8'],
@@ -30,7 +32,8 @@ Fin.tema = (() => {
     ['azul', 'Azul', '#eff6ff', '#dbeafe', '#bfdbfe', '#3b82f6', '#2563eb', '#1d4ed8', '#1e40af'],
   ];
   const TEMAS = LISTA.map(([id, nome, ...hex]) => ({ id, nome, cores: Object.fromEntries(NIVEIS.map((n, i) => [n, hex[i]])) }));
-  const PADRAO = 'esmeralda';
+  const PADRAO = 'valoris';
+  const ANTIGO_PADRAO = 'esmeralda'; // verde de fábrica antes da marca Valoris
 
   const rgb = (hex) => {
     const n = parseInt(hex.slice(1), 16);
@@ -39,7 +42,18 @@ Fin.tema = (() => {
   const porId = (id) => TEMAS.find((t) => t.id === id) || TEMAS.find((t) => t.id === PADRAO);
 
   function lerPref() {
-    try { return JSON.parse(localStorage.getItem(`${Fin.PREFIXO || 'fin:'}prefs`) || '{}').tema || PADRAO; } catch { return PADRAO; }
+    try {
+      const chave = `${Fin.PREFIXO || 'fin:'}prefs`;
+      const p = JSON.parse(localStorage.getItem(chave) || '{}');
+      // 1ª abertura com a marca Valoris: quem estava no verde de fábrica passa à cor da marca
+      // (uma vez só; quem escolher outra cor depois mantém a escolha).
+      if (!p.temaMarca) {
+        if (!p.tema || p.tema === ANTIGO_PADRAO) p.tema = PADRAO;
+        p.temaMarca = 1;
+        localStorage.setItem(chave, JSON.stringify(p));
+      }
+      return p.tema || PADRAO;
+    } catch { return PADRAO; }
   }
   function gravarPref(id) {
     // Grava direto (este módulo carrega antes do storage.js).
@@ -67,5 +81,5 @@ Fin.tema = (() => {
 
   aplicar(lerPref(), { guardar: false });
 
-  return { TEMAS, PADRAO, aplicar, atual: () => atual, porId };
+  return { TEMAS, PADRAO, ANTIGO_PADRAO, aplicar, atual: () => atual, porId };
 })();
