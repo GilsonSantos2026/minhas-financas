@@ -383,19 +383,19 @@ Fin.pages.dashboard = (() => {
 
     // Lembrete de backup: alterações sem backup há 7+ dias (dá para adiar até reabrir o app).
     const b = Fin.storage.situacaoBackup();
+    // Lembrete discreto (v2026-11-16.4): uma linha no fim do Início; o sininho também avisa.
     const lembrete = b.lembrar && !Fin.state.backupAdiado ? `
-      <div class="flex flex-wrap items-center gap-3 bg-amber-50 text-amber-900 rounded-2xl px-4 py-3 text-sm" role="status">
-        ${Fin.icones.badge('cofreDados', 'amber', 'w-8 h-8', 'w-[18px] h-[18px]')}
-        <span class="flex-1 min-w-[12rem]">${b.ultimo ? `Seu último backup foi há <b>${b.dias} dias</b> e há alterações novas.` : 'Você ainda <b>não fez nenhum backup</b>. Os dados existem só neste aparelho.'}</span>
-        <a href="#/dados" class="btn btn-primary !py-1.5">Fazer backup</a>
-        <button data-act="adiar-backup" class="text-amber-900/70 hover:text-amber-900 text-xs underline">Depois</button>
+      <div class="flex items-center gap-2 text-xs text-amber-900 bg-amber-50/70 border border-amber-100 rounded-xl px-3 py-1.5" role="status">
+        ${Fin.icone('cofreDados', 'w-4 h-4 shrink-0 text-amber-700')}
+        <span class="flex-1 min-w-0 truncate">${b.ultimo ? `Último backup há <b>${b.dias} dias</b>` : '<b>Sem backup</b> ainda: os dados estão só neste aparelho'}</span>
+        <a href="#/dados" class="font-semibold underline shrink-0">Fazer backup</a>
+        <button data-act="adiar-backup" class="text-amber-900/60 hover:text-amber-900 shrink-0" aria-label="Esconder até reabrir o app" title="Esconder até reabrir o app">✕</button>
       </div>` : '';
 
     view.innerHTML = `
       <div class="space-y-4">
         ${saudacaoHTML()}
         ${Fin.ui.filtroPessoa()}
-        ${lembrete}
         ${Fin.ui.monthNav(ym)}
         ${hero(r, ym)}
         ${ym === fmt.currentYM() ? proximosHTML() : ''}
@@ -429,6 +429,8 @@ Fin.pages.dashboard = (() => {
           ${ym === fmt.currentYM() ? '' : card(`${titulo('calendario', 'amber', 'Contas a pagar', 'mb-1')}${contasHTML(contas, ym)}`)}
           ${card(`${titulo('cartao', 'violet', 'Faturas do cartão', 'mb-1')}${faturasHTML(ym)}`)}
         </div>
+
+        ${lembrete}
       </div>`;
 
     view.querySelector('[data-act="adiar-backup"]')?.addEventListener('click', () => {
