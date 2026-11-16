@@ -60,6 +60,25 @@ Fin.forms.inv = (() => {
 
   /* ---------------- Conta ---------------- */
 
+  /**
+   * Modo casal: "De quem é?" com as fotos (pessoas + "Dos dois"). Vazio com uma pessoa só.
+   * atual: id da pessoa ou 'casal'.
+   */
+  function donoCampo(rotulo, atual, rotCasal = 'Dos dois') {
+    if (!Fin.finance?.temCasal?.()) return '';
+    const M = Fin.membros;
+    const opcoes = [
+      ...Fin.cofre.pessoas().map((p) => ({ id: p.id, nome: M.primeiroNome(M.porId(p.id)) || p.usuario, av: M.avatar(M.porId(p.id), { tam: 'w-7 h-7', txt: 'text-[10px]' }) })),
+      { id: 'casal', nome: rotCasal, av: `<span class="w-7 h-7 rounded-full grid place-items-center bg-prim-600 text-white shrink-0">${Fin.icone('usuario', 'w-4 h-4')}</span>` },
+    ];
+    return `
+      <fieldset><legend class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">${rotulo}</legend>
+        <div class="grid grid-cols-3 gap-2">${opcoes.map((o) => `
+          <label class="quem-opcao"><input type="radio" name="dono" value="${esc(o.id)}" ${o.id === atual ? 'checked' : ''}><span>${o.av}<span class="truncate">${esc(o.nome)}</span></span></label>`).join('')}
+        </div></fieldset>`;
+  }
+  const donoEscolhido = (form, padrao) => form.querySelector('input[name="dono"]:checked')?.value || padrao;
+
   function conta(id = null) {
     const c = id ? I().conta(id) : null;
     const usos = c ? I().movs().filter((m) => m.conta === c.id).length : 0;
@@ -68,6 +87,7 @@ Fin.forms.inv = (() => {
         <label class="field"><span>Ícone</span><input name="icone" class="input text-center text-xl" maxlength="8" value="${esc(c?.icone || '')}" placeholder="🏦"></label>
         <label class="field"><span>Nome *</span><input name="nome" class="input" maxlength="40" value="${esc(c?.nome || '')}" placeholder="Ex.: Rico, Nomad, Previdência"></label>
       </div>
+      ${donoCampo('De quem é a conta?', c ? I().donoDe(c) : Fin.cofre.membroId(), 'Conjunta')}
       <fieldset class="field"><legend class="text-sm font-medium text-slate-700 mb-1">Tipo</legend>
         <div class="seg">
           <label><input type="radio" name="tipo" value="corretora" ${c?.tipo !== 'saldo' ? 'checked' : ''}><span>Corretora (ativos)</span></label>
@@ -104,6 +124,7 @@ Fin.forms.inv = (() => {
         ...(c ? { id: c.id } : {}), nome, icone: el('icone').value.trim() || null, tipo,
         moeda: tipo === 'corretora' ? el('moeda').value : 'BRL',
         classe: tipo === 'saldo' ? el('classe').value : null,
+        ...(Fin.finance.temCasal() ? { dono: donoEscolhido(form, c ? I().donoDe(c) : Fin.cofre.membroId()) } : {}),
       });
       concluir(c ? 'Conta atualizada.' : 'Conta criada.');
     });
@@ -440,6 +461,8 @@ Fin.forms.inv = (() => {
     const sel = new Set(mt?.classes || ['stock', 'reit', 'etf']);
     const { panel, form, el, erro } = modal(mt ? 'Editar meta' : 'Nova meta', `
       <label class="field"><span>Nome *</span><input name="nome" class="input" maxlength="50" value="${esc(mt?.nome || '')}" placeholder="Ex.: Patrimônio de R$ 15 mil"></label>
+      ${donoCampo('Meta individual ou compartilhada?', mt ? I().donoMeta(mt) : 'casal', 'Dos dois')}
+      ${Fin.finance?.temCasal?.() ? '<p class="text-xs text-slate-500 -mt-2">Individual conta só a carteira da pessoa; “Dos dois” conta a carteira da casa inteira.</p>' : ''}
       <label class="field"><span>Acompanhar</span><select name="tipo" class="input">
         ${opt('patrimonio', 'Patrimônio total', mt?.tipo)}${opt('classes', 'Algumas classes (ex.: exterior)', mt?.tipo)}
         ${opt('proventos', 'Média mensal de proventos (12 meses)', mt?.tipo)}${opt('conta', 'Uma conta', mt?.tipo)}</select></label>
@@ -472,7 +495,8 @@ Fin.forms.inv = (() => {
       if (!nome) return erro('Informe o nome.');
       if (!(alvo > 0)) return erro('Informe o objetivo.');
       if (t === 'classes' && !classes.length) return erro('Escolha ao menos uma classe.');
-      S.upsert('invMetas', { ...(mt ? { id: mt.id } : {}), nome, tipo: t, alvo, aporteMensal: t === 'proventos' ? null : num(el('aporte').value) || null, classes: t === 'classes' ? classes : null, conta: t === 'conta' ? el('conta').value : null });
+      S.upsert('invMetas', { ...(mt ? { id: mt.id } : {}), nome, tipo: t, alvo, aporteMensal: t === 'proventos' ? null : num(el('aporte').value) || null, classes: t === 'classes' ? classes : null, conta: t === 'conta' ? el('conta').value : null,
+        ...(Fin.finance.temCasal() ? { dono: donoEscolhido(form, mt ? I().donoMeta(mt) : 'casal') } : {}) });
       concluir(mt ? 'Meta atualizada.' : 'Meta criada.');
     });
   }

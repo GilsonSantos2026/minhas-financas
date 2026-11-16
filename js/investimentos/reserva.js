@@ -39,6 +39,12 @@ Fin.reserva = (() => {
   const config = () => ({ meses: 6, essenciais: {}, aporteMensal: null, ...(Fin.inv?.config('reserva') || {}) });
   const salvar = (dados) => Fin.inv.salvarConfig('reserva', dados);
 
+  // Modo casal (v2026-11-16.2): reserva compartilhada (casa inteira, padrão) ou individual (cfg.dono = id):
+  // individual usa a parte da pessoa nas despesas (mesma regra do filtro por pessoa) e a carteira dela.
+  let donoCalc = null; // null = casa inteira
+  const lancBase = () => (donoCalc ? F.visaoDe(F.todos(), donoCalc) : F.todos());
+  const fatorCartao = (ym) => (donoCalc ? F.fatorCompras(ym, donoCalc) : 1);
+
   function percentil(vals, p) {
     if (!vals.length) return 0;
     const v = [...vals].sort((a, b) => a - b);
@@ -61,6 +67,7 @@ Fin.reserva = (() => {
   /** Gasto por categoria no mês: lançamentos (sem fatura/aportes) + compras do cartão pela categoria. */
   function gastosDoMes(ym) {
     const cats = F.catsInvestimento();
+    const fc = fatorCartao(ym);
     const m = new Map();
     const add = (nome, v, cartao) => {
       const k = nome || 'Sem categoria';
@@ -69,13 +76,13 @@ Fin.reserva = (() => {
       if (cartao) c.cartao += v;
       m.set(k, c);
     };
-    for (const l of F.doMes(ym, F.todos())) {
+    for (const l of F.doMes(ym, lancBase())) {
       if (l.tipo !== 'despesa' || F.isPagamentoFatura(l) || F.ehAporte(l, cats)) continue;
       add(l.categoria, F.valor(l), false);
     }
     for (const c of S.list('cartaoCompras')) {
       if (c.fatura !== ym || RE_ENCARGO.test(N(c.descricao))) continue;
-      add(c.categoria, c.valor || 0, true);
+      add(c.categoria, (c.valor || 0) * fc, true);
     }
     return m;
   }
@@ -103,6 +110,12 @@ Fin.reserva = (() => {
 
   function calcular() {
     const cfg = config();
+    const dono = cfg.dono && cfg.dono !== 'casal' && F.temCasal() ? cfg.dono : null;
+    donoCalc = dono;
+    try { return calcularPara(cfg, dono); } finally { donoCalc = null; }
+  }
+
+  function calcularPara(cfg, dono) {
     const meses = janela();
     const porMes = meses.map((ym) => ({ ym, gastos: gastosDoMes(ym) }));
     const nomes = new Set(porMes.flatMap((m) => [...m.gastos.keys()]));
@@ -139,9 +152,9 @@ Fin.reserva = (() => {
     const ate = fmt.addMonths(atual, MESES_COMPROMISSO - 1);
     let futuras = 0;
     for (const c of S.list('cartaoCompras')) {
-      if (c.parcela?.total > 1 && c.fatura >= atual && c.fatura <= ate && !essenciais.has(c.categoria) && (c.valor || 0) > 0) futuras += c.valor;
+      if (c.parcela?.total > 1 && c.fatura >= atual && c.fatura <= ate && !essenciais.has(c.categoria) && (c.valor || 0) > 0) futuras += c.valor * fatorCartao(c.fatura);
     }
-    for (const l of F.todos()) {
+    for (const l of lancBase()) {
       const comp = F.competencia(l);
       if (l.tipo === 'despesa' && l.recorrencia === 'parcelado' && comp >= atual && comp <= ate && !F.isPago(l) && !essenciais.has(l.categoria)) futuras += F.valor(l);
     }
@@ -154,11 +167,11 @@ Fin.reserva = (() => {
 
     // Situação atual
     const temInv = !!Fin.inv?.temDados();
-    const atualValor = temInv ? (Fin.inv.resumo().porClasse.reserva || 0) : 0;
+    const atualValor = temInv ? (Fin.inv.comPessoa(dono, Fin.inv.resumo).porClasse.reserva || 0) : 0;
     const conta = temInv ? Fin.inv.contas().find((c) => c.tipo === 'saldo' && c.classe === 'reserva') || null : null;
 
     // Capacidade de poupança: mediana da sobra (receitas − despesas) nos meses da janela.
-    const sobras = meses.map((ym) => { const r = F.resumo(ym, F.doMes(ym, F.todos())); return r.receitas - r.despesas; });
+    const sobras = meses.map((ym) => { const r = F.resumo(ym, F.doMes(ym, lancBase())); return r.receitas - r.despesas; });
     const sobraMediana = r2(percentil(sobras, 0.5));
     const sugerido = sobraMediana > 0 ? Math.max(50, Math.round((sobraMediana * 0.5) / 50) * 50) : null;
     const naoEssencialMediana = r2(percentil(mesesInfo.map((m) => m.outros), 0.5));
@@ -166,7 +179,7 @@ Fin.reserva = (() => {
     const falta = Math.max(0, ideal - atualValor);
 
     return {
-      cfg, perfil: PERFIS.find((p) => p.meses === mesesAlvo) || { meses: mesesAlvo, nome: `${mesesAlvo} meses`, desc: '' },
+      cfg, dono: dono || 'casal', perfil: PERFIS.find((p) => p.meses === mesesAlvo) || { meses: mesesAlvo, nome: `${mesesAlvo} meses`, desc: '' },
       meses: mesesInfo, janela: meses.length, categorias,
       media: r2(ess.reduce((s, v) => s + v, 0) / (ess.length || 1)), mediana: r2(percentil(ess, 0.5)), p75,
       totalMedia: r2(mesesInfo.reduce((s, m) => s + m.total, 0) / (mesesInfo.length || 1)),
@@ -180,13 +193,13 @@ Fin.reserva = (() => {
   function garantirConta() {
     const c = Fin.inv.contas().find((x) => x.tipo === 'saldo' && x.classe === 'reserva');
     if (c) return c;
-    return S.upsert('invContas', { nome: 'Reserva de emergência', tipo: 'saldo', moeda: 'BRL', classe: 'reserva', icone: '🛟', criadoEm: new Date().toISOString() });
+    return S.upsert('invContas', { nome: 'Reserva de emergência', tipo: 'saldo', moeda: 'BRL', classe: 'reserva', icone: '🛟', dono: (config().dono && F.temCasal()) ? config().dono : 'm1', criadoEm: new Date().toISOString() });
   }
 
   /** Cria ou atualiza a meta "Reserva de emergência" com o valor ideal. */
   function salvarMeta(rv) {
     const m = Fin.inv.metas().find((x) => x.tipo === 'classes' && (x.classes || []).length === 1 && x.classes[0] === 'reserva');
-    return S.upsert('invMetas', { ...(m || {}), nome: 'Reserva de emergência', tipo: 'classes', classes: ['reserva'], alvo: rv.ideal, aporteMensal: rv.aporte || null });
+    return S.upsert('invMetas', { ...(m || {}), nome: 'Reserva de emergência', tipo: 'classes', classes: ['reserva'], alvo: rv.ideal, aporteMensal: rv.aporte || null, dono: rv.dono || 'casal' });
   }
 
   return { calcular, classificar, config, salvar, garantirConta, salvarMeta, PERFIS, percentil };

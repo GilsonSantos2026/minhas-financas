@@ -597,7 +597,7 @@ Fin.finance = (() => {
   /* ================= Casal: autoria, quem pagou e filtro por pessoa ================= */
 
   /**
-   * Regras (v2026-11-15.11):
+   * Regras (v2026-11-16.1):
    * - autor(l) = quem lançou (criadoPor); registros antigos, sem autor, são do titular ('m1').
    * - Receita: quem lançou é quem recebeu.
    * - Despesa: pagoPor = id da pessoa ou 'casal' (contas dos dois); sem campo = quem lançou.
@@ -646,8 +646,7 @@ Fin.finance = (() => {
 
   const r2 = (v) => Math.round(v * 100) / 100;
   let memoLente = { lista: null, chave: '', out: null };
-  function lente(lista) {
-    const p = pessoaAtiva();
+  function lente(lista, p = pessoaAtiva()) {
     if (!p) return lista;
     const chave = `${p}|${JSON.stringify(divisao())}`;
     if (memoLente.lista === lista && memoLente.chave === chave) return memoLente.out;
@@ -671,12 +670,20 @@ Fin.finance = (() => {
    * Compras do cartão no filtro por pessoa: seguem quem pagou a fatura do mês.
    * Fator = pagamentos de fatura do mês na visão da pessoa ÷ pagamentos de fatura do mês.
    */
-  function fatorCompras(ym) {
-    if (!pessoaAtiva()) return 1;
-    const todos = bruto().filter((l) => competencia(l) === ym && isPagamentoFatura(l));
-    const total = todos.reduce((s, l) => s + valor(l), 0);
-    if (total <= 0) return 0;
-    return todos.reduce((s, l) => s + valor(l) * peso(l), 0) / total;
+  function fatorCompras(ym, p = pessoaAtiva()) {
+    if (!p) return 1;
+    const proporcao = (lista) => {
+      const total = lista.reduce((s, l) => s + valor(l), 0);
+      return total > 0 ? lista.reduce((s, l) => s + valor(l) * peso(l, p), 0) / total : null;
+    };
+    const pagFaturas = bruto().filter(isPagamentoFatura);
+    const doMesmo = proporcao(pagFaturas.filter((l) => competencia(l) === ym));
+    if (doMesmo != null) return doMesmo;
+    // Mês sem pagamento de fatura lançado (ex.: parcelas futuras): usa quem pagou as faturas
+    // nos 12 meses anteriores; sem histórico, a divisão do casal.
+    const ini = fmt.addMonths(ym, -12);
+    const hist = proporcao(pagFaturas.filter((l) => { const c = competencia(l); return c >= ini && c < ym; }));
+    return hist != null ? hist : parteDe(p);
   }
 
   /** A pessoa participa deste lançamento? (para filtrar listas mostrando o valor cheio) */
@@ -685,7 +692,7 @@ Fin.finance = (() => {
   return {
     // casal
     CASAL, autor, pagador, divisao, parteDe, salvarDivisao, pessoaAtiva, peso, temCasal, fatorCompras, daPessoa,
-    todos: bruto, naVisao: (lista) => lente(lista),
+    todos: bruto, naVisao: (lista) => lente(lista), visaoDe: (lista, p) => lente(lista, p || null),
     conciliar, conciliacaoPeriodo, conciliacaoFaturas,
     criarRepetidos, atualizarProximos, excluirLancamento, usosCategoria, moverCategoria, orcamento, mediaGasto,
     lancamentos, dataRef, competencia, valor, statusEfetivo, isPago, doMes, resumo, ehAporte, aportesDoMes, catsInvestimento,

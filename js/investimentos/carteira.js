@@ -79,6 +79,30 @@ Fin.inv = (() => {
   const metas = () => S.list('invMetas');
   const temDados = () => S.list('invContas').length > 0;
 
+  /* ---------------- Casal: dono das contas (v2026-11-16.2) ---------------- */
+  /*
+   * Cada conta tem dono: id da pessoa ou 'casal' (conta conjunta). Sem campo = titular ('m1').
+   * Filtro por pessoa (o mesmo do resto do app, Fin.state.pessoa): a pessoa vê as contas dela
+   * inteiras e a parte dela (divisão do casal) nas contas conjuntas. Ambos = tudo, como antes.
+   * As listas (ativos, movimentações) mostram valores cheios; os totais usam o peso.
+   */
+  let pessoaForcada; // undefined = filtro da tela; null = Ambos; id = pessoa
+  const pessoaVisao = () => (pessoaForcada !== undefined ? pessoaForcada : Fin.finance?.pessoaAtiva?.() || null);
+  const donoDe = (c) => c?.dono || 'm1';
+  function pesoConta(c, p = pessoaVisao()) {
+    if (!p) return 1;
+    const d = donoDe(c);
+    if (d === 'casal') return Fin.finance.parteDe(p);
+    return d === p ? 1 : 0;
+  }
+  /** Calcula como se o filtro fosse p (null = Ambos), sem mexer na tela. */
+  function comPessoa(p, fn) {
+    const ant = pessoaForcada;
+    pessoaForcada = p;
+    try { return fn(); } finally { pessoaForcada = ant; }
+  }
+  const contasVisiveis = () => contas().filter((c) => pesoConta(c) > 0);
+
   function config(id) { return S.list('invConfig').find((c) => c.id === id) || null; }
   function salvarConfig(id, dados) { return S.upsert('invConfig', { ...(config(id) || {}), ...dados, id }); }
 
@@ -125,7 +149,7 @@ Fin.inv = (() => {
     const out = new Map();
     for (const a of ativos()) {
       const c = cMap.get(a.conta);
-      out.set(a.id, { ativo: a, conta: c, moeda: moedaDe(a, c), classe: a.classe, qtd: 0, custo: 0, custoBRL: 0, realizado: 0, proventos: 0, ops: 0 });
+      out.set(a.id, { ativo: a, conta: c, moeda: moedaDe(a, c), classe: a.classe, qtd: 0, custo: 0, custoBRL: 0, realizado: 0, proventos: 0, ops: 0, peso: pesoConta(c) });
     }
     const conversoes = new Map(); // conversão/incorporação: o custo do ativo antigo passa para o novo
     for (const m of ordenar(movs())) {
@@ -212,7 +236,7 @@ Fin.inv = (() => {
         const v = Number(m.valor) || 0;
         if (m.tipo === 'aporte') { valor += v; investido += v; } else if (m.tipo === 'resgate') { valor -= v; investido -= v; } else if (m.tipo === 'saldo') { valor = v; ultimoSaldo = m.data; }
       }
-      return { conta: c, classe: c.classe || 'outro', valor, investido, ganho: valor - investido, rent: investido > 0 ? (valor - investido) / investido : null, ultimoSaldo };
+      return { conta: c, classe: c.classe || 'outro', valor, investido, ganho: valor - investido, rent: investido > 0 ? (valor - investido) / investido : null, ultimoSaldo, peso: pesoConta(c) };
     });
   }
 
@@ -227,8 +251,10 @@ Fin.inv = (() => {
     for (const m of movs()) {
       if (m.tipo !== 'provento') continue;
       const a = aMap.get(m.ativo);
+      const w = pesoConta(conta(a?.conta || m.conta));
+      if (w <= 0) continue;
       const moeda = m.moedaValor || moedaDe(a);
-      const valorBRL = (Number(m.valor) || 0) * cambioMov(m, moeda);
+      const valorBRL = (Number(m.valor) || 0) * cambioMov(m, moeda) * w;
       lista.push({ mov: m, ativo: a, moeda, valorMoeda: Number(m.valor) || 0, valor: valorBRL, data: m.data, futuro: (m.data || '') > hoje });
     }
     lista.sort((a, b) => (b.data || '').localeCompare(a.data || ''));
@@ -253,19 +279,20 @@ Fin.inv = (() => {
   /* ---------------- Resumo da carteira ---------------- */
 
   function resumo() {
-    const pos = posicoes();
+    // Filtro por pessoa: só contas com peso > 0; valores dos totais × peso (conta conjunta = parte).
+    const pos = posicoes().filter((p) => p.peso > 0);
     const abertas = pos.filter((p) => p.qtd > 0);
-    const sal = contasSaldo();
+    const sal = contasSaldo().filter((c) => c.peso > 0);
     const prov = proventos();
-    const patrimonio = abertas.reduce((s, p) => s + p.valor, 0) + sal.reduce((s, c) => s + c.valor, 0);
-    const investido = abertas.reduce((s, p) => s + p.custoBRL, 0) + sal.reduce((s, c) => s + Math.max(0, c.investido), 0);
-    const realizado = pos.reduce((s, p) => s + p.realizado, 0);
+    const patrimonio = abertas.reduce((s, p) => s + p.valor * p.peso, 0) + sal.reduce((s, c) => s + c.valor * c.peso, 0);
+    const investido = abertas.reduce((s, p) => s + p.custoBRL * p.peso, 0) + sal.reduce((s, c) => s + Math.max(0, c.investido) * c.peso, 0);
+    const realizado = pos.reduce((s, p) => s + p.realizado * p.peso, 0);
     const porClasse = {};
-    for (const p of abertas) porClasse[p.classe] = (porClasse[p.classe] || 0) + p.valor;
-    for (const c of sal) porClasse[c.classe] = (porClasse[c.classe] || 0) + c.valor;
+    for (const p of abertas) porClasse[p.classe] = (porClasse[p.classe] || 0) + p.valor * p.peso;
+    for (const c of sal) porClasse[c.classe] = (porClasse[c.classe] || 0) + c.valor * c.peso;
     const porConta = {};
-    for (const p of abertas) porConta[p.ativo.conta] = (porConta[p.ativo.conta] || 0) + p.valor;
-    for (const c of sal) porConta[c.conta.id] = (porConta[c.conta.id] || 0) + c.valor;
+    for (const p of abertas) porConta[p.ativo.conta] = (porConta[p.ativo.conta] || 0) + p.valor * p.peso;
+    for (const c of sal) porConta[c.conta.id] = (porConta[c.conta.id] || 0) + c.valor * c.peso;
     const ganho = patrimonio - investido;
     return {
       posicoes: pos, abertas, contasSaldo: sal, proventos: prov,
@@ -287,17 +314,19 @@ Fin.inv = (() => {
     const cMap = new Map(S.list('invContas').map((c) => [c.id, c]));
     for (const m of movs()) {
       if (!m.data || m.conv) continue; // conversões não são aporte nem resgate
+      const a = aMap.get(m.ativo);
+      const w = pesoConta(cMap.get(a?.conta || m.conta));
+      if (w <= 0) continue;
       const k = m.data.slice(0, 7);
       const f = out[k] || (out[k] = { entra: 0, sai: 0 });
-      const a = aMap.get(m.ativo);
-      const cb = cambioMov(m, a ? moedaDe(a, cMap.get(a.conta)) : 'BRL');
+      const cb = cambioMov(m, a ? moedaDe(a, cMap.get(a.conta)) : 'BRL') * w;
       const q = Number(m.qtd) || 0;
       const pr = Number(m.preco) || 0;
       const tx = Number(m.taxas) || 0;
       if (m.tipo === 'compra') f.entra += (q * pr + tx) * cb;
       else if (m.tipo === 'venda') f.sai += (q * pr - tx) * cb;
-      else if (m.tipo === 'aporte') f.entra += Number(m.valor) || 0;
-      else if (m.tipo === 'resgate') f.sai += Number(m.valor) || 0;
+      else if (m.tipo === 'aporte') f.entra += (Number(m.valor) || 0) * w;
+      else if (m.tipo === 'resgate') f.sai += (Number(m.valor) || 0) * w;
     }
     for (const f of Object.values(out)) f.liquido = f.entra - f.sai;
     return out;
@@ -306,8 +335,20 @@ Fin.inv = (() => {
   const fimDoMes = (ym) => { const [y, m] = ym.split('-').map(Number); return `${ym}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`; };
 
   function investidoEm(dataISO) {
-    const pos = posicoes(dataISO).filter((p) => p.qtd > 0).reduce((s, p) => s + p.custoBRL, 0);
-    return pos + contasSaldo(dataISO).reduce((s, c) => s + Math.max(0, c.investido), 0);
+    const pos = posicoes(dataISO).filter((p) => p.qtd > 0).reduce((s, p) => s + p.custoBRL * p.peso, 0);
+    return pos + contasSaldo(dataISO).reduce((s, c) => s + Math.max(0, c.investido) * c.peso, 0);
+  }
+
+  /**
+   * Patrimônio de uma foto mensal na visão atual. Ambos = o da foto. Pessoa = foto.porDono[p]
+   * (gravado a partir da v2026-11-16.2); fotos antigas só valem se todas as contas forem dela.
+   */
+  function patrimonioFoto(foto) {
+    const p = pessoaVisao();
+    if (!foto || !p) return foto ? foto.patrimonio : null;
+    if (foto.porDono && foto.porDono[p] != null) return foto.porDono[p];
+    const donos = new Set(contas().map(donoDe));
+    return donos.size === 1 && donos.has(p) ? foto.patrimonio : null;
   }
 
   /**
@@ -325,13 +366,14 @@ Fin.inv = (() => {
     let anterior = null;
     for (let m = datas[0]; m <= atual && out.length < 240; m = fmt.addMonths(m, 1)) {
       const foto = fotos.get(m);
-      const aplicado = foto?.manual && foto.investido != null ? foto.investido : m === atual ? r.investido : investidoEm(fimDoMes(m));
-      const patrimonio = m === atual ? r.patrimonio : foto ? foto.patrimonio : null;
+      const fotoInteira = !pessoaVisao() || patrimonioFoto(foto) === foto?.patrimonio; // a foto vale para esta visão
+      const aplicado = foto?.manual && foto.investido != null && fotoInteira ? foto.investido : m === atual ? r.investido : investidoEm(fimDoMes(m));
+      const patrimonio = m === atual ? r.patrimonio : foto ? patrimonioFoto(foto) : null;
       const f = fl[m]?.liquido ?? (foto?.manual && anterior?.aplicado != null ? aplicado - anterior.aplicado : 0);
       const pv = prov[m] || 0;
       let rent = null;
       // Mês importado do Investidor 10 (e não corrigido pelos extratos): vale a rentabilidade calculada por ele.
-      if (foto?.rentI10 != null && foto.fonte === 'i10' && m !== atual) rent = foto.rentI10;
+      if (foto?.rentI10 != null && foto.fonte === 'i10' && m !== atual && fotoInteira) rent = foto.rentI10;
       else if (patrimonio != null && anterior?.patrimonio != null) {
         const base = anterior.patrimonio + f / 2;
         if (base > 0) rent = (patrimonio - anterior.patrimonio - f + pv) / base;
@@ -351,22 +393,40 @@ Fin.inv = (() => {
   }
 
   /** Guarda a foto do mês atual (no máx. uma gravação por dia, ou se o valor mudou). */
-  function salvarFoto(r) {
+  function salvarFoto(rTela) {
+    // A foto é sempre da casa inteira (Ambos), mesmo com o filtro por pessoa ligado na tela.
+    const r = pessoaVisao() ? comPessoa(null, resumo) : rTela;
     const id = fmt.currentYM();
     const hoje = fmt.todayISO();
     const ant = S.list('invHist').find((h) => h.id === id);
     const pat = r2(r.patrimonio);
-    if (ant && ant.em === hoje && Math.abs((ant.patrimonio || 0) - pat) < 0.01) return;
+    if (ant && ant.em === hoje && Math.abs((ant.patrimonio || 0) - pat) < 0.01 && (ant.porDono || !Fin.finance?.temCasal?.())) return;
     if (!(pat > 0) && !ant) return;
+    // Modo casal: guarda também o patrimônio de cada pessoa (para a evolução por pessoa).
+    const porDono = Fin.finance?.temCasal?.()
+      ? Object.fromEntries(Fin.cofre.pessoas().map((p) => [p.id, r2(comPessoa(p.id, resumo).patrimonio)]))
+      : undefined;
     S.upsert('invHist', {
       id, patrimonio: pat, investido: r2(r.investido), em: hoje, manual: false,
       porClasse: Object.fromEntries(Object.entries(r.porClasse).map(([k, v]) => [k, r2(v)])), dolar: dolarAtual(),
+      ...(porDono ? { porDono } : {}),
     });
   }
 
   /* ---------------- Metas, reserva e alocação ---------------- */
 
-  function progressoMeta(meta, r) {
+  /** Dono da meta: id da pessoa (individual) ou 'casal' (compartilhada). Metas antigas = casal. */
+  const donoMeta = (m) => m?.dono || 'casal';
+  /** Metas que aparecem na visão atual: as da pessoa + as compartilhadas. */
+  const metasVisiveis = () => {
+    const p = pessoaVisao();
+    return metas().filter((m) => !p || donoMeta(m) === 'casal' || donoMeta(m) === p);
+  };
+
+  function progressoMeta(meta, rTela) {
+    // Individual: conta só a carteira da pessoa; compartilhada: a da casa inteira.
+    const alvoVisao = donoMeta(meta) === 'casal' || !Fin.finance?.temCasal?.() ? null : donoMeta(meta);
+    const r = alvoVisao === pessoaVisao() ? rTela : comPessoa(alvoVisao, resumo);
     let atual = 0;
     if (meta.tipo === 'patrimonio') atual = r.patrimonio;
     else if (meta.tipo === 'classes') atual = (meta.classes || []).reduce((s, k) => s + (r.porClasse[k] || 0), 0);
@@ -450,5 +510,7 @@ Fin.inv = (() => {
     sugerirClasse, obterAtivo, posicoes, contasSaldo, proventos, resumo, fluxos, historico, acumulada,
     salvarFoto, progressoMeta, reserva, alocacao, garantirCategoria, conferenciaAportes,
     criarContasPadrao, excluirAtivo, excluirConta, dolarAtual, ordenar,
+    // casal
+    donoDe, pesoConta, comPessoa, contasVisiveis, donoMeta, metasVisiveis, pessoaVisao,
   };
 })();

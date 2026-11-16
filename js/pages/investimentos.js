@@ -38,6 +38,7 @@ Fin.pages.investimentos = (() => {
 
   function cabecalho(aba) {
     return `
+      ${Fin.ui.filtroPessoa()}
       <div class="flex flex-wrap items-center gap-2">
         <div class="mr-auto hidden md:block">${Fin.icones.titulo('alta', 'emerald', 'Investimentos', { cls: 'text-xl', tam: 'w-9 h-9', ic: 'w-5 h-5' })}</div>
         <span data-dolar>${dolarChip()}</span>
@@ -111,14 +112,22 @@ Fin.pages.investimentos = (() => {
   }
 
   function contasHTML(r) {
-    const contas = I().contas();
+    const contas = I().contasVisiveis();
     const total = r.patrimonio || 1;
+    const casal = Fin.finance.temCasal();
+    const donoMini = (c) => {
+      if (!casal) return '';
+      const d = I().donoDe(c);
+      if (d === 'casal') return `<span class="autor-mini rounded-full grid place-items-center bg-prim-600 text-white shrink-0" title="Conta dos dois">${Fin.icone('usuario', 'w-2.5 h-2.5')}</span>`;
+      const m = Fin.membros.porId(d);
+      return `<span class="inline-flex shrink-0" title="Conta de ${esc(Fin.membros.nome(m) || m.usuario)}">${Fin.membros.avatar(m, { tam: 'autor-mini', txt: '' })}</span>`;
+    };
     return `
       <div class="flex items-center justify-between mb-2">${T3('banco', 'sky', 'Por conta')}
         <button data-act="nova-conta" class="text-sm text-prim-700 font-medium hover:underline">＋ Conta</button></div>
       <ul class="divide-y divide-slate-100">${contas.map((c) => `
         <li><button data-conta="${c.id}" class="w-full flex items-center gap-2 py-2 text-left text-sm hover:bg-slate-50 rounded">
-          <span aria-hidden="true">${c.icone || '🏦'}</span><span class="flex-1 truncate">${esc(c.nome)}
+          <span aria-hidden="true">${c.icone || '🏦'}</span>${donoMini(c)}<span class="flex-1 truncate">${esc(c.nome)}
             <span class="text-xs text-slate-400">${c.tipo === 'saldo' ? 'saldo' : c.moeda === 'USD' ? 'US$' : 'R$'}</span></span>
           <span class="tabular-nums">${fmt.brl(r.porConta[c.id] || 0)}</span>
           <span class="text-xs text-slate-400 w-12 text-right">${fmt.pct((r.porConta[c.id] || 0) / total)}</span>
@@ -148,6 +157,24 @@ Fin.pages.investimentos = (() => {
   }
 
   /* ---------------- Reserva de emergência (aba) ---------------- */
+
+  /** Modo casal: reserva compartilhada (da casa) ou individual (de uma pessoa). */
+  function donoReservaHTML(rv) {
+    if (!Fin.finance.temCasal()) return '';
+    const M = Fin.membros;
+    const opcoes = [
+      { id: 'casal', nome: 'Dos dois', av: `<span class="w-7 h-7 rounded-full grid place-items-center bg-prim-600 text-white shrink-0">${Fin.icone('usuario', 'w-4 h-4')}</span>` },
+      ...Fin.cofre.pessoas().map((p) => ({ id: p.id, nome: `Só de ${M.primeiroNome(M.porId(p.id)) || p.usuario}`, av: M.avatar(M.porId(p.id), { tam: 'w-7 h-7', txt: 'text-[10px]' }) })),
+    ];
+    return card(`
+      <div class="text-sm font-medium mb-2">De quem é esta reserva?</div>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2" role="radiogroup" aria-label="De quem é a reserva">
+        ${opcoes.map((o) => `<label class="quem-opcao"><input type="radio" name="rv-dono" value="${esc(o.id)}" ${rv.dono === o.id ? 'checked' : ''}><span>${o.av}<span class="truncate">${esc(o.nome)}</span></span></label>`).join('')}
+      </div>
+      <p class="text-xs text-slate-500 mt-2">${rv.dono === 'casal'
+        ? 'Compartilhada: custo essencial da casa inteira e o que está guardado nas contas de reserva de vocês dois.'
+        : 'Individual: só a parte desta pessoa nas despesas (o que ela pagou + a parte dela nas contas dos dois) e só as contas de reserva dela.'}</p>`);
+  }
 
   function reservaAbaHTML() {
     const rv = Fin.reserva.calcular();
@@ -182,6 +209,7 @@ Fin.pages.investimentos = (() => {
       </tr>`).join('');
 
     return `
+      ${donoReservaHTML(rv)}
       ${card(`
         <div class="flex items-start gap-3 flex-wrap">
           <div class="flex-1 min-w-[14rem]">
@@ -425,7 +453,9 @@ Fin.pages.investimentos = (() => {
     const cMap = new Map(I().contas().map((c) => [c.id, c]));
     const q = Fin.parsers.normalize(filtroMovs.busca);
     const fAtivo = Fin.state.invFiltroAtivo || '';
+    const visiveis = new Set(I().contasVisiveis().map((c) => c.id)); // filtro por pessoa
     const lista = I().movs().filter((m) => {
+      if (!visiveis.has(m.conta || aMap.get(m.ativo)?.conta)) return false;
       if (filtroMovs.conta && m.conta !== filtroMovs.conta) return false;
       if (filtroMovs.tipo && m.tipo !== filtroMovs.tipo) return false;
       if (fAtivo && m.ativo !== fAtivo) return false;
@@ -436,7 +466,7 @@ Fin.pages.investimentos = (() => {
     return `
       ${card(`<div class="grid grid-cols-2 lg:grid-cols-4 gap-2">
         <input id="mv-busca" type="search" class="input col-span-2 lg:col-span-1" placeholder="Buscar ticker…" value="${esc(filtroMovs.busca)}" aria-label="Buscar">
-        <select id="mv-conta" class="input" aria-label="Conta">${opt('', 'Todas as contas', filtroMovs.conta)}${I().contas().map((c) => opt(c.id, c.nome, filtroMovs.conta)).join('')}</select>
+        <select id="mv-conta" class="input" aria-label="Conta">${opt('', 'Todas as contas', filtroMovs.conta)}${I().contasVisiveis().map((c) => opt(c.id, c.nome, filtroMovs.conta)).join('')}</select>
         <select id="mv-tipo" class="input" aria-label="Tipo">${opt('', 'Todos os tipos', filtroMovs.tipo)}${Object.entries(I().TIPOS).map(([k, t]) => opt(k, t.nome, filtroMovs.tipo)).join('')}</select>
         ${fAtivo ? `<button data-act="limpar-ativo" class="chip is-active">${esc(aMap.get(fAtivo)?.ticker || '')} ✕</button>` : ''}
       </div>`)}
@@ -466,7 +496,14 @@ Fin.pages.investimentos = (() => {
   /* ---------------- Metas ---------------- */
 
   function metasHTML(r, limite = null) {
-    const ms = I().metas().map((m) => I().progressoMeta(m, r)).sort((a, b) => a.concluida - b.concluida || b.pct - a.pct);
+    const ms = I().metasVisiveis().map((m) => I().progressoMeta(m, r)).sort((a, b) => a.concluida - b.concluida || b.pct - a.pct);
+    const casal = Fin.finance.temCasal();
+    const tagDono = (m) => {
+      if (!casal) return '';
+      const d = I().donoMeta(m);
+      if (d === 'casal') return '<span class="text-[11px] px-1.5 py-0.5 rounded-full bg-prim-50 text-prim-800 shrink-0">dos dois</span>';
+      return `<span class="text-[11px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600 shrink-0">de ${esc(Fin.membros.primeiroNome(Fin.membros.porId(d)))}</span>`;
+    };
     if (limite && !ms.length) return '';
     const lista = limite ? ms.slice(0, limite) : ms;
     return `
@@ -475,7 +512,7 @@ Fin.pages.investimentos = (() => {
         <button data-act="nova-meta" class="text-sm text-prim-700 font-semibold hover:underline">＋ Meta</button></span></div>
       ${lista.length ? `<div class="grid grid-cols-1 lg:grid-cols-3 gap-3 items-start">${lista.map((p) => `
         <button data-meta="${p.meta.id}" class="block w-full text-left bg-white rounded-2xl shadow-sm p-4 hover:ring-2 hover:ring-emerald-200 min-w-0">
-          <div class="flex items-center gap-2"><span class="font-medium truncate flex-1">${esc(p.meta.nome)}</span>
+          <div class="flex items-center gap-2"><span class="font-medium truncate flex-1">${esc(p.meta.nome)}</span>${tagDono(p.meta)}
             <span class="text-sm font-semibold ${p.concluida ? 'text-emerald-700' : ''}">${p.concluida ? '✓ ' : ''}${fmt.pct(p.pct)}</span></div>
           <div class="h-2 bg-slate-100 rounded mt-2" aria-hidden="true"><div class="h-2 rounded" style="width:${p.pct * 100}%;background:${p.concluida ? COR.ganho : COR.aplicado}"></div></div>
           <dl class="grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs mt-2 tabular-nums">
@@ -574,6 +611,10 @@ Fin.pages.investimentos = (() => {
       ro.observe(rvEl);
       signal.addEventListener('abort', () => ro.disconnect());
     }
+    view.querySelectorAll('input[name="rv-dono"]').forEach((el) => el.addEventListener('change', (e) => {
+      Fin.reserva.salvar({ dono: e.target.value });
+      Fin.router.refresh();
+    }));
     view.querySelectorAll('input[name="rv-meses"]').forEach((el) => el.addEventListener('change', (e) => {
       Fin.reserva.salvar({ meses: Number(e.target.value) });
       Fin.router.refresh();
