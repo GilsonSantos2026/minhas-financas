@@ -47,9 +47,21 @@ Fin.pages.importarFatura = (() => {
           <input id="fat-input" type="file" class="sr-only" accept="application/pdf,.pdf,image/*" />
         </label>
         <ul class="text-xs text-slate-500 mt-4 space-y-1 list-disc pl-5">
-          <li>Testado com faturas do Sicoob, Banco do Brasil (Ourocard) e Mercado Pago.</li>
+          <li>Testado com faturas do Sicoob, Banco do Brasil (Ourocard) e Mercado Pago. PDF com senha: o app pede a senha.</li>
           <li>Foto ou print usa reconhecimento de texto (OCR): é mais lento e pode errar — revise com atenção.</li>
         </ul>
+      </section>
+      <section class="bg-white rounded-2xl shadow-sm p-5 mt-4">
+        <div class="flex items-start gap-3">
+          ${Fin.icones.badge('mensagem', 'violet', 'w-10 h-10', 'w-5 h-5')}
+          <div class="flex-1 min-w-0">
+            <h3 class="font-semibold">O leitor não entendeu a sua fatura?</h3>
+            <p class="text-sm text-slate-500 mt-0.5">Use o ChatGPT ou o Gemini que você já tem, sem custo: o app copia o texto da fatura,
+              a IA organiza os lançamentos e você cola a resposta aqui para conferir e importar.</p>
+            <label for="fat-input-ia" class="btn btn-ghost mt-3 cursor-pointer">${Fin.icone('mensagem', 'w-4 h-4')} Ler com ajuda da IA</label>
+            <input id="fat-input-ia" type="file" class="sr-only" accept="application/pdf,.pdf,image/*" />
+          </div>
+        </div>
       </section>`;
   }
 
@@ -259,6 +271,79 @@ Fin.pages.importarFatura = (() => {
     });
   }
 
+  /** Leitura pronta (do leitor ou da IA) → tela de conferência. */
+  function irParaRevisao(leitura) {
+    st.leitura = leitura;
+    st.cartao = I().sugerirCartao(leitura.info);
+    st.fatura = leitura.info.vencimento ? leitura.info.vencimento.slice(0, 7) : Fin.state.mes;
+    st.linhas = I().preparar(leitura, st.cartao, st.fatura);
+    st.etapa = 'revisao';
+    draw();
+    window.scrollTo(0, 0);
+  }
+
+  /**
+   * Fatura com ajuda da IA (sem custo): extrai o texto, mostra o pedido pronto para copiar no
+   * ChatGPT/Gemini e recebe a resposta colada ("DD/MM;DESCRIÇÃO;VALOR") → mesma conferência.
+   */
+  async function lerComIA(file, senha = null) {
+    if (!file) return;
+    if (!F.cartoes().length) {
+      Fin.ui.toast('Cadastre o cartão antes de importar a fatura.', 'error');
+      return Fin.forms.cartao.open();
+    }
+    Object.assign(st, { arquivo: file, etapa: 'processando', progresso: 'Extraindo o texto da fatura…' });
+    draw();
+    let extraido;
+    try {
+      extraido = await Fin.faturaLeitor.texto(file, (msg) => { const el = document.getElementById('fat-prog'); if (el) el.textContent = msg; }, { senha });
+    } catch (err) {
+      st.etapa = 'upload';
+      draw();
+      if (err?.senha) {
+        const nova = await pedirSenha(file.name, err.incorreta);
+        return nova ? lerComIA(file, nova) : Fin.ui.toast('Importação cancelada.');
+      }
+      return Fin.ui.toast(err.message || 'Não foi possível ler o arquivo.', 'error');
+    }
+    st.etapa = 'upload';
+    draw();
+    if (!extraido.texto.trim()) return Fin.ui.toast('Não achei texto neste arquivo.', 'error');
+
+    const panel = Fin.ui.openModal(`
+      <div class="p-5 space-y-4">
+        <div data-arrastar class="flex items-center justify-between gap-2">
+          <h2 class="font-semibold text-lg">Ler a fatura com a IA</h2>
+          <button type="button" data-close class="icon-btn" aria-label="Fechar">✕</button>
+        </div>
+        <section class="space-y-2">
+          <div class="text-sm font-semibold"><span class="inline-grid place-items-center w-5 h-5 rounded-full bg-prim-600 text-white text-[11px] mr-1">1</span> Copie e cole no ChatGPT ou no Gemini</div>
+          ${Fin.ia.blocoCopia(Fin.ia.pedidoFatura(extraido.texto), { linhas: 7 })}
+        </section>
+        <section class="space-y-2">
+          <div class="text-sm font-semibold"><span class="inline-grid place-items-center w-5 h-5 rounded-full bg-prim-600 text-white text-[11px] mr-1">2</span> Cole aqui a resposta da IA</div>
+          <textarea data-ia-resposta class="input font-mono !text-xs" rows="7" spellcheck="false" placeholder="05/10;SUPERMERCADO EXEMPLO;123,45&#10;07/10;LOJA X 02/06;89,90"></textarea>
+          <p data-ia-erro class="hidden text-sm text-rose-700 bg-rose-50 rounded-lg px-3 py-2" role="alert"></p>
+          <button type="button" data-ia-conferir class="btn btn-primary w-full">Conferir lançamentos</button>
+        </section>
+      </div>`, 'Ler a fatura com a IA');
+    Fin.ia.ligarCopia(panel);
+    panel.querySelector('[data-close]').addEventListener('click', () => Fin.ui.closeModal());
+    panel.querySelector('[data-ia-conferir]').addEventListener('click', () => {
+      const leitura = Fin.faturaLeitor.deTexto(panel.querySelector('[data-ia-resposta]').value, extraido.info);
+      const erro = panel.querySelector('[data-ia-erro]');
+      if (!leitura.itens.length) {
+        erro.textContent = 'Não achei nenhuma linha no formato DD/MM;DESCRIÇÃO;VALOR. Confira se colou a resposta inteira.';
+        erro.classList.remove('hidden');
+        return;
+      }
+      Fin.ui.closeModal();
+      st.arquivo = file;
+      irParaRevisao(leitura);
+      Fin.ui.toast(`${leitura.itens.length} lançamentos lidos pela IA. Confira antes de importar.`);
+    });
+  }
+
   async function processar(file, senha = null) {
     if (!file) return;
     if (!/pdf$|^image\//i.test(file.type) && !/\.(pdf|png|jpe?g|webp)$/i.test(file.name)) {
@@ -278,14 +363,8 @@ Fin.pages.importarFatura = (() => {
         if (el) el.textContent = msg;
       }, { senha });
       senha = null; // não guarda
-      if (!leitura.itens.length) throw new Error('Não encontrei lançamentos nesta fatura.');
-      st.leitura = leitura;
-      st.cartao = I().sugerirCartao(leitura.info);
-      st.fatura = leitura.info.vencimento ? leitura.info.vencimento.slice(0, 7) : Fin.state.mes;
-      st.linhas = I().preparar(leitura, st.cartao, st.fatura);
-      st.etapa = 'revisao';
-      draw();
-      window.scrollTo(0, 0);
+      if (!leitura.itens.length) throw new Error('Não encontrei lançamentos nesta fatura. Tente “Ler com ajuda da IA”, logo abaixo.');
+      irParaRevisao(leitura);
     } catch (err) {
       senha = null;
       if (err?.senha) {
@@ -315,6 +394,7 @@ Fin.pages.importarFatura = (() => {
   function bindUpload() {
     const dz = view.querySelector('#fat-drop');
     view.querySelector('#fat-input').addEventListener('change', (e) => processar(e.target.files[0]));
+    view.querySelector('#fat-input-ia')?.addEventListener('change', (e) => lerComIA(e.target.files[0]));
     ['dragenter', 'dragover'].forEach((ev) => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.add('is-dragging'); }));
     ['dragleave', 'drop'].forEach((ev) => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.remove('is-dragging'); }));
     dz.addEventListener('drop', (e) => processar(e.dataTransfer.files[0]));

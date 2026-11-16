@@ -115,6 +115,35 @@ Fin.pages.dashboard = (() => {
       </section>`;
   }
 
+  /** Atalhos de destaque: Perguntar à IA (sem custo) e Aprender (próximo guia não lido). */
+  function atalhosHTML() {
+    const E = Fin.educacao;
+    let aprender = '';
+    if (E) {
+      const lidos = new Set(Fin.storage.prefs().guiasLidos || []);
+      const prox = E.ARTIGOS.find((a) => !lidos.has(a.id));
+      const n = E.ARTIGOS.filter((a) => lidos.has(a.id)).length;
+      aprender = `
+        <a href="#/educacao${prox ? `?artigo=${prox.id}` : ''}" class="flex items-center gap-3 bg-white rounded-2xl shadow-sm p-3 hover:ring-2 hover:ring-emerald-200 min-w-0">
+          ${Fin.icones.badge('livro', 'emerald', 'w-10 h-10', 'w-5 h-5')}
+          <span class="flex-1 min-w-0">
+            <span class="block text-sm font-semibold">Aprender <span class="text-[11px] font-normal text-slate-500">· ${n} de ${E.ARTIGOS.length} guias lidos</span></span>
+            <span class="block text-xs text-slate-500 truncate">${prox ? `Próximo: ${esc(prox.titulo)} · ${prox.min} min` : 'Todos os guias lidos ✓ — reveja quando quiser'}</span>
+            <span class="block h-1 rounded-full bg-slate-100 mt-1.5 overflow-hidden" aria-hidden="true"><span class="block h-full bg-emerald-500 rounded-full" style="width:${(n / E.ARTIGOS.length) * 100}%"></span></span>
+          </span>
+        </a>`;
+    }
+    const ia = Fin.ia ? `
+      <button type="button" data-act="perguntar-ia" class="flex items-center gap-3 bg-white rounded-2xl shadow-sm p-3 hover:ring-2 hover:ring-violet-200 text-left min-w-0">
+        ${Fin.icones.badge('mensagem', 'violet', 'w-10 h-10', 'w-5 h-5')}
+        <span class="flex-1 min-w-0">
+          <span class="block text-sm font-semibold">Perguntar à IA</span>
+          <span class="block text-xs text-slate-500 truncate">Análise do mês no ChatGPT ou Gemini, sem custo</span>
+        </span>
+      </button>` : '';
+    return aprender || ia ? `<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">${aprender}${ia}</div>` : '';
+  }
+
   /**
    * Próximos 30 dias: contas em aberto atrasadas e as que vencem até daqui a 30 dias
    * (compromissos já conhecidos), com data em destaque e total. Segue o filtro por pessoa.
@@ -398,6 +427,7 @@ Fin.pages.dashboard = (() => {
         ${Fin.ui.filtroPessoa()}
         ${Fin.ui.monthNav(ym)}
         ${hero(r, ym)}
+        ${atalhosHTML()}
         ${ym === fmt.currentYM() ? proximosHTML() : ''}
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -433,6 +463,7 @@ Fin.pages.dashboard = (() => {
         ${lembrete}
       </div>`;
 
+    view.querySelector('[data-act="perguntar-ia"]')?.addEventListener('click', () => Fin.ia.abrirAnalise());
     view.querySelector('[data-act="adiar-backup"]')?.addEventListener('click', () => {
       Fin.state.backupAdiado = true;
       Fin.router.refresh();

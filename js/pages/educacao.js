@@ -11,11 +11,20 @@ Fin.pages.educacao = (() => {
   const E = () => Fin.educacao;
   const AVISO = 'Conteúdo educativo, em linguagem simples. Não é recomendação de investimento: avalie seu momento e, se precisar, procure um profissional certificado.';
 
+  /** Guias já abertos neste aparelho (prefs.guiasLidos) — para o progresso e o "Próximo guia". */
+  const lidos = () => new Set(Fin.storage.prefs().guiasLidos || []);
+  function marcarLido(id) {
+    const s = lidos();
+    if (s.has(id)) return;
+    s.add(id);
+    Fin.storage.setPref('guiasLidos', [...s]);
+  }
+
   const cartao = (a) => `
     <a href="#/educacao?artigo=${a.id}" class="group flex items-start gap-3 bg-white rounded-2xl shadow-sm p-4 hover:ring-2 hover:ring-prim-200 min-w-0">
       ${Fin.icones.badge(a.icone, a.cor, 'w-11 h-11', 'w-6 h-6')}
       <span class="flex-1 min-w-0">
-        <span class="block font-semibold leading-snug">${esc(a.titulo)}</span>
+        <span class="block font-semibold leading-snug">${esc(a.titulo)}${lidos().has(a.id) ? ' <span class="text-[11px] font-medium text-emerald-700 bg-emerald-50 rounded-full px-1.5 py-0.5 align-middle">✓ lido</span>' : ''}</span>
         <span class="block text-sm text-slate-500 mt-0.5">${esc(a.resumo)}</span>
         <span class="inline-flex items-center gap-1 text-xs text-slate-400 mt-1.5">${Fin.icone('relogio', 'w-3.5 h-3.5')} ${a.min} min de leitura</span>
       </span>
@@ -27,9 +36,21 @@ Fin.pages.educacao = (() => {
       <div class="space-y-5">
         <header class="flex items-start gap-3">
           ${Fin.icones.badge('livro', 'prim', 'w-11 h-11', 'w-6 h-6')}
-          <div><h1 class="text-xl font-semibold">Aprender</h1>
-            <p class="text-sm text-slate-500">Guias rápidos sobre orçamento, reserva, investimentos e dívidas.</p></div>
+          <div class="flex-1 min-w-0"><h1 class="text-xl font-semibold">Aprender</h1>
+            <p class="text-sm text-slate-500">Guias rápidos sobre orçamento, reserva, investimentos e dívidas. Ler todos leva uns 25 minutos — e muda a forma de cuidar do dinheiro.</p></div>
         </header>
+        ${(() => {
+          const n = E().ARTIGOS.filter((a) => lidos().has(a.id)).length;
+          const total = E().ARTIGOS.length;
+          const prox = E().ARTIGOS.find((a) => !lidos().has(a.id));
+          return `<div class="bg-white rounded-2xl shadow-sm p-4 flex items-center gap-4">
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-semibold">${n === total ? 'Parabéns: você leu todos os guias ✓' : `Seu progresso: ${n} de ${total} guias`}</div>
+              <div class="h-2 rounded-full bg-slate-100 mt-2 overflow-hidden" role="progressbar" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${n}"><div class="h-full rounded-full bg-emerald-500" style="width:${(n / total) * 100}%"></div></div>
+            </div>
+            ${prox ? `<a href="#/educacao?artigo=${prox.id}" class="btn btn-primary shrink-0">${n ? 'Continuar' : 'Começar'}</a>` : ''}
+          </div>`;
+        })()}
         ${E().GRUPOS.map(([g, nome]) => `
           <section>
             <h2 class="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2 px-1">${esc(nome)}</h2>
@@ -40,7 +61,9 @@ Fin.pages.educacao = (() => {
   }
 
   function artigoHTML(a) {
-    const outros = E().ARTIGOS.filter((x) => x.id !== a.id && x.grupo === a.grupo).slice(0, 2);
+    // "Leia também": primeiro os ainda não lidos (na ordem dos guias), depois os do mesmo grupo.
+    const naoLidos = E().ARTIGOS.filter((x) => x.id !== a.id && !lidos().has(x.id));
+    const outros = (naoLidos.length ? naoLidos : E().ARTIGOS.filter((x) => x.id !== a.id && x.grupo === a.grupo)).slice(0, 2);
     return `
       <article class="space-y-4 max-w-2xl mx-auto">
         <a href="#/educacao" class="inline-flex items-center gap-1 text-sm text-prim-700 font-medium hover:underline">‹ Todos os guias</a>
@@ -75,6 +98,7 @@ Fin.pages.educacao = (() => {
   function render(view) {
     const id = location.hash.match(/[?&]artigo=([\w-]+)/)?.[1];
     const a = id ? E().artigo(id) : null;
+    if (a) marcarLido(a.id);
     view.innerHTML = a ? artigoHTML(a) : listaHTML();
     window.scrollTo(0, 0);
   }

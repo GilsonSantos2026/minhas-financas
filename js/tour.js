@@ -46,7 +46,9 @@ Fin.tour = (() => {
       { alvo: () => document.querySelector('#view [data-month]')?.parentElement || null, titulo: 'Troque o mês', texto: 'Use as setas para ver meses anteriores ou futuros. Tudo no Início segue o mês escolhido.', icone: 'calendario', antes: fecharForm },
       { alvo: ['header [data-ocultar]', 'aside [data-ocultar]'], titulo: 'Esconder valores', texto: 'O olho borra todos os valores — útil em lugar público. O app sempre abre com os valores escondidos.', icone: 'cadeado', antes: fecharForm },
       { alvo: ['header [data-avisos]', 'aside [data-avisos]'], titulo: 'Avisos', texto: 'O sininho lembra contas vencendo ou atrasadas, faturas pagas a menos e backup. Dá para dispensar o que você já sabe.', icone: 'alerta', antes: fecharForm },
-      { titulo: 'Pronto!', texto: 'Para ver este tutorial de novo: Configurações → Ajuda → Rever tutorial.', icone: 'check', antes: fecharForm, fim: true },
+      { alvo: ['header [data-aprender]', 'aside [data-aprender]'], titulo: 'Aprender: comece por aqui', texto: 'Guias de 3 a 4 minutos sobre orçamento, reserva de emergência, investimentos, cartão e dívidas. Vale ler todos — o app mostra quantos você já leu e sugere o próximo no Início.', icone: 'livro', antes: fecharForm },
+      { titulo: 'Pronto!', texto: 'Sugestão: leia agora o primeiro guia, “Orçamento sem sofrimento” (3 min). Para ver este tutorial de novo: Configurações → Ajuda → Rever tutorial.', icone: 'check', antes: fecharForm, fim: true,
+        extra: { rotulo: 'Ler os guias', acao: () => { location.hash = '#/educacao?artigo=orcamento'; } } },
     ].filter((p) => !p.se || p.se());
   }
 
@@ -69,7 +71,8 @@ Fin.tour = (() => {
       <div class="flex items-center gap-2 mt-4">
         ${p.fim ? '' : '<button type="button" data-tour="pular" class="text-sm text-slate-500 hover:text-slate-800 hover:underline">Pular</button>'}
         <span class="flex-1"></span>
-        ${i > 0 ? '<button type="button" data-tour="voltar" class="btn btn-ghost !py-1.5">Voltar</button>' : ''}
+        ${i > 0 && !p.extra ? '<button type="button" data-tour="voltar" class="btn btn-ghost !py-1.5">Voltar</button>' : ''}
+        ${p.extra ? `<button type="button" data-tour="extra" class="btn btn-ghost !py-1.5">${esc(p.extra.rotulo)}</button>` : ''}
         <button type="button" data-tour="proximo" class="btn btn-primary !py-1.5">${p.fim ? 'Concluir' : i === 0 ? 'Começar' : 'Próximo'}</button>
       </div>
       <div class="flex justify-center gap-1 mt-3" aria-hidden="true">${estado.passos.map((_, k) => `<span class="h-1.5 rounded-full ${k === i ? 'w-5 bg-prim-600' : 'w-1.5 bg-slate-200'}"></span>`).join('')}</div>`;
@@ -153,6 +156,7 @@ Fin.tour = (() => {
     addEventListener('resize', onResize);
     raiz.addEventListener('click', (e) => {
       const b = e.target.closest('[data-tour]')?.dataset.tour;
+      if (b === 'extra') { const acao = estado.passos[estado.i].extra?.acao; encerrar(); acao?.(); return; }
       if (b === 'pular') encerrar();
       else if (b === 'voltar') ir(estado.i - 1);
       else if (b === 'proximo') ir(estado.i + 1);

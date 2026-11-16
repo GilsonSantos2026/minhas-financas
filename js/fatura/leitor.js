@@ -351,5 +351,63 @@ Fin.faturaLeitor = (() => {
     };
   }
 
-  return { ler, loadScript };
+  /* ---------------- Ajuda da IA (copiar e colar, v2026-11-16.8) ---------------- */
+
+  /**
+   * Texto da fatura em linhas (para colar no ChatGPT/Gemini quando o leitor não entende o layout).
+   * Também devolve o cabeçalho lido (banco, vencimento, total) para a resposta da IA reaproveitar.
+   * Números longos (cartão, CPF, código de barras) são mascarados.
+   */
+  async function texto(file, onProgress, { senha = null } = {}) {
+    const isPdf = /pdf$/i.test(file.type) || /\.pdf$/i.test(file.name);
+    const brutos = isPdf ? await itensDoPdf(file, onProgress, senha) : await itensDaImagem(file, onProgress);
+    const itens = normalizarItens(brutos);
+    const info = cabecalho(itens.map((i) => i.str).join(' '));
+    info.vencimento = vencimentoPeloLayout(itens) || info.vencimento;
+    const linhas = [];
+    const ordenados = [...itens].sort((a, b) => a.page - b.page || a.y - b.y || a.x - b.x);
+    let atual = null;
+    for (const it of ordenados) {
+      if (!atual || it.page !== atual.page || Math.abs(it.y - atual.y) > 3) {
+        atual = { page: it.page, y: it.y, partes: [] };
+        linhas.push(atual);
+      }
+      atual.partes.push(it.str);
+    }
+    const mascarar = (s) => s.replace(/\d[\d .\-/]{9,}\d/g, (m) => (m.replace(/\D/g, '').length >= 10 ? '[número oculto]' : m));
+    return { info, texto: linhas.map((l) => mascarar(l.partes.join('  '))).join('\n') };
+  }
+
+  /**
+   * Lê a resposta da IA no formato "DD/MM;DESCRIÇÃO;VALOR" (uma compra por linha) e devolve
+   * no mesmo formato de ler() — vai para a mesma tela de conferência.
+   */
+  function deTexto(resposta, info = {}) {
+    const itens = [];
+    for (const bruta of String(resposta || '').split(/\r?\n/)) {
+      const linha = bruta.replace(/^[\s>*\-•]+|`/g, '').trim();
+      const m = linha.match(/^(\d{1,2}\/\d{1,2})(?:\/\d{2,4})?\s*[;|\t]\s*(.+?)\s*[;|\t]\s*(-?\s*(?:R\$\s*)?-?[\d.]*\d,\d{2}|-?\d+(?:\.\d{1,2})?)\s*$/);
+      if (!m) continue;
+      const data = dataISO(m[1], info.vencimento);
+      let valor = m[3].replace(/R\$|\s/g, '');
+      valor = /,\d{2}$/.test(valor) ? Number(valor.replace(/\./g, '').replace(',', '.')) : Number(valor);
+      if (!data || !Number.isFinite(valor)) continue;
+      const { parcela, texto: t } = extrairParcela(m[2]);
+      const descricao = t.replace(/\s{2,}/g, ' ').trim();
+      const tipo = tipoDoItem(descricao, valor);
+      if (tipo === 'pagamento' && valor > 0) valor = -valor;
+      itens.push({ data, descricao, valor, parcela, tipo, portador: null });
+    }
+    const r2 = (v) => (v == null ? null : Math.round(v * 100) / 100);
+    const pagamentos = itens.filter((i) => i.tipo === 'pagamento').reduce((s, i) => s + i.valor, 0);
+    const novos = itens.filter((i) => i.tipo !== 'pagamento').reduce((s, i) => s + i.valor, 0);
+    const esperado = info.total != null ? info.total - (info.saldoAnterior || 0) - pagamentos : null;
+    return {
+      info: { ...info, viaIA: true },
+      itens,
+      conferencia: { lido: r2(novos), esperado: r2(esperado), ok: esperado != null && Math.abs(esperado - novos) < 0.02 },
+    };
+  }
+
+  return { ler, loadScript, texto, deTexto };
 })();

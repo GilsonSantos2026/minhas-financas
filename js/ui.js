@@ -174,6 +174,34 @@ Fin.ui = (() => {
     lastFocus?.focus?.();
   }
 
+  /**
+   * Pergunta simples Sim/Não numa janela (sem caixinha de "entendi"). Promise<boolean>.
+   * opts: { titulo, texto (html), sim, nao, avatar (html opcional) }
+   */
+  function perguntar(opts = {}) {
+    return new Promise((resolve) => {
+      let fim = false;
+      const terminar = (v) => { if (fim) return; fim = true; obs.disconnect(); closeModal(); resolve(v); };
+      const panel = openModal(`
+        <div class="p-5 space-y-4">
+          <div class="flex items-start gap-3">
+            ${opts.avatar || ''}
+            <div class="min-w-0"><h2 class="font-semibold text-lg leading-tight">${opts.titulo || 'Confirmar'}</h2>
+              ${opts.texto ? `<p class="text-sm text-slate-600 mt-1">${opts.texto}</p>` : ''}</div>
+          </div>
+          <div class="flex justify-end gap-2">
+            <button type="button" data-nao class="btn btn-ghost">${opts.nao || 'Cancelar'}</button>
+            <button type="button" data-sim class="btn btn-primary">${opts.sim || 'Confirmar'}</button>
+          </div>
+        </div>`, opts.titulo || 'Confirmar');
+      const obs = new MutationObserver(() => { if (!document.body.contains(panel)) terminar(false); });
+      obs.observe(document.getElementById('modal-root'), { childList: true });
+      panel.querySelector('[data-nao]').addEventListener('click', () => terminar(false));
+      panel.querySelector('[data-sim]').addEventListener('click', () => terminar(true));
+      setTimeout(() => panel.querySelector('[data-sim]').focus(), 40);
+    });
+  }
+
   /* ---------- Modo casal: filtro Ambos / pessoa ---------- */
 
   /**
@@ -385,5 +413,5 @@ Fin.ui = (() => {
       </div>`;
   }
 
-  return { toast, openModal, closeModal, confirmar, filtroPessoa, autorMini, monthNav, statusPill, pagamentoLinha, alertaRotativo, catIcon, emptyState };
+  return { toast, openModal, closeModal, confirmar, perguntar, filtroPessoa, autorMini, monthNav, statusPill, pagamentoLinha, alertaRotativo, catIcon, emptyState };
 })();

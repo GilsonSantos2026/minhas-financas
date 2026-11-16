@@ -30,9 +30,27 @@ window.Fin = window.Fin || {};
     const toggle = t.closest('[data-toggle-pago]');
     if (toggle) {
       e.stopPropagation();
-      const l = Fin.finance.togglePago(toggle.dataset.togglePago);
-      if (l) Fin.ui.toast(l.status === 'pago' ? (l.tipo === 'receita' ? 'Marcado como recebido.' : 'Marcado como pago.') : 'Marcado como em aberto.');
-      Fin.router.refresh();
+      const alternar = () => {
+        const l = Fin.finance.togglePago(toggle.dataset.togglePago);
+        if (l) Fin.ui.toast(l.status === 'pago' ? (l.tipo === 'receita' ? 'Marcado como recebido.' : 'Marcado como pago.') : 'Marcado como em aberto.');
+        Fin.router.refresh();
+      };
+      // Modo casal: lançamento feito pela outra pessoa → confirma antes (nos dois sentidos).
+      const F = Fin.finance;
+      const l0 = F.todos().find((x) => x.id === toggle.dataset.togglePago);
+      if (l0 && F.temCasal() && F.autor(l0) !== Fin.cofre.membroId()) {
+        const a = Fin.membros.porId(F.autor(l0));
+        const nome = Fin.fmt.esc(Fin.membros.primeiroNome(a) || a.usuario);
+        const vira = F.isPago(l0) ? 'em aberto' : l0.tipo === 'receita' ? 'recebido' : 'pago';
+        Fin.ui.perguntar({
+          titulo: `Lançamento de ${nome}`,
+          texto: `“${Fin.fmt.esc(l0.descricao || l0.categoria)}” foi lançado por <b>${nome}</b>. Marcar como <b>${vira}</b>?`,
+          sim: `Sim, marcar ${vira}`, nao: 'Cancelar',
+          avatar: Fin.membros.avatar(a, { tam: 'w-10 h-10', txt: 'text-xs' }),
+        }).then((ok) => { if (ok) alternar(); });
+        return;
+      }
+      alternar();
       return;
     }
 

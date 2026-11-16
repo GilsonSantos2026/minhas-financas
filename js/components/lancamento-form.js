@@ -54,6 +54,28 @@ Fin.forms.lancamento = (() => {
       ${autor && v.tipo === 'receita' ? `<p data-quem-rec class="text-xs text-slate-500 -mt-2">Recebido por <b>${esc(M.nome(autor) || autor.usuario)}</b> (quem lançou).</p>` : ''}`;
   }
 
+  /**
+   * Modo casal: lançamento feito pela OUTRA pessoa → salvar/excluir pede confirmação
+   * (barra que aparece no lugar dos botões, sem fechar o formulário). Vale nos dois sentidos.
+   */
+  const autorOutro = (l) => (l && F.temCasal() && F.autor(l) !== Fin.cofre.membroId() ? Fin.membros.porId(F.autor(l)) : null);
+  function deOutroHTML(l) {
+    const a = autorOutro(l);
+    if (!a) return '';
+    const nome = esc(Fin.membros.primeiroNome(a) || a.usuario);
+    return `
+      <div data-confirma-outro class="hidden px-5 py-4 border-t border-amber-200 bg-amber-50 sticky bottom-0 space-y-3" role="alertdialog" aria-live="assertive">
+        <div class="flex items-start gap-2 text-sm text-amber-900">
+          ${Fin.membros.avatar(a, { tam: 'w-7 h-7', txt: 'text-[10px]' })}
+          <span><b>Este lançamento foi feito por ${nome}.</b> <span data-confirma-texto>Quer mesmo salvar a alteração?</span></span>
+        </div>
+        <div class="flex justify-end gap-2">
+          <button type="button" data-confirma-nao class="btn btn-ghost !py-1.5">Voltar</button>
+          <button type="button" data-confirma-sim class="btn btn-primary !py-1.5">Sim, salvar</button>
+        </div>
+      </div>`;
+  }
+
   function open(id = null) {
     const l = id ? F.todos().find((x) => x.id === id) : null; // registro real (não a visão filtrada)
     if (id && !l) return Fin.ui.toast('Lançamento não encontrado.', 'error');
@@ -178,12 +200,13 @@ Fin.forms.lancamento = (() => {
           <p id="form-erro" class="hidden text-sm text-rose-700 bg-rose-50 rounded-lg px-3 py-2" role="alert"></p>
         </div>
 
-        <div class="flex items-center gap-2 px-5 py-4 border-t border-slate-100 sticky bottom-0 bg-white">
+        <div data-rodape class="flex items-center gap-2 px-5 py-4 border-t border-slate-100 sticky bottom-0 bg-white">
           ${l ? `<button type="button" data-delete class="btn btn-danger-ghost">${l.grupo ? 'Excluir…' : 'Excluir'}</button>` : ''}
           <span class="flex-1"></span>
           <button type="button" data-close class="btn btn-ghost">Cancelar</button>
           <button type="submit" class="btn btn-primary">Salvar</button>
         </div>
+        ${deOutroHTML(l)}
       </form>`, l ? 'Editar lançamento' : 'Novo lançamento');
 
     const form = panel.querySelector('#lanc-form');
@@ -356,14 +379,38 @@ Fin.forms.lancamento = (() => {
 
     const escopo = () => form.querySelector('input[name="escopo"]:checked')?.value || 'este';
 
-    panel.querySelector('[data-delete]')?.addEventListener('click', () => {
+    // Lançamento da outra pessoa: barra de confirmação no lugar dos botões.
+    const outro = autorOutro(l);
+    let confirmadoOutro = false;
+    const barra = form.querySelector('[data-confirma-outro]');
+    const rodape = form.querySelector('[data-rodape]');
+    const mostrarConfirmacao = (texto, rotulo, aoConfirmar) => {
+      barra.querySelector('[data-confirma-texto]').textContent = texto;
+      const sim = barra.querySelector('[data-confirma-sim]');
+      sim.textContent = rotulo;
+      sim.onclick = aoConfirmar;
+      rodape.classList.add('hidden');
+      barra.classList.remove('hidden');
+      sim.focus();
+    };
+    barra?.querySelector('[data-confirma-nao]').addEventListener('click', () => {
+      barra.classList.add('hidden');
+      rodape.classList.remove('hidden');
+    });
+
+    const excluir = (jaConfirmado = false) => {
       const proximos = escopo() === 'proximos';
       const alvo = proximos ? `“${l.descricao || l.categoria}” e os próximos meses deste grupo` : `“${l.descricao || l.categoria}”`;
-      if (!confirm(`Excluir ${alvo}? Esta ação não pode ser desfeita.${l.grupo && !proximos ? '\n\nDica: para excluir também os meses seguintes, marque “Este e os próximos”.' : ''}`)) return;
+      if (!jaConfirmado && !confirm(`Excluir ${alvo}? Esta ação não pode ser desfeita.${l.grupo && !proximos ? '\n\nDica: para excluir também os meses seguintes, marque “Este e os próximos”.' : ''}`)) return;
       const qtd = F.excluirLancamento(l, escopo());
       Fin.ui.closeModal();
       Fin.ui.toast(qtd > 1 ? `${qtd} lançamentos excluídos.` : 'Lançamento excluído.');
       Fin.router.refresh();
+    };
+    panel.querySelector('[data-delete]')?.addEventListener('click', () => {
+      if (!outro) return excluir();
+      const proximos = escopo() === 'proximos';
+      mostrarConfirmacao(`Quer mesmo excluir${proximos ? ' este e os próximos meses' : ''}? Não dá para desfazer.`, 'Sim, excluir', () => excluir(true));
     });
 
     form.addEventListener('submit', (e) => {
@@ -393,6 +440,14 @@ Fin.forms.lancamento = (() => {
         erro.textContent = `Informe ${problemas.join(', ')}.`;
         erro.classList.remove('hidden');
         return;
+      }
+      // Lançamento da outra pessoa: confirma antes de salvar (nos dois sentidos).
+      if (outro && !confirmadoOutro) {
+        return mostrarConfirmacao(
+          `Quer mesmo salvar a alteração${escopo() === 'proximos' ? ' (neste e nos próximos meses)' : ''}?`,
+          'Sim, salvar',
+          () => { confirmadoOutro = true; form.requestSubmit(); },
+        );
       }
 
       const cat = F.categorias().find((c) => c.nome === categoria);
