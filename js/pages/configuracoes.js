@@ -254,6 +254,17 @@ Fin.pages.configuracoes = (() => {
     }
   }
 
+  function ajudaHTML() {
+    return card(`
+      ${Fin.icones.titulo('lupa', 'prim', 'Ajuda', { cls: 'mb-2' })}
+      <button data-act="rever-tour" class="w-full flex items-center gap-3 -mx-1 px-1 py-2 rounded-xl hover:bg-slate-50 text-left">
+        ${Fin.icones.badge('check', 'emerald', 'w-10 h-10')}
+        <span class="flex-1 min-w-0"><span class="block text-sm font-medium">Rever tutorial</span>
+          <span class="block text-xs text-slate-500">Balões que mostram como lançar receitas e despesas, marcar pago e usar os filtros</span></span>
+        <span class="text-slate-300" aria-hidden="true">›</span>
+      </button>`);
+  }
+
   function atalhosHTML() {
     return card(`
       <a href="#/dados" class="flex items-center gap-3 -m-1 p-1 rounded-xl hover:bg-slate-50">
@@ -275,6 +286,7 @@ Fin.pages.configuracoes = (() => {
           <div id="cfg-perfil">${perfilHTML(m, rascunho)}</div>
           <div id="cfg-pessoas">${pessoasHTML()}</div>
           ${aparenciaHTML()}
+          ${ajudaHTML()}
           ${atalhosHTML()}
         </div>`;
     };
@@ -346,6 +358,7 @@ Fin.pages.configuracoes = (() => {
       }
       const alvo = e.target.closest('[data-act]');
       const act = alvo?.dataset.act;
+      if (act === 'rever-tour') return Fin.tour.iniciar();
       if (act === 'compartilhar') return convidar(view, true);
       if (act === 'convidar') return convidar(view, false);
       if (act === 'acessos-drive') return listarAcessosDrive(view);

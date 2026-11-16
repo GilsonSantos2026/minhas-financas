@@ -12,19 +12,6 @@ Fin.pages.dashboard = (() => {
   const titulo = (icone, cor, texto, cls = '') => `<h2 class="font-semibold flex items-center gap-2 ${cls}">${Fin.icones.badge(icone, cor, 'w-7 h-7', 'w-4 h-4')}${texto}</h2>`;
   const card = (inner, cls = '') => `<section class="bg-white rounded-2xl shadow-sm p-4 sm:p-5 min-w-0 ${cls}">${inner}</section>`;
 
-  /** Mini indicador do resumo: ícone em círculo, rótulo, valor e detalhe. */
-  function stat(icone, cor, rotulo, valor, sub) {
-    return `
-      <div class="flex flex-col sm:flex-row items-start gap-1.5 sm:gap-2.5 min-w-0">
-        ${Fin.icones.badge(icone, cor, 'w-7 h-7 sm:w-9 sm:h-9', 'w-4 h-4 sm:w-[18px] sm:h-[18px]')}
-        <div class="min-w-0">
-          <div class="text-[11px] sm:text-xs text-slate-500">${rotulo}</div>
-          <div class="text-[13px] sm:text-base font-semibold tabular-nums whitespace-nowrap">${valor}</div>
-          <div class="text-[11px] text-slate-500 truncate">${sub}</div>
-        </div>
-      </div>`;
-  }
-
   /** Resumo do mês: saldo previsto + receitas, despesas e a pagar num só cartão compacto. */
   /** "Boa tarde, Gilson!" com a foto de quem entrou neste aparelho. */
   function saudacaoHTML() {
@@ -44,8 +31,47 @@ Fin.pages.dashboard = (() => {
       </div>`;
   }
 
-  function hero(r) {
+  /** Minigráfico (linha) do resultado dos últimos meses, em branco sobre a cor do app. */
+  function sparkline(valores) {
+    if (valores.length < 2) return '';
+    const w = 112, h = 48, p = 4;
+    const min = Math.min(...valores), max = Math.max(...valores);
+    const amp = max - min || 1;
+    const pts = valores.map((v, i) => [p + (i * (w - 2 * p)) / (valores.length - 1), h - p - ((v - min) / amp) * (h - 2 * p)]);
+    const zero = min < 0 && max > 0 ? h - p - ((0 - min) / amp) * (h - 2 * p) : null;
+    const [lx, ly] = pts[pts.length - 1];
+    return `<svg viewBox="0 0 ${w} ${h}" class="w-24 h-11 sm:w-28 sm:h-12 shrink-0" aria-hidden="true" focusable="false">
+      ${zero != null ? `<line x1="${p}" x2="${w - p}" y1="${zero}" y2="${zero}" stroke="rgba(255,255,255,.35)" stroke-dasharray="3 3"/>` : ''}
+      <polyline points="${pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ')}" fill="none" stroke="#fff" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+      ${pts.slice(0, -1).map(([x, y]) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2" fill="#fff" opacity=".75"/>`).join('')}
+      <circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="3.6" fill="#fff"/>
+    </svg>`;
+  }
+
+  /** Entradas / Saídas / A pagar: círculo colorido com seta, rótulo, valor e detalhe. */
+  function io(icone, fundo, rotulo, valor, sub, corValor = 'text-slate-900') {
+    return `
+      <div class="flex flex-col sm:flex-row items-start gap-1.5 sm:gap-2.5 min-w-0">
+        <span class="w-8 h-8 sm:w-9 sm:h-9 rounded-full grid place-items-center text-white shrink-0 ${fundo}" aria-hidden="true">${Fin.icone(icone, 'w-4 h-4 sm:w-[18px] sm:h-[18px]')}</span>
+        <div class="min-w-0">
+          <div class="text-[11px] sm:text-xs text-slate-500">${rotulo}</div>
+          <div class="text-[13px] sm:text-base font-semibold tabular-nums whitespace-nowrap ${corValor}">${valor}</div>
+          <div class="text-[11px] text-slate-500 truncate">${sub}</div>
+        </div>
+      </div>`;
+  }
+
+  /**
+   * Resultado do mês (v2026-11-16.3): faixa na cor do app com o saldo, a variação sobre o mês
+   * anterior e o minigráfico dos últimos 6 meses; embaixo Entradas, Saídas e A pagar.
+   */
+  function hero(r, ym) {
     const negativo = r.saldo < 0;
+    const hist = F.historico(ym, 6);
+    const anterior = hist.length > 1 ? hist[hist.length - 2].saldo : null;
+    const variacao = anterior ? (r.saldo - anterior) / Math.abs(anterior) : null;
+    const chipVar = variacao == null || !Number.isFinite(variacao) ? ''
+      : `<span class="inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 font-medium">${variacao >= 0 ? '▲' : '▼'} ${Math.round(Math.abs(variacao) * 100)}% vs. mês passado</span>`;
     const uso = r.receitas > 0 ? r.despesas / r.receitas : null; // quanto da receita as despesas consomem
     const corUso = uso == null ? '#94a3b8' : uso > 1 ? '#d03b3b' : uso > 0.9 ? '#fab219' : '#0ca30c';
     const textoUso = uso == null ? 'sem receitas lançadas no mês'
@@ -55,32 +81,82 @@ Fin.pages.dashboard = (() => {
       ? `<span class="text-rose-700 font-medium">! ${r.atrasadas} atrasada${r.atrasadas > 1 ? 's' : ''}</span>`
       : r.qtdAPagar ? `${r.qtdAPagar} ${r.qtdAPagar === 1 ? 'conta' : 'contas'}` : 'tudo pago ✓';
     const patrimonio = Fin.inv?.temDados() ? Fin.inv.resumo().patrimonio : null;
-    return card(`
-      <div class="grid grid-cols-1 md:grid-cols-[minmax(0,15rem)_1fr] gap-4 md:gap-6 items-center">
-        <div class="flex items-center gap-3 min-w-0">
-          ${Fin.icones.badge('carteira', negativo ? 'rose' : 'emerald', 'w-11 h-11', 'w-6 h-6')}
-          <div class="min-w-0">
-            <div class="text-xs text-slate-500">Saldo previsto do mês</div>
-            <div class="text-2xl sm:text-3xl font-semibold tracking-tight tabular-nums ${negativo ? 'text-rose-700' : 'text-slate-900'}">${fmt.brl(r.saldo)}</div>
-            <div class="text-xs text-slate-500 truncate" title="recebido ${fmt.brl(r.recebido)} − pago ${fmt.brl(r.pago)}">realizado até agora <b class="text-slate-700 tabular-nums">${fmt.brl(r.saldoRealizado)}</b></div>
+    return `
+      <section class="rounded-2xl shadow-sm overflow-hidden bg-white min-w-0" data-hero>
+        <div class="hero-topo text-white px-4 sm:px-5 pt-4 pb-4">
+          <div class="flex items-start gap-3">
+            <div class="flex-1 min-w-0">
+              <div class="text-[11px] font-semibold uppercase tracking-wider text-white/75">Resultado do mês</div>
+              <div class="text-3xl sm:text-4xl font-semibold tracking-tight tabular-nums mt-0.5">${fmt.brl(r.saldo)}</div>
+              <div class="flex flex-wrap items-center gap-x-2 gap-y-1 mt-2 text-xs">
+                ${negativo ? '<span class="inline-flex items-center gap-1 rounded-full bg-rose-500/90 px-2 py-0.5 font-medium">! saldo negativo</span>' : ''}
+                ${chipVar}
+                <span class="text-white/80" title="recebido ${fmt.brl(r.recebido)} − pago ${fmt.brl(r.pago)}">realizado <b class="text-white tabular-nums">${fmt.brl(r.saldoRealizado)}</b></span>
+              </div>
+            </div>
+            ${sparkline(hist.map((m) => m.saldo))}
           </div>
         </div>
-        <div class="grid grid-cols-3 gap-2 sm:gap-4 md:border-l md:border-slate-100 md:pl-6">
-          ${stat('entrada', 'blue', 'Receitas', fmt.brl(r.receitas), `recebido ${fmt.brl(r.recebido)}`)}
-          ${stat('saida', 'orange', 'Despesas', fmt.brl(r.despesas), `pago ${fmt.brl(r.pago)}`)}
-          ${stat('relogio', r.atrasadas ? 'rose' : 'amber', 'A pagar', fmt.brl(r.aPagar), pagar)}
+        <div class="grid grid-cols-3 gap-2 sm:gap-4 px-4 sm:px-5 pt-4">
+          ${io('entrada', 'bg-emerald-600', 'Entradas', fmt.brl(r.receitas), `recebido ${fmt.brl(r.recebido)}`, 'text-emerald-700')}
+          ${io('saida', 'bg-rose-600', 'Saídas', fmt.brl(r.despesas), `pago ${fmt.brl(r.pago)}`, 'text-rose-700')}
+          ${io('relogio', r.atrasadas ? 'bg-rose-500' : 'bg-amber-500', 'A pagar', fmt.brl(r.aPagar), pagar)}
         </div>
+        <div class="px-4 sm:px-5 pb-4 mt-4">
+          <div class="h-1.5 rounded-full bg-slate-100 overflow-hidden" role="meter" aria-label="Despesas sobre a receita" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${uso == null ? 0 : Math.round(uso * 100)}">
+            <div class="h-full rounded-full" style="width:${uso == null ? 0 : Math.min(100, uso * 100)}%;background:${corUso}"></div>
+          </div>
+          <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-xs text-slate-500">
+            <span>Despesas = <b class="text-slate-700">${uso == null ? '—' : `${Math.round(uso * 100)}%`}</b> da receita · ${textoUso}</span>
+            ${r.aportes > 0 ? `<span class="inline-flex items-center gap-1">${Fin.icone('cofrinho', 'w-4 h-4 text-emerald-700')} investido no mês <b class="text-emerald-700 tabular-nums">${fmt.brl(r.aportes)}</b></span>` : ''}
+            ${patrimonio != null ? `<a href="#/investimentos" class="inline-flex items-center gap-1 text-prim-700 font-medium hover:underline md:ml-auto">${Fin.icone('alta', 'w-4 h-4')} patrimônio <span class="tabular-nums">${fmt.brl(patrimonio)}</span> →</a>` : ''}
+          </div>
+        </div>
+      </section>`;
+  }
+
+  /**
+   * Próximos 30 dias: contas em aberto atrasadas e as que vencem até daqui a 30 dias
+   * (compromissos já conhecidos), com data em destaque e total. Segue o filtro por pessoa.
+   */
+  function proximosHTML() {
+    const hoje = fmt.todayISO();
+    const d30 = new Date(); d30.setDate(d30.getDate() + 30);
+    const limite = `${d30.getFullYear()}-${String(d30.getMonth() + 1).padStart(2, '0')}-${String(d30.getDate()).padStart(2, '0')}`;
+    const cats = F.catsInvestimento();
+    const itens = F.lancamentos()
+      .filter((l) => l.tipo === 'despesa' && !F.isPago(l) && !F.ehAporte(l, cats) && F.dataRef(l) && F.dataRef(l) <= limite)
+      .filter((l) => F.dataRef(l) >= hoje || F.statusEfetivo(l) === 'atrasado')
+      .sort((a, b) => F.dataRef(a).localeCompare(F.dataRef(b)));
+    const falta = (l) => Math.max(0, F.valor(l) - (l.status === 'parcial' ? l.valorPago || 0 : 0));
+    const total = itens.reduce((s, l) => s + falta(l), 0);
+    const atrasadas = itens.filter((l) => F.dataRef(l) < hoje);
+    const MES = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
+    const linhas = itens.slice(0, 7).map((l) => {
+      const d = F.dataRef(l);
+      const atras = d < hoje;
+      return `
+        <li class="flex items-center gap-3 py-2.5 cursor-pointer" data-edit="${l.id}" role="button" tabindex="0" aria-label="Editar ${esc(l.descricao || l.categoria)}">
+          <span class="w-11 shrink-0 rounded-xl text-center py-1 ${atras ? 'bg-rose-50 text-rose-700' : d === hoje ? 'bg-amber-50 text-amber-800' : 'bg-slate-50 text-slate-700'}">
+            <span class="block text-base font-semibold leading-tight tabular-nums">${d.slice(8, 10)}</span>
+            <span class="block text-[10px] font-medium tracking-wide">${MES[Number(d.slice(5, 7)) - 1]}</span>
+          </span>
+          <span class="flex-1 min-w-0">
+            <span class="flex items-center gap-1.5 text-sm font-medium min-w-0">${Fin.ui.autorMini(l)}<span class="truncate">${esc(l.descricao || l.categoria)}</span></span>
+            <span class="block text-xs ${atras ? 'text-rose-700' : 'text-slate-500'} truncate">${atras ? `atrasada · ${esc(l.categoria || '')}` : d === hoje ? 'vence hoje' : esc([l.categoria, l.formaPagamento].filter(Boolean).join(' · '))}</span>
+          </span>
+          <span class="text-sm font-semibold tabular-nums text-rose-700 shrink-0">− ${fmt.brl(falta(l))}</span>
+        </li>`;
+    }).join('');
+    return card(`
+      <div class="flex items-start justify-between gap-2 mb-1">
+        <div>${titulo('calendario', 'amber', 'Próximos 30 dias')}
+          <p class="text-xs text-slate-500 mt-0.5">compromissos já conhecidos${atrasadas.length ? ` · <span class="text-rose-700 font-medium">${atrasadas.length} atrasada${atrasadas.length > 1 ? 's' : ''}</span>` : ''}</p></div>
+        ${itens.length ? `<div class="text-right shrink-0"><div class="text-[11px] text-slate-500">total</div><div class="text-sm font-semibold tabular-nums">${fmt.brl(total)}</div></div>` : ''}
       </div>
-      <div class="mt-4">
-        <div class="h-1.5 rounded-full bg-slate-100 overflow-hidden" role="meter" aria-label="Despesas sobre a receita" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${uso == null ? 0 : Math.round(uso * 100)}">
-          <div class="h-full rounded-full" style="width:${uso == null ? 0 : Math.min(100, uso * 100)}%;background:${corUso}"></div>
-        </div>
-        <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-xs text-slate-500">
-          <span>Despesas = <b class="text-slate-700">${uso == null ? '—' : `${Math.round(uso * 100)}%`}</b> da receita · ${textoUso}</span>
-          ${r.aportes > 0 ? `<span class="inline-flex items-center gap-1">${Fin.icone('cofrinho', 'w-4 h-4 text-emerald-700')} investido no mês <b class="text-emerald-700 tabular-nums">${fmt.brl(r.aportes)}</b></span>` : ''}
-          ${patrimonio != null ? `<a href="#/investimentos" class="inline-flex items-center gap-1 text-prim-700 font-medium hover:underline md:ml-auto">${Fin.icone('alta', 'w-4 h-4')} patrimônio <span class="tabular-nums">${fmt.brl(patrimonio)}</span> →</a>` : ''}
-        </div>
-      </div>`);
+      ${itens.length ? `<ul class="divide-y divide-slate-100">${linhas}</ul>
+        ${itens.length > 7 ? `<a href="#/lancamentos" data-filtro-status="pendentes" class="block text-center text-sm text-prim-700 font-medium pt-3 hover:underline">Ver todas (${itens.length})</a>` : ''}`
+        : '<p class="text-sm text-slate-500 py-3">Nada a pagar nos próximos 30 dias. 🎉</p>'}`);
   }
 
   function contasHTML(contas, ym) {
@@ -321,7 +397,8 @@ Fin.pages.dashboard = (() => {
         ${Fin.ui.filtroPessoa()}
         ${lembrete}
         ${Fin.ui.monthNav(ym)}
-        ${hero(r)}
+        ${hero(r, ym)}
+        ${ym === fmt.currentYM() ? proximosHTML() : ''}
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
           ${card(`
@@ -349,7 +426,7 @@ Fin.pages.dashboard = (() => {
         ${orcamentoHTML(ym)}
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          ${card(`${titulo('calendario', 'amber', 'Contas a pagar', 'mb-1')}${contasHTML(contas, ym)}`)}
+          ${ym === fmt.currentYM() ? '' : card(`${titulo('calendario', 'amber', 'Contas a pagar', 'mb-1')}${contasHTML(contas, ym)}`)}
           ${card(`${titulo('cartao', 'violet', 'Faturas do cartão', 'mb-1')}${faturasHTML(ym)}`)}
         </div>
       </div>`;

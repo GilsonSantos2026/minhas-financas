@@ -14,8 +14,46 @@ Fin.pages.lancamentos = (() => {
   const F = Fin.finance;
 
   // Filtros ficam guardados enquanto o app está aberto (sobrevivem à troca de tela).
-  const filtros = { busca: '', tipo: '', status: '', categoria: '', periodo: 'mes' };
+  const filtros = { busca: '', tipo: '', status: '', categoria: '', periodo: 'mes', visao: 'lista', dia: null };
   const multiMes = () => filtros.periodo !== 'mes';
+
+  /**
+   * Calendário do mês (v2026-11-16.3): cada dia com o que entra (+) e o que sai (−) pelo
+   * vencimento, já com os filtros aplicados. Tocar no dia mostra só os lançamentos dele.
+   */
+  function calendarioHTML(lista, ym) {
+    const porDia = new Map();
+    for (const l of lista) {
+      const d = F.dataRef(l);
+      if (!d || d.slice(0, 7) !== ym) continue;
+      const t = porDia.get(d) || { r: 0, d: 0 };
+      if (l.tipo === 'receita') t.r += l.valorPrevisto ?? F.valor(l); else t.d += l.valorPrevisto ?? F.valor(l);
+      porDia.set(d, t);
+    }
+    const [y, m] = ym.split('-').map(Number);
+    const dias = new Date(y, m, 0).getDate();
+    const inicio = (new Date(y, m - 1, 1).getDay() + 6) % 7; // segunda = 0
+    const hoje = fmt.todayISO();
+    const curto = (v) => (v >= 1000 ? `${(v / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} mil` : Math.round(v).toLocaleString('pt-BR'));
+    const cel = [];
+    for (let i = 0; i < inicio; i++) cel.push('<div class="cal-dia fora" aria-hidden="true"></div>');
+    for (let dd = 1; dd <= dias; dd++) {
+      const iso = `${ym}-${String(dd).padStart(2, '0')}`;
+      const t = porDia.get(iso);
+      const rot = `${dd} de ${fmt.monthLong(ym).split(' ')[0].toLowerCase()}${t ? `: ${t.r ? `entra ${fmt.brl(t.r)}` : ''}${t.r && t.d ? ', ' : ''}${t.d ? `sai ${fmt.brl(t.d)}` : ''}` : ', sem lançamentos'}`;
+      cel.push(`<button type="button" data-dia="${iso}" class="cal-dia ${iso === hoje ? 'hoje' : ''} ${filtros.dia === iso ? 'sel' : ''}" aria-pressed="${filtros.dia === iso}" aria-label="${esc(rot)}">
+        <span class="n">${dd}</span>
+        ${t?.r ? `<span class="r vlr">+${curto(t.r)}</span>` : ''}
+        ${t?.d ? `<span class="d vlr">−${curto(t.d)}</span>` : ''}
+      </button>`);
+    }
+    return `
+      <section class="bg-white rounded-2xl shadow-sm p-3">
+        <div class="cal text-[11px] font-semibold text-slate-400 mb-1" aria-hidden="true">${['S', 'T', 'Q', 'Q', 'S', 'S', 'D'].map((d) => `<div class="text-center">${d}</div>`).join('')}</div>
+        <div class="cal">${cel.join('')}</div>
+        <p class="text-[11px] text-slate-500 mt-2 flex flex-wrap gap-x-3"><span class="text-emerald-700">+ entra</span><span class="text-orange-700">− sai</span><span>pelo vencimento · toque no dia para ver os lançamentos</span></p>
+      </section>`;
+  }
 
   function aplicar(lista) {
     const q = Fin.parsers.normalize(filtros.busca);
@@ -211,8 +249,14 @@ Fin.pages.lancamentos = (() => {
           <span><span aria-hidden="true">⚖️</span> Conciliar lançado × pago do mês</span><span class="text-slate-300" aria-hidden="true">›</span></a>`}
 
         <div class="bg-white rounded-2xl shadow-sm p-3 space-y-2">
-          <div class="chips flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Período da busca">
-            ${Fin.periodo.chips(filtros.periodo)}
+          <div class="flex items-center gap-2">
+            <div class="chips flex gap-2 overflow-x-auto pb-1 flex-1 min-w-0" role="group" aria-label="Período da busca">
+              ${Fin.periodo.chips(filtros.periodo)}
+            </div>
+            ${multiMes() ? '' : `<div class="seg seg-neutro !grid-cols-2 shrink-0 !p-0.5" role="group" aria-label="Ver como">
+              <label><input type="radio" name="visao" value="lista" ${filtros.visao !== 'calendario' ? 'checked' : ''}><span class="!py-1 !px-2 inline-flex items-center gap-1" title="Lista">${Fin.icone('lista', 'w-4 h-4')}<span class="sr-only sm:not-sr-only">Lista</span></span></label>
+              <label><input type="radio" name="visao" value="calendario" ${filtros.visao === 'calendario' ? 'checked' : ''}><span class="!py-1 !px-2 inline-flex items-center gap-1" title="Calendário">${Fin.icone('calendario', 'w-4 h-4')}<span class="sr-only sm:not-sr-only">Calendário</span></span></label>
+            </div>`}
           </div>
           <input id="f-busca" type="search" class="input" placeholder="${multiMes() ? 'Buscar em todo o período (ex.: aluguel)…' : 'Buscar descrição, categoria, observação…'}"
                  value="${esc(filtros.busca)}" aria-label="Buscar lançamentos" />
@@ -230,23 +274,48 @@ Fin.pages.lancamentos = (() => {
         </div>
 
         <div id="lanc-cobertura"></div>
+        <div id="lanc-cal"></div>
+        <div id="lanc-dia"></div>
         <div id="lanc-lista" class="space-y-4"></div>
         <p id="lanc-contagem" class="text-center text-xs text-slate-400"></p>
       </div>`;
 
+    if (filtros.dia && (multiMes() || filtros.dia.slice(0, 7) !== ym || filtros.visao !== 'calendario')) filtros.dia = null;
     const draw = () => {
       const lista = aplicar(base);
+      const cal = !multiMes() && filtros.visao === 'calendario';
+      const doDia = cal && filtros.dia ? lista.filter((l) => F.dataRef(l) === filtros.dia) : lista;
       view.querySelector('#lanc-resumo').innerHTML = resumoHTML(lista);
       view.querySelector('#lanc-cobertura').innerHTML = multiMes() && (filtros.busca.trim() || filtros.categoria) ? coberturaHTML(lista, todos) : '';
-      view.querySelector('#lanc-lista').innerHTML = listaHTML(lista);
-      view.querySelector('#lanc-contagem').textContent = lista.length ? `${lista.length} de ${base.length} lançamentos` : '';
+      view.querySelector('#lanc-cal').innerHTML = cal ? calendarioHTML(lista, ym) : '';
+      view.querySelector('#lanc-dia').innerHTML = cal && filtros.dia ? `
+        <div class="flex items-center justify-between gap-2 text-sm px-1">
+          <span>Mostrando <b>${fmt.date(filtros.dia)}</b> · ${doDia.length} ${doDia.length === 1 ? 'lançamento' : 'lançamentos'}</span>
+          <button data-dia-limpar class="text-prim-700 font-medium hover:underline">Ver o mês todo</button>
+        </div>` : '';
+      view.querySelector('#lanc-lista').innerHTML = listaHTML(doDia);
+      view.querySelector('#lanc-contagem').textContent = doDia.length ? `${doDia.length} de ${base.length} lançamentos` : '';
     };
 
     view.querySelector('#f-busca').addEventListener('input', (e) => { filtros.busca = e.target.value; draw(); });
     view.querySelector('#f-tipo').addEventListener('change', (e) => { filtros.tipo = e.target.value; draw(); });
     view.querySelector('#f-status').addEventListener('change', (e) => { filtros.status = e.target.value; draw(); });
     view.querySelector('#f-categoria').addEventListener('change', (e) => { filtros.categoria = e.target.value; draw(); });
+    view.addEventListener('change', (e) => {
+      if (e.target.name !== 'visao') return;
+      filtros.visao = e.target.value;
+      filtros.dia = null;
+      draw();
+    }, { signal });
     view.addEventListener('click', (e) => {
+      const dia = e.target.closest('[data-dia]');
+      if (dia) {
+        filtros.dia = filtros.dia === dia.dataset.dia ? null : dia.dataset.dia;
+        draw();
+        if (filtros.dia) view.querySelector('#lanc-dia')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        return;
+      }
+      if (e.target.closest('[data-dia-limpar]')) { filtros.dia = null; draw(); return; }
       if (e.target.closest('[data-limpar]')) {
         Object.assign(filtros, { busca: '', tipo: '', status: '', categoria: '' });
         Fin.router.render();

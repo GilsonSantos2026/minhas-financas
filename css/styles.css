@@ -240,3 +240,28 @@ details[open] .chev { transform: rotate(90deg); }
 .filtro-pessoa button[aria-pressed="true"] { background: rgb(var(--p-600)); color: #fff; }
 .filtro-pessoa button:not([aria-pressed="true"]):hover { background: #f1f5f9; }
 .autor-mini { width: 1.15rem; height: 1.15rem; font-size: 0.55rem; }
+
+/* Tour guiado (js/tour.js) */
+.tour { position: fixed; inset: 0; z-index: 90; }
+.tour [data-fundo] { pointer-events: auto; }
+.tour-recorte { position: fixed; border-radius: 0.9rem; box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.66); outline: 2px solid rgb(var(--p-500)); outline-offset: 2px; pointer-events: none; transition: left 0.2s, top 0.2s, width 0.2s, height 0.2s; }
+.tour-balao { position: fixed; background: #fff; border-radius: 1rem; padding: 1rem; box-shadow: 0 20px 50px -12px rgba(15, 23, 42, 0.5); transition: left 0.2s, top 0.2s; }
+.tour.tour-trocando .tour-balao, .tour.tour-trocando .tour-recorte { opacity: 0; }
+@media (prefers-reduced-motion: reduce) { .tour-recorte, .tour-balao { transition: none; } }
+
+/* Início: cartão "Resultado do mês" na cor do app */
+.hero-topo { position: relative; overflow: hidden; background: linear-gradient(135deg, rgb(var(--p-800)), rgb(var(--p-600))); }
+.hero-topo::after { content: ""; position: absolute; right: -2.5rem; top: -3rem; width: 9rem; height: 9rem; border-radius: 9999px; background: rgb(255 255 255 / 0.07); pointer-events: none; }
+.hero-topo > * { position: relative; z-index: 1; }
+
+/* Lançamentos: calendário do mês */
+.cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0.25rem; }
+.cal-dia { min-height: 3.4rem; border-radius: 0.75rem; padding: 0.3rem 0.15rem; text-align: center; font-size: 0.8rem; line-height: 1.1; display: flex; flex-direction: column; align-items: center; gap: 0.1rem; }
+.cal-dia[data-dia]:hover { background: #f1f5f9; }
+.cal-dia .n { font-weight: 600; color: #334155; }
+.cal-dia .r { font-size: 0.62rem; color: #047857; font-variant-numeric: tabular-nums; }
+.cal-dia .d { font-size: 0.62rem; color: #c2410c; font-variant-numeric: tabular-nums; }
+.cal-dia.hoje { box-shadow: inset 0 0 0 1.5px rgb(var(--p-500)); }
+.cal-dia.sel { background: rgb(var(--p-600)) !important; }
+.cal-dia.sel .n, .cal-dia.sel .r, .cal-dia.sel .d { color: #fff; }
+.cal-dia.fora { visibility: hidden; }
