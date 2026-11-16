@@ -234,6 +234,16 @@ Fin.storage = (() => {
     });
   }
 
+  /** Primeiro uso sem planilha: grava só as categorias prontas (e marca o app como iniciado). */
+  function comecarDoZero(categorias) {
+    gravarTudo({ lancamentos: [], cartaoCompras: [], categorias, cartoes: [] }, {
+      versao: SCHEMA_VERSION,
+      iniciadoEm: new Date().toISOString(),
+      origem: 'zero',
+      contagens: { lancamentos: 0, cartaoCompras: 0, categorias: categorias.length, cartoes: 0 },
+    });
+  }
+
   /** Coleções a gravar: as básicas sempre; as de investimentos só se vierem nos dados. */
   const aGravar = (data) => COLLECTIONS.filter((k) => BASICAS.includes(k) || Array.isArray(data[k]));
 
@@ -400,7 +410,7 @@ Fin.storage = (() => {
   }
 
   return {
-    get, set, getMeta, saveImport, clearAll, exportBackup, usageKB,
+    get, set, getMeta, saveImport, comecarDoZero, clearAll, exportBackup, usageKB,
     prefs, setPref, registrarBackup, situacaoBackup, lerBackup, restaurarBackup,
     list, upsert, remove, hasData, uid, COLLECTIONS,
     // cofre e sincronização

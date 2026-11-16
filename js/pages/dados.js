@@ -256,6 +256,51 @@ Fin.pages.dados = (() => {
   }
 
   /** Bloco "restaurar" mostrado também na tela vazia (aparelho novo). */
+  /* ---------------- Primeiro uso: começar do zero (sem planilha) ---------------- */
+
+  // [nome, ícone, classificação, extras]
+  const CATEGORIAS_PADRAO = {
+    despesa: [
+      ['Moradia', '🏠', 'Essencial'], ['Contas da casa', '💡', 'Essencial'], ['Mercado', '🛒', 'Essencial'],
+      ['Transporte', '🚗', 'Essencial'], ['Saúde', '💊', 'Essencial'], ['Educação', '🎓', 'Essencial'],
+      ['Restaurantes e delivery', '🍽️', 'Estilo de vida'], ['Lazer', '🎮', 'Estilo de vida'], ['Roupas', '👕', 'Estilo de vida'],
+      ['Cuidados pessoais', '💇', 'Estilo de vida'], ['Assinaturas', '📱', 'Estilo de vida'], ['Viagens', '✈️', 'Estilo de vida'],
+      ['Presentes', '🎁', 'Estilo de vida'], ['Pets', '🐾', 'Estilo de vida'],
+      ['Pagamento Fatura', '💳', 'Financeiro'], ['Impostos e taxas', '🧾', 'Financeiro'],
+      ['Investimentos', '📈', 'Financeiro', { investimento: true }], ['Outros gastos', '📦', 'Outros'],
+    ],
+    receita: [
+      ['Salário', '💰', 'Receitas'], ['Renda extra', '💼', 'Receitas'], ['Rendimentos', '🏦', 'Receitas'],
+      ['Reembolsos', '🔁', 'Receitas'], ['Outras receitas', '📦', 'Receitas'],
+    ],
+  };
+
+  function blocoComecarZero() {
+    const nD = CATEGORIAS_PADRAO.despesa.length;
+    const nR = CATEGORIAS_PADRAO.receita.length;
+    const exemplos = CATEGORIAS_PADRAO.despesa.slice(0, 8).map(([n, i]) => `<span class="inline-flex items-center gap-1 bg-slate-100 rounded-full px-2 py-0.5">${i} ${esc(n)}</span>`).join(' ');
+    return `
+      <section class="bg-white rounded-2xl shadow-sm p-5 sm:p-6 mb-4 border-2 border-prim-200">
+        ${Fin.icones.titulo('lista', 'prim', 'Começar do zero', { cls: 'text-lg', tam: 'w-8 h-8', ic: 'w-[18px] h-[18px]' })}
+        <p class="text-sm text-slate-600 mt-1">Não tem planilha? Comece já com <b>${nD} categorias de despesa e ${nR} de receita</b> prontas — dá para renomear, apagar ou criar outras depois.</p>
+        <p class="text-xs text-slate-500 mt-2 flex flex-wrap gap-1">${exemplos} <span class="px-1 py-0.5">e mais…</span></p>
+        <button data-act="zero" class="btn btn-primary mt-4">Começar do zero</button>
+      </section>
+      <p class="text-xs font-semibold uppercase tracking-wide text-slate-400 text-center mb-4">ou, se já tem seus lançamentos numa planilha</p>`;
+  }
+
+  function comecarDoZero() {
+    const cats = ['despesa', 'receita'].flatMap((tipo) => CATEGORIAS_PADRAO[tipo].map(([nome, icone, classificacao, extra]) => ({
+      id: Fin.storage.uid(), nome, icone, tipo, classificacao, orcamentoMensal: 0, ...(extra || {}),
+    })));
+    Fin.storage.comecarDoZero(cats);
+    Fin.state.mes = fmt.currentYM();
+    Fin.ui.toast('Tudo pronto! Use o botão “＋” para o primeiro lançamento.');
+    location.hash = '#/dashboard';
+    // Tour de boas-vindas (uma vez por aparelho), agora que o app tem o básico.
+    setTimeout(() => { if (!Fin.storage.prefs().tourVisto && !Fin.tour.ativo()) Fin.tour.iniciar(); }, 900);
+  }
+
   function blocoRestaurarVazio() {
     return secao('Já tem um backup?', '♻️', `
       <p class="text-sm text-slate-600 mt-1">Em um aparelho novo, restaure o arquivo de backup baixado no outro aparelho.</p>
@@ -722,7 +767,7 @@ Fin.pages.dados = (() => {
     const mode = state.mode || (Fin.storage.hasData() ? null : 'upload');
     view.innerHTML = mode === 'review' ? renderReview()
       : mode === 'restore' ? renderRestore()
-      : mode === 'upload' ? renderUpload() + blocoRestaurarVazio()
+      : mode === 'upload' ? (Fin.storage.hasData() ? '' : blocoComecarZero()) + renderUpload() + blocoRestaurarVazio()
       : renderImported();
     if (mode === 'review') renderTotals();
     if (mode === 'upload') bindDropzone();
@@ -774,6 +819,7 @@ Fin.pages.dados = (() => {
         if (act === 'restore-ok') confirmarRestauracao();
         if (act === 'restore-cancel') { Object.assign(state, { mode: null, restore: null }); draw(); }
         if (act === 'apagar') onApagar();
+        if (act === 'zero' && !Fin.storage.hasData()) comecarDoZero();
         if (act === 'instalar') { await Fin.pwa.instalar(); draw(); }
         if (act === 'trocar-senha') trocarSenha();
         if (act === 'nova-chave') novaChave();
