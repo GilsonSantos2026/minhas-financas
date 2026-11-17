@@ -25,13 +25,44 @@ Fin.pwa = (() => {
   });
   window.addEventListener('appinstalled', () => {
     pedidoInstalacao = null;
-    Fin.ui?.toast('App instalado! Procure “Finanças” na tela inicial.');
+    Fin.ui?.toast('App instalado! Procure “Valoris” na tela inicial.');
     avisar();
   });
 
-  const instalado = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const instalado = () => window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone === true;
   const ios = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const podeInstalar = () => !!pedidoInstalacao;
+
+  /*
+   * Convite para instalar o app (components/convite-app.js) — uma vez por aparelho.
+   * prefs.conviteApp, decidido UMA vez na 1ª abertura com este código:
+   *   'legado'   = o aparelho já tinha conta (usuário atual) → nunca mostra;
+   *   'pendente' = aparelho novo → mostra após a 1ª conexão com o Google Drive;
+   *   'mostrado' = já mostrado (instalou ou recusou).
+   * Gravado direto nas prefs locais (como o tema): funciona mesmo com o app bloqueado.
+   */
+  const chavePrefs = () => `${Fin.PREFIXO || 'fin:'}prefs`;
+  const lerPrefs = () => { try { return JSON.parse(localStorage.getItem(chavePrefs()) || '{}'); } catch { return {}; } };
+  function gravarConvite(valor) {
+    try {
+      const p = lerPrefs();
+      p.conviteApp = valor;
+      localStorage.setItem(chavePrefs(), JSON.stringify(p));
+    } catch { /* sem armazenamento: vale só nesta sessão */ }
+  }
+  if (!lerPrefs().conviteApp) gravarConvite(Fin.cofre?.existeConta?.() ? 'legado' : 'pendente');
+  const conviteApp = () => lerPrefs().conviteApp;
+
+  /** Espera o pedido nativo de instalação (beforeinstallprompt) por até `ms`. */
+  function aguardarPedido(ms = 3000) {
+    if (podeInstalar()) return Promise.resolve(true);
+    return new Promise((resolve) => {
+      const fim = (ok) => { clearTimeout(t); window.removeEventListener('fin:pwa', ver); resolve(ok); };
+      const ver = () => { if (podeInstalar()) fim(true); };
+      const t = setTimeout(() => fim(false), ms);
+      window.addEventListener('fin:pwa', ver);
+    });
+  }
 
   async function instalar() {
     if (!pedidoInstalacao) return false;
@@ -125,5 +156,8 @@ Fin.pwa = (() => {
     return { protegido };
   }
 
-  return { estado: st, instalado, ios, podeInstalar, instalar, registrar, proteger, armazenamento, atualizar, procurar, versao };
+  return {
+    estado: st, instalado, ios, podeInstalar, instalar, registrar, proteger, armazenamento, atualizar, procurar, versao,
+    conviteApp, marcarConvite: gravarConvite, aguardarPedido,
+  };
 })();
