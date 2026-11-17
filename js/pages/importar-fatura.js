@@ -1,38 +1,9 @@
-/**
- * pages/importar-fatura.js — Importar fatura de cartão (PDF ou foto) com tela de revisão.
- * Rota: #/importar-fatura (aberta pelo botão "Importar fatura" na tela Cartões).
- */
-window.Fin = window.Fin || {};
-Fin.pages = Fin.pages || {};
-
-Fin.pages.importarFatura = (() => {
-  const fmt = Fin.fmt;
-  const esc = fmt.esc;
-  const F = Fin.finance;
-  const I = () => Fin.faturaImportador;
-
-  const TIPOS = {
-    compra: ['Compra', 'bg-slate-100 text-slate-600'],
-    encargo: ['Encargo', 'bg-amber-50 text-amber-800'],
-    credito: ['Crédito', 'bg-emerald-50 text-emerald-800'],
-    pagamento: ['Pagamento', 'bg-sky-50 text-sky-800'],
-  };
-
-  // Estado da importação em andamento (sobrevive a trocas de tela até concluir/cancelar).
-  const st = { arquivo: null, leitura: null, linhas: [], cartao: null, fatura: null, futuras: true, etapa: 'upload', progresso: '' };
-
-  function reset() {
-    Object.assign(st, { arquivo: null, leitura: null, linhas: [], cartao: null, fatura: null, futuras: true, etapa: 'upload', progresso: '' });
-  }
-
-  /* ---------------- Etapa 1: envio ---------------- */
-
-  function htmlUpload() {
-    return `
+/*! © 2026 Valoris Financial Intelligence. Todos os direitos reservados. Software proprietário: proibido copiar, reutilizar ou criar obras derivadas (veja LICENSE e termos.html). */
+window.Fin=window.Fin||{},Fin.pages=Fin.pages||{},Fin.pages.importarFatura=(()=>{const c=Fin.fmt,i=c.esc,f=Fin.finance,u=()=>Fin.faturaImportador,q={compra:["Compra","bg-slate-100 text-slate-600"],encargo:["Encargo","bg-amber-50 text-amber-800"],credito:["Crédito","bg-emerald-50 text-emerald-800"],pagamento:["Pagamento","bg-sky-50 text-sky-800"]},t={arquivo:null,leitura:null,linhas:[],cartao:null,fatura:null,futuras:!0,etapa:"upload",progresso:""};function b(){Object.assign(t,{arquivo:null,leitura:null,linhas:[],cartao:null,fatura:null,futuras:!0,etapa:"upload",progresso:""})}function C(){return`
       <section class="bg-white rounded-2xl shadow-sm p-5 sm:p-6">
         <div class="flex items-start justify-between gap-3">
           <div>
-            ${Fin.icones.titulo('upload', 'violet', 'Importar fatura do cartão', { cls: 'text-lg', tam: 'w-8 h-8', ic: 'w-[18px] h-[18px]' })}
+            ${Fin.icones.titulo("upload","violet","Importar fatura do cartão",{cls:"text-lg",tam:"w-8 h-8",ic:"w-[18px] h-[18px]"})}
             <p class="text-sm text-slate-500 mt-1">Envie o PDF da fatura (recomendado) ou uma foto/print.
               O arquivo é lido aqui no seu navegador — nada é enviado para a internet.</p>
           </div>
@@ -53,191 +24,105 @@ Fin.pages.importarFatura = (() => {
       </section>
       <section class="bg-white rounded-2xl shadow-sm p-5 mt-4">
         <div class="flex items-start gap-3">
-          ${Fin.icones.badge('mensagem', 'violet', 'w-10 h-10', 'w-5 h-5')}
+          ${Fin.icones.badge("mensagem","violet","w-10 h-10","w-5 h-5")}
           <div class="flex-1 min-w-0">
             <h3 class="font-semibold">O leitor não entendeu a sua fatura?</h3>
             <p class="text-sm text-slate-500 mt-0.5">Use o ChatGPT ou o Gemini que você já tem, sem custo: o app copia o texto da fatura,
               a IA organiza os lançamentos e você cola a resposta aqui para conferir e importar.</p>
-            <label for="fat-input-ia" class="btn btn-ghost mt-3 cursor-pointer">${Fin.icone('mensagem', 'w-4 h-4')} Ler com ajuda da IA</label>
+            <label for="fat-input-ia" class="btn btn-ghost mt-3 cursor-pointer">${Fin.icone("mensagem","w-4 h-4")} Ler com ajuda da IA</label>
             <input id="fat-input-ia" type="file" class="sr-only" accept="application/pdf,.pdf,image/*" />
           </div>
         </div>
-      </section>`;
-  }
-
-  function htmlProcessando() {
-    return `
+      </section>`}function E(){return`
       <section class="bg-white rounded-2xl shadow-sm p-8 text-center">
         <span class="spinner inline-block" aria-hidden="true"></span>
-        <p class="mt-3 font-medium">${esc(st.arquivo?.name || '')}</p>
-        <p id="fat-prog" class="text-sm text-slate-500 mt-1">${esc(st.progresso || 'Lendo a fatura…')}</p>
-      </section>`;
-  }
-
-  /* ---------------- Etapa 2: revisão ---------------- */
-
-  const selecionadas = () => st.linhas.filter((l) => l.incluir);
-
-  function htmlConferencia() {
-    const { info, conferencia: c } = st.leitura;
-    const soma = selecionadas().reduce((s, l) => s + l.valor, 0);
-    const linha = (rot, val) => `<div class="flex justify-between gap-3"><span class="text-slate-500">${rot}</span><span class="tabular-nums font-medium">${val}</span></div>`;
-    let selo = '';
-    if (c.esperado != null) {
-      selo = c.ok
-        ? `<p class="mt-2 text-sm text-emerald-800 bg-emerald-50 rounded-lg px-3 py-2"><span aria-hidden="true">✓</span> Leitura conferida: os lançamentos somam exatamente o esperado pela fatura.</p>`
-        : `<p class="mt-2 text-sm text-amber-800 bg-amber-50 rounded-lg px-3 py-2"><span aria-hidden="true">!</span> Diferença de ${fmt.brl(c.esperado - c.lido)} entre o lido (${fmt.brl(c.lido)}) e o esperado (${fmt.brl(c.esperado)}). Confira se faltou algum item.</p>`;
-    }
-    return `
+        <p class="mt-3 font-medium">${i(t.arquivo?.name||"")}</p>
+        <p id="fat-prog" class="text-sm text-slate-500 mt-1">${i(t.progresso||"Lendo a fatura…")}</p>
+      </section>`}const h=()=>t.linhas.filter(a=>a.incluir);function L(){const{info:a,conferencia:o}=t.leitura,r=h().reduce((s,p)=>s+p.valor,0),e=(s,p)=>`<div class="flex justify-between gap-3"><span class="text-slate-500">${s}</span><span class="tabular-nums font-medium">${p}</span></div>`;let n="";return o.esperado!=null&&(n=o.ok?'<p class="mt-2 text-sm text-emerald-800 bg-emerald-50 rounded-lg px-3 py-2"><span aria-hidden="true">✓</span> Leitura conferida: os lançamentos somam exatamente o esperado pela fatura.</p>':`<p class="mt-2 text-sm text-amber-800 bg-amber-50 rounded-lg px-3 py-2"><span aria-hidden="true">!</span> Diferença de ${c.brl(o.esperado-o.lido)} entre o lido (${c.brl(o.lido)}) e o esperado (${c.brl(o.esperado)}). Confira se faltou algum item.</p>`),`
       <div class="text-sm space-y-1">
-        ${info.total != null ? linha('Total da fatura', fmt.brl(info.total)) : ''}
-        ${info.saldoAnterior ? linha('Saldo da fatura anterior', fmt.brl(info.saldoAnterior)) : ''}
-        ${linha('Novos lançamentos lidos', fmt.brl(c.lido))}
-        ${linha('Selecionados para importar', fmt.brl(soma))}
-      </div>${selo}`;
-  }
-
-  const quando = (iso) => new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
-
-  /** Texto explicando de onde veio o registro que já existe. */
-  function origemTexto(e) {
-    if (!e) return '';
-    if (e.origem === 'pdf') return `Já importado${e.arquivo ? ` de ${e.arquivo}` : ''}${e.criadoEm ? ` em ${quando(e.criadoEm)}` : ''}`;
-    if (e.origem === 'app') return 'Já lançado manualmente no app';
-    return 'Já existe (veio da planilha importada)';
-  }
-
-  /** Aviso no topo quando a fatura inteira (ou quase) já está na base. */
-  function htmlJaImportada() {
-    const j = I().jaImportada(st.linhas);
-    if (!j) return '';
-    const titulo = j.deImportacao
-      ? `Esta fatura parece já ter sido importada${j.quando ? ` em ${quando(j.quando)}` : ''}${j.arquivo && j.arquivo !== st.arquivo.name ? ` (arquivo ${esc(j.arquivo)})` : ''}.`
-      : 'Os lançamentos desta fatura já estão na base (vieram da planilha ou foram lançados no app).';
-    const outros = j.deImportacao && j.dups > j.daImportacao
-      ? ` (${j.daImportacao} da importação anterior e ${j.dups - j.daImportacao} da planilha/app)` : '';
-    const detalhe = j.novos
-      ? `${j.dups} de ${j.total} itens já existem${outros} e vieram desmarcados. ${j.novos === 1 ? 'Só 1 item é novo' : `Só ${j.novos} itens são novos`} — confira antes de importar.`
-      : `Todos os ${j.total} itens já existem${outros}: não há nada novo para importar.`;
-    return `
+        ${a.total!=null?e("Total da fatura",c.brl(a.total)):""}
+        ${a.saldoAnterior?e("Saldo da fatura anterior",c.brl(a.saldoAnterior)):""}
+        ${e("Novos lançamentos lidos",c.brl(o.lido))}
+        ${e("Selecionados para importar",c.brl(r))}
+      </div>${n}`}const g=a=>new Date(a).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"});function j(a){return a?a.origem==="pdf"?`Já importado${a.arquivo?` de ${a.arquivo}`:""}${a.criadoEm?` em ${g(a.criadoEm)}`:""}`:a.origem==="app"?"Já lançado manualmente no app":"Já existe (veio da planilha importada)":""}function I(){const a=u().jaImportada(t.linhas);if(!a)return"";const o=a.deImportacao?`Esta fatura parece já ter sido importada${a.quando?` em ${g(a.quando)}`:""}${a.arquivo&&a.arquivo!==t.arquivo.name?` (arquivo ${i(a.arquivo)})`:""}.`:"Os lançamentos desta fatura já estão na base (vieram da planilha ou foram lançados no app).",r=a.deImportacao&&a.dups>a.daImportacao?` (${a.daImportacao} da importação anterior e ${a.dups-a.daImportacao} da planilha/app)`:"",e=a.novos?`${a.dups} de ${a.total} itens já existem${r} e vieram desmarcados. ${a.novos===1?"Só 1 item é novo":`Só ${a.novos} itens são novos`} — confira antes de importar.`:`Todos os ${a.total} itens já existem${r}: não há nada novo para importar.`;return`
       <div class="rounded-xl bg-violet-50 text-violet-900 px-3 py-2.5 text-sm" role="status">
-        <p class="font-semibold"><span aria-hidden="true">⧉</span> ${titulo}</p>
-        <p class="mt-0.5">${detalhe}</p>
-      </div>`;
-  }
-
-  function htmlLinha(l) {
-    const [rot, cls] = TIPOS[l.tipo];
-    const opts = F.categorias('despesa').map((c) => `<option ${c.nome === l.categoria ? 'selected' : ''}>${esc(c.nome)}</option>`).join('');
-    const extra = F.categorias('despesa').some((c) => c.nome === l.categoria) ? '' : `<option selected>${esc(l.categoria)}</option>`;
-    return `
-      <li class="px-3 sm:px-4 py-3 ${l.incluir ? '' : 'bg-slate-50'}" data-n="${l.n}">
+        <p class="font-semibold"><span aria-hidden="true">⧉</span> ${o}</p>
+        <p class="mt-0.5">${e}</p>
+      </div>`}function S(a){const[o,r]=q[a.tipo],e=f.categorias("despesa").map(s=>`<option ${s.nome===a.categoria?"selected":""}>${i(s.nome)}</option>`).join(""),n=f.categorias("despesa").some(s=>s.nome===a.categoria)?"":`<option selected>${i(a.categoria)}</option>`;return`
+      <li class="px-3 sm:px-4 py-3 ${a.incluir?"":"bg-slate-50"}" data-n="${a.n}">
         <div class="flex items-start gap-3">
-          <input type="checkbox" data-f="incluir" class="mt-1 w-5 h-5 accent-prim-600 shrink-0" ${l.incluir ? 'checked' : ''}
-                 aria-label="Importar ${esc(l.descricao)}" />
+          <input type="checkbox" data-f="incluir" class="mt-1 w-5 h-5 accent-prim-600 shrink-0" ${a.incluir?"checked":""}
+                 aria-label="Importar ${i(a.descricao)}" />
           <div class="flex-1 min-w-0 space-y-1.5">
             <div class="flex items-start gap-2">
-              <input data-f="descricao" value="${esc(l.descricao)}" class="flex-1 min-w-0 text-sm font-medium bg-transparent border-0 border-b border-transparent focus:border-prim-500 focus:outline-none px-0 py-0.5 ${l.incluir ? '' : 'text-slate-400 line-through'}" aria-label="Descrição" />
-              <span class="text-sm font-semibold tabular-nums whitespace-nowrap ${l.valor < 0 ? 'text-emerald-700' : ''} ${l.incluir ? '' : 'text-slate-400'}">${fmt.brl(l.valor)}</span>
+              <input data-f="descricao" value="${i(a.descricao)}" class="flex-1 min-w-0 text-sm font-medium bg-transparent border-0 border-b border-transparent focus:border-prim-500 focus:outline-none px-0 py-0.5 ${a.incluir?"":"text-slate-400 line-through"}" aria-label="Descrição" />
+              <span class="text-sm font-semibold tabular-nums whitespace-nowrap ${a.valor<0?"text-emerald-700":""} ${a.incluir?"":"text-slate-400"}">${c.brl(a.valor)}</span>
             </div>
             <div class="flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
-              <span>${fmt.date(l.data).slice(0, 5)}</span>
-              ${l.parcela ? `<span class="pill bg-slate-100 text-slate-600">parcela ${l.parcela.atual}/${l.parcela.total}</span>` : ''}
-              <span class="pill ${cls}">${rot}</span>
-              ${l.duplicada ? `<span class="pill bg-violet-50 text-violet-800" title="${esc(origemTexto(l.existente))}">⧉ já existe</span>` : ''}
-              ${l.portador ? `<span class="truncate max-w-[12rem]" title="${esc(l.portador)}">${esc(l.portador)}</span>` : ''}
+              <span>${c.date(a.data).slice(0,5)}</span>
+              ${a.parcela?`<span class="pill bg-slate-100 text-slate-600">parcela ${a.parcela.atual}/${a.parcela.total}</span>`:""}
+              <span class="pill ${r}">${o}</span>
+              ${a.duplicada?`<span class="pill bg-violet-50 text-violet-800" title="${i(j(a.existente))}">⧉ já existe</span>`:""}
+              ${a.portador?`<span class="truncate max-w-[12rem]" title="${i(a.portador)}">${i(a.portador)}</span>`:""}
             </div>
-            ${l.incluir ? `<select data-f="categoria" class="input !py-1 !text-xs !w-auto max-w-full" aria-label="Categoria">${extra}${opts}</select>` : ''}
+            ${a.incluir?`<select data-f="categoria" class="input !py-1 !text-xs !w-auto max-w-full" aria-label="Categoria">${n}${e}</select>`:""}
           </div>
         </div>
-      </li>`;
-  }
-
-  function htmlRevisao() {
-    const { info } = st.leitura;
-    const cartoes = F.cartoes();
-    const futuras = I().parcelasFuturas(st.linhas, st.cartao, st.fatura);
-    const sel = selecionadas();
-    const dups = st.linhas.filter((l) => l.duplicada).length;
-
-    return `
+      </li>`}function k(){const{info:a}=t.leitura,o=f.cartoes(),r=u().parcelasFuturas(t.linhas,t.cartao,t.fatura),e=h(),n=t.linhas.filter(s=>s.duplicada).length;return`
       <div class="space-y-4 pb-24">
         <section class="bg-white rounded-2xl shadow-sm p-4 sm:p-5 space-y-4">
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
-              ${Fin.icones.titulo('recibo', 'violet', 'Confira a fatura', { cls: 'text-lg', tam: 'w-8 h-8', ic: 'w-[18px] h-[18px]' })}
-              <p class="text-sm text-slate-500 break-all">${esc(st.arquivo.name)}${info.banco ? ` · ${esc(info.banco)}` : ''}${info.finalCartao ? ` · final ${esc(info.finalCartao)}` : ''}</p>
+              ${Fin.icones.titulo("recibo","violet","Confira a fatura",{cls:"text-lg",tam:"w-8 h-8",ic:"w-[18px] h-[18px]"})}
+              <p class="text-sm text-slate-500 break-all">${i(t.arquivo.name)}${a.banco?` · ${i(a.banco)}`:""}${a.finalCartao?` · final ${i(a.finalCartao)}`:""}</p>
             </div>
             <button data-act="cancelar" class="text-sm text-slate-500 hover:text-slate-800 shrink-0">Cancelar</button>
           </div>
 
-          ${htmlJaImportada()}
+          ${I()}
 
           <div class="grid grid-cols-2 gap-3">
             <label class="field"><span>Cartão</span>
-              <select id="fat-cartao" class="input">${cartoes.map((k) => `<option ${k.nome === st.cartao ? 'selected' : ''}>${esc(k.nome)}</option>`).join('')}</select></label>
+              <select id="fat-cartao" class="input">${o.map(s=>`<option ${s.nome===t.cartao?"selected":""}>${i(s.nome)}</option>`).join("")}</select></label>
             <label class="field"><span>Fatura (vencimento)</span>
-              <input id="fat-mes" type="month" class="input" value="${st.fatura}" /></label>
+              <input id="fat-mes" type="month" class="input" value="${t.fatura}" /></label>
           </div>
 
-          ${htmlConferencia()}
+          ${L()}
 
           <label class="flex items-start gap-2 text-sm">
-            <input id="fat-futuras" type="checkbox" class="mt-0.5 w-4 h-4 accent-prim-600" ${st.futuras ? 'checked' : ''} />
+            <input id="fat-futuras" type="checkbox" class="mt-0.5 w-4 h-4 accent-prim-600" ${t.futuras?"checked":""} />
             <span>Criar as parcelas futuras das compras parceladas
-              <span class="text-slate-500">(${futuras.length} ${futuras.length === 1 ? 'parcela' : 'parcelas'} nas próximas faturas; as que já existem são ignoradas)</span></span>
+              <span class="text-slate-500">(${r.length} ${r.length===1?"parcela":"parcelas"} nas próximas faturas; as que já existem são ignoradas)</span></span>
           </label>
-          ${dups ? `<p class="text-xs text-slate-500"><span aria-hidden="true">⧉</span> ${dups} ${dups === 1 ? 'item já existe' : 'itens já existem'} neste cartão/fatura e ${dups === 1 ? 'veio desmarcado' : 'vieram desmarcados'}. Pagamentos também vêm desmarcados (já estão nos seus lançamentos).</p>` : ''}
+          ${n?`<p class="text-xs text-slate-500"><span aria-hidden="true">⧉</span> ${n} ${n===1?"item já existe":"itens já existem"} neste cartão/fatura e ${n===1?"veio desmarcado":"vieram desmarcados"}. Pagamentos também vêm desmarcados (já estão nos seus lançamentos).</p>`:""}
         </section>
 
         <div class="flex items-center justify-between px-1">
-          <h3 class="text-xs font-medium text-slate-500 uppercase tracking-wide">${st.linhas.length} itens na fatura</h3>
+          <h3 class="text-xs font-medium text-slate-500 uppercase tracking-wide">${t.linhas.length} itens na fatura</h3>
           <div class="flex gap-3 text-xs font-medium">
             <button data-act="todos" class="text-prim-700 hover:underline">Marcar todos</button>
             <button data-act="nenhum" class="text-slate-500 hover:underline">Desmarcar todos</button>
           </div>
         </div>
-        <ul id="fat-lista" class="bg-white rounded-2xl shadow-sm divide-y divide-slate-100 overflow-hidden">${st.linhas.map(htmlLinha).join('')}</ul>
+        <ul id="fat-lista" class="bg-white rounded-2xl shadow-sm divide-y divide-slate-100 overflow-hidden">${t.linhas.map(S).join("")}</ul>
       </div>
 
       <div class="fixed inset-x-0 bottom-16 md:bottom-0 md:left-60 z-20 bg-white/95 backdrop-blur border-t border-slate-200">
         <div class="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
           <p class="text-sm text-slate-600 flex-1 min-w-0">
-            <b>${sel.length}</b> ${sel.length === 1 ? 'item' : 'itens'} · <span class="tabular-nums">${fmt.brl(sel.reduce((s, l) => s + l.valor, 0))}</span>
-            ${st.futuras && futuras.length ? `<span class="text-slate-400"> + ${futuras.length} futuras</span>` : ''}
+            <b>${e.length}</b> ${e.length===1?"item":"itens"} · <span class="tabular-nums">${c.brl(e.reduce((s,p)=>s+p.valor,0))}</span>
+            ${t.futuras&&r.length?`<span class="text-slate-400"> + ${r.length} futuras</span>`:""}
           </p>
-          <button data-act="importar" class="btn btn-primary shrink-0" ${sel.length ? '' : 'disabled'}>Importar</button>
+          <button data-act="importar" class="btn btn-primary shrink-0" ${e.length?"":"disabled"}>Importar</button>
         </div>
-      </div>`;
-  }
-
-  /* ---------------- Ações ---------------- */
-
-  let view = null;
-
-  function draw() {
-    if (!view) return;
-    const y = window.scrollY;
-    view.innerHTML = st.etapa === 'revisao' ? htmlRevisao() : st.etapa === 'processando' ? htmlProcessando() : htmlUpload();
-    if (st.etapa === 'upload') bindUpload();
-    if (st.etapa === 'revisao') window.scrollTo(0, y);
-  }
-
-  /**
-   * Fatura com senha: pede a senha numa janela. A senha fica só na memória durante a leitura
-   * e não é gravada em lugar nenhum. Resolve com a senha digitada ou null (cancelou).
-   */
-  function pedirSenha(nome, incorreta) {
-    return new Promise((resolve) => {
-      let fim = false;
-      const terminar = (v) => { if (fim) return; fim = true; obs.disconnect(); Fin.ui.closeModal(); resolve(v); };
-      const panel = Fin.ui.openModal(`
+      </div>`}let d=null;function l(){if(!d)return;const a=window.scrollY;d.innerHTML=t.etapa==="revisao"?k():t.etapa==="processando"?E():C(),t.etapa==="upload"&&D(),t.etapa==="revisao"&&window.scrollTo(0,a)}function $(a,o){return new Promise(r=>{let e=!1;const n=x=>{e||(e=!0,p.disconnect(),Fin.ui.closeModal(),r(x))},s=Fin.ui.openModal(`
         <form class="p-5 space-y-4" novalidate autocomplete="off">
           <div class="flex items-start gap-3">
-            ${Fin.icones.badge('cadeado', 'amber', 'w-10 h-10', 'w-5 h-5')}
+            ${Fin.icones.badge("cadeado","amber","w-10 h-10","w-5 h-5")}
             <div class="min-w-0 flex-1">
               <h2 class="font-semibold text-lg leading-tight">Fatura protegida por senha</h2>
-              <p class="text-sm text-slate-500 truncate">${esc(nome)}</p>
+              <p class="text-sm text-slate-500 truncate">${i(a)}</p>
             </div>
           </div>
           <p class="text-sm text-slate-600">Veja no e-mail do banco qual é a senha — costuma ser parte do CPF (ex.: os 5 primeiros números) ou a data de nascimento.</p>
@@ -246,71 +131,13 @@ Fin.pages.importarFatura = (() => {
               <input name="senha" type="password" class="input pr-16" autocomplete="off" inputmode="text" />
               <button type="button" data-ver class="absolute right-1 top-1/2 -translate-y-1/2 px-2 py-1 text-xs text-slate-500 hover:text-slate-800">mostrar</button>
             </div></label>
-          ${incorreta ? '<p class="text-sm text-rose-700 bg-rose-50 rounded-lg px-3 py-2" role="alert">Senha incorreta. Tente de novo.</p>' : ''}
-          <p class="text-xs text-slate-500">${Fin.icone('cadeado', 'w-3.5 h-3.5 inline -mt-0.5')} A senha é usada só para abrir este arquivo agora e <b>não fica guardada</b>.</p>
+          ${o?'<p class="text-sm text-rose-700 bg-rose-50 rounded-lg px-3 py-2" role="alert">Senha incorreta. Tente de novo.</p>':""}
+          <p class="text-xs text-slate-500">${Fin.icone("cadeado","w-3.5 h-3.5 inline -mt-0.5")} A senha é usada só para abrir este arquivo agora e <b>não fica guardada</b>.</p>
           <div class="flex justify-end gap-2">
             <button type="button" data-cancelar class="btn btn-ghost">Cancelar</button>
             <button type="submit" class="btn btn-primary">Abrir fatura</button>
           </div>
-        </form>`, 'Senha da fatura');
-      const obs = new MutationObserver(() => { if (!document.body.contains(panel)) terminar(null); });
-      obs.observe(document.getElementById('modal-root'), { childList: true });
-      const input = panel.querySelector('[name=senha]');
-      setTimeout(() => input.focus(), 50);
-      panel.querySelector('[data-ver]').addEventListener('click', (e) => {
-        const ver = input.type === 'password';
-        input.type = ver ? 'text' : 'password';
-        e.currentTarget.textContent = ver ? 'ocultar' : 'mostrar';
-      });
-      panel.querySelector('[data-cancelar]').addEventListener('click', () => terminar(null));
-      panel.querySelector('form').addEventListener('submit', (e) => {
-        e.preventDefault();
-        if (!input.value) return input.focus();
-        terminar(input.value);
-      });
-    });
-  }
-
-  /** Leitura pronta (do leitor ou da IA) → tela de conferência. */
-  function irParaRevisao(leitura) {
-    st.leitura = leitura;
-    st.cartao = I().sugerirCartao(leitura.info);
-    st.fatura = leitura.info.vencimento ? leitura.info.vencimento.slice(0, 7) : Fin.state.mes;
-    st.linhas = I().preparar(leitura, st.cartao, st.fatura);
-    st.etapa = 'revisao';
-    draw();
-    window.scrollTo(0, 0);
-  }
-
-  /**
-   * Fatura com ajuda da IA (sem custo): extrai o texto, mostra o pedido pronto para copiar no
-   * ChatGPT/Gemini e recebe a resposta colada ("DD/MM;DESCRIÇÃO;VALOR") → mesma conferência.
-   */
-  async function lerComIA(file, senha = null) {
-    if (!file) return;
-    if (!F.cartoes().length) {
-      Fin.ui.toast('Cadastre o cartão antes de importar a fatura.', 'error');
-      return Fin.forms.cartao.open();
-    }
-    Object.assign(st, { arquivo: file, etapa: 'processando', progresso: 'Extraindo o texto da fatura…' });
-    draw();
-    let extraido;
-    try {
-      extraido = await Fin.faturaLeitor.texto(file, (msg) => { const el = document.getElementById('fat-prog'); if (el) el.textContent = msg; }, { senha });
-    } catch (err) {
-      st.etapa = 'upload';
-      draw();
-      if (err?.senha) {
-        const nova = await pedirSenha(file.name, err.incorreta);
-        return nova ? lerComIA(file, nova) : Fin.ui.toast('Importação cancelada.');
-      }
-      return Fin.ui.toast(err.message || 'Não foi possível ler o arquivo.', 'error');
-    }
-    st.etapa = 'upload';
-    draw();
-    if (!extraido.texto.trim()) return Fin.ui.toast('Não achei texto neste arquivo.', 'error');
-
-    const panel = Fin.ui.openModal(`
+        </form>`,"Senha da fatura"),p=new MutationObserver(()=>{document.body.contains(s)||n(null)});p.observe(document.getElementById("modal-root"),{childList:!0});const m=s.querySelector("[name=senha]");setTimeout(()=>m.focus(),50),s.querySelector("[data-ver]").addEventListener("click",x=>{const F=m.type==="password";m.type=F?"text":"password",x.currentTarget.textContent=F?"ocultar":"mostrar"}),s.querySelector("[data-cancelar]").addEventListener("click",()=>n(null)),s.querySelector("form").addEventListener("submit",x=>{if(x.preventDefault(),!m.value)return m.focus();n(m.value)})})}function w(a){t.leitura=a,t.cartao=u().sugerirCartao(a.info),t.fatura=a.info.vencimento?a.info.vencimento.slice(0,7):Fin.state.mes,t.linhas=u().preparar(a,t.cartao,t.fatura),t.etapa="revisao",l(),window.scrollTo(0,0)}async function y(a,o=null){if(!a)return;if(!f.cartoes().length)return Fin.ui.toast("Cadastre o cartão antes de importar a fatura.","error"),Fin.forms.cartao.open();Object.assign(t,{arquivo:a,etapa:"processando",progresso:"Extraindo o texto da fatura…"}),l();let r;try{r=await Fin.faturaLeitor.texto(a,n=>{const s=document.getElementById("fat-prog");s&&(s.textContent=n)},{senha:o})}catch(n){if(t.etapa="upload",l(),n?.senha){const s=await $(a.name,n.incorreta);return s?y(a,s):Fin.ui.toast("Importação cancelada.")}return Fin.ui.toast(n.message||"Não foi possível ler o arquivo.","error")}if(t.etapa="upload",l(),!r.texto.trim())return Fin.ui.toast("Não achei texto neste arquivo.","error");const e=Fin.ui.openModal(`
       <div class="p-5 space-y-4">
         <div data-arrastar class="flex items-center justify-between gap-2">
           <h2 class="font-semibold text-lg">Ler a fatura com a IA</h2>
@@ -318,7 +145,7 @@ Fin.pages.importarFatura = (() => {
         </div>
         <section class="space-y-2">
           <div class="text-sm font-semibold"><span class="inline-grid place-items-center w-5 h-5 rounded-full bg-prim-600 text-white text-[11px] mr-1">1</span> Copie e cole no ChatGPT ou no Gemini</div>
-          ${Fin.ia.blocoCopia(Fin.ia.pedidoFatura(extraido.texto), { linhas: 7 })}
+          ${Fin.ia.blocoCopia(Fin.ia.pedidoFatura(r.texto),{linhas:7})}
         </section>
         <section class="space-y-2">
           <div class="text-sm font-semibold"><span class="inline-grid place-items-center w-5 h-5 rounded-full bg-prim-600 text-white text-[11px] mr-1">2</span> Cole aqui a resposta da IA</div>
@@ -326,109 +153,4 @@ Fin.pages.importarFatura = (() => {
           <p data-ia-erro class="hidden text-sm text-rose-700 bg-rose-50 rounded-lg px-3 py-2" role="alert"></p>
           <button type="button" data-ia-conferir class="btn btn-primary w-full">Conferir lançamentos</button>
         </section>
-      </div>`, 'Ler a fatura com a IA');
-    Fin.ia.ligarCopia(panel);
-    panel.querySelector('[data-close]').addEventListener('click', () => Fin.ui.closeModal());
-    panel.querySelector('[data-ia-conferir]').addEventListener('click', () => {
-      const leitura = Fin.faturaLeitor.deTexto(panel.querySelector('[data-ia-resposta]').value, extraido.info);
-      const erro = panel.querySelector('[data-ia-erro]');
-      if (!leitura.itens.length) {
-        erro.textContent = 'Não achei nenhuma linha no formato DD/MM;DESCRIÇÃO;VALOR. Confira se colou a resposta inteira.';
-        erro.classList.remove('hidden');
-        return;
-      }
-      Fin.ui.closeModal();
-      st.arquivo = file;
-      irParaRevisao(leitura);
-      Fin.ui.toast(`${leitura.itens.length} lançamentos lidos pela IA. Confira antes de importar.`);
-    });
-  }
-
-  async function processar(file, senha = null) {
-    if (!file) return;
-    if (!/pdf$|^image\//i.test(file.type) && !/\.(pdf|png|jpe?g|webp)$/i.test(file.name)) {
-      Fin.ui.toast('Envie um PDF ou uma imagem (JPG/PNG).', 'error');
-      return;
-    }
-    if (!F.cartoes().length) {
-      Fin.ui.toast('Cadastre o cartão antes de importar a fatura.', 'error');
-      return Fin.forms.cartao.open();
-    }
-    Object.assign(st, { arquivo: file, etapa: 'processando', progresso: '' });
-    draw();
-    try {
-      const leitura = await Fin.faturaLeitor.ler(file, (msg) => {
-        st.progresso = msg;
-        const el = document.getElementById('fat-prog');
-        if (el) el.textContent = msg;
-      }, { senha });
-      senha = null; // não guarda
-      if (!leitura.itens.length) throw new Error('Não encontrei lançamentos nesta fatura. Tente “Ler com ajuda da IA”, logo abaixo.');
-      irParaRevisao(leitura);
-    } catch (err) {
-      senha = null;
-      if (err?.senha) {
-        // PDF protegido: pede a senha e tenta de novo (cancelar volta para a escolha do arquivo).
-        st.etapa = 'upload';
-        draw();
-        const nova = await pedirSenha(file.name, err.incorreta);
-        if (nova) return processar(file, nova);
-        return Fin.ui.toast('Importação cancelada.');
-      }
-      console.error(err);
-      st.etapa = 'upload';
-      draw();
-      Fin.ui.toast(err.message || 'Não foi possível ler a fatura.', 'error');
-    }
-  }
-
-  function importar() {
-    const r = I().salvar(st.linhas, { cartao: st.cartao, fatura: st.fatura, futuras: st.futuras, arquivo: st.arquivo.name });
-    Fin.state.cartao = st.cartao;
-    Fin.state.mes = st.fatura;
-    reset();
-    Fin.ui.toast(`${r.qtd} ${r.qtd === 1 ? 'item importado' : 'itens importados'}${r.futuras ? ` + ${r.futuras} parcelas futuras` : ''}.`);
-    Fin.router.go('/cartoes');
-  }
-
-  function bindUpload() {
-    const dz = view.querySelector('#fat-drop');
-    view.querySelector('#fat-input').addEventListener('change', (e) => processar(e.target.files[0]));
-    view.querySelector('#fat-input-ia')?.addEventListener('change', (e) => lerComIA(e.target.files[0]));
-    ['dragenter', 'dragover'].forEach((ev) => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.add('is-dragging'); }));
-    ['dragleave', 'drop'].forEach((ev) => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.remove('is-dragging'); }));
-    dz.addEventListener('drop', (e) => processar(e.dataTransfer.files[0]));
-  }
-
-  function render(container, { signal }) {
-    view = container;
-    if (st.etapa === 'processando' && !st.leitura) st.etapa = 'upload';
-    draw();
-
-    view.addEventListener('click', (e) => {
-      const act = e.target.closest('[data-act]')?.dataset.act;
-      if (act === 'cancelar') { reset(); draw(); }
-      if (act === 'importar') importar();
-      if (act === 'todos' || act === 'nenhum') { st.linhas.forEach((l) => (l.incluir = act === 'todos')); draw(); }
-    }, { signal });
-
-    view.addEventListener('change', (e) => {
-      const t = e.target;
-      if (t.id === 'fat-cartao' || t.id === 'fat-mes') {
-        if (t.id === 'fat-cartao') st.cartao = t.value;
-        if (t.id === 'fat-mes' && t.value) st.fatura = t.value;
-        I().remarcarDuplicados(st.linhas, st.cartao, st.fatura);
-        return draw();
-      }
-      if (t.id === 'fat-futuras') { st.futuras = t.checked; return draw(); }
-      const li = t.closest('[data-n]');
-      if (!li) return;
-      const l = st.linhas[Number(li.dataset.n)];
-      if (t.dataset.f === 'incluir') { l.incluir = t.checked; draw(); }
-      if (t.dataset.f === 'categoria') l.categoria = t.value;
-      if (t.dataset.f === 'descricao') l.descricao = t.value.trim() || l.descricao;
-    }, { signal });
-  }
-
-  return { title: 'Importar fatura', render, processar, estado: st };
-})();
+      </div>`,"Ler a fatura com a IA");Fin.ia.ligarCopia(e),e.querySelector("[data-close]").addEventListener("click",()=>Fin.ui.closeModal()),e.querySelector("[data-ia-conferir]").addEventListener("click",()=>{const n=Fin.faturaLeitor.deTexto(e.querySelector("[data-ia-resposta]").value,r.info),s=e.querySelector("[data-ia-erro]");if(!n.itens.length){s.textContent="Não achei nenhuma linha no formato DD/MM;DESCRIÇÃO;VALOR. Confira se colou a resposta inteira.",s.classList.remove("hidden");return}Fin.ui.closeModal(),t.arquivo=a,w(n),Fin.ui.toast(`${n.itens.length} lançamentos lidos pela IA. Confira antes de importar.`)})}async function v(a,o=null){if(a){if(!/pdf$|^image\//i.test(a.type)&&!/\.(pdf|png|jpe?g|webp)$/i.test(a.name)){Fin.ui.toast("Envie um PDF ou uma imagem (JPG/PNG).","error");return}if(!f.cartoes().length)return Fin.ui.toast("Cadastre o cartão antes de importar a fatura.","error"),Fin.forms.cartao.open();Object.assign(t,{arquivo:a,etapa:"processando",progresso:""}),l();try{const r=await Fin.faturaLeitor.ler(a,e=>{t.progresso=e;const n=document.getElementById("fat-prog");n&&(n.textContent=e)},{senha:o});if(o=null,!r.itens.length)throw new Error("Não encontrei lançamentos nesta fatura. Tente “Ler com ajuda da IA”, logo abaixo.");w(r)}catch(r){if(o=null,r?.senha){t.etapa="upload",l();const e=await $(a.name,r.incorreta);return e?v(a,e):Fin.ui.toast("Importação cancelada.")}console.error(r),t.etapa="upload",l(),Fin.ui.toast(r.message||"Não foi possível ler a fatura.","error")}}}function P(){const a=u().salvar(t.linhas,{cartao:t.cartao,fatura:t.fatura,futuras:t.futuras,arquivo:t.arquivo.name});Fin.state.cartao=t.cartao,Fin.state.mes=t.fatura,b(),Fin.ui.toast(`${a.qtd} ${a.qtd===1?"item importado":"itens importados"}${a.futuras?` + ${a.futuras} parcelas futuras`:""}.`),Fin.router.go("/cartoes")}function D(){const a=d.querySelector("#fat-drop");d.querySelector("#fat-input").addEventListener("change",o=>v(o.target.files[0])),d.querySelector("#fat-input-ia")?.addEventListener("change",o=>y(o.target.files[0])),["dragenter","dragover"].forEach(o=>a.addEventListener(o,r=>{r.preventDefault(),a.classList.add("is-dragging")})),["dragleave","drop"].forEach(o=>a.addEventListener(o,r=>{r.preventDefault(),a.classList.remove("is-dragging")})),a.addEventListener("drop",o=>v(o.dataTransfer.files[0]))}function T(a,{signal:o}){d=a,t.etapa==="processando"&&!t.leitura&&(t.etapa="upload"),l(),d.addEventListener("click",r=>{const e=r.target.closest("[data-act]")?.dataset.act;e==="cancelar"&&(b(),l()),e==="importar"&&P(),(e==="todos"||e==="nenhum")&&(t.linhas.forEach(n=>n.incluir=e==="todos"),l())},{signal:o}),d.addEventListener("change",r=>{const e=r.target;if(e.id==="fat-cartao"||e.id==="fat-mes")return e.id==="fat-cartao"&&(t.cartao=e.value),e.id==="fat-mes"&&e.value&&(t.fatura=e.value),u().remarcarDuplicados(t.linhas,t.cartao,t.fatura),l();if(e.id==="fat-futuras")return t.futuras=e.checked,l();const n=e.closest("[data-n]");if(!n)return;const s=t.linhas[Number(n.dataset.n)];e.dataset.f==="incluir"&&(s.incluir=e.checked,l()),e.dataset.f==="categoria"&&(s.categoria=e.value),e.dataset.f==="descricao"&&(s.descricao=e.value.trim()||s.descricao)},{signal:o})}return{title:"Importar fatura",render:T,processar:v,estado:t}})();

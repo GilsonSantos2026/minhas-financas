@@ -1,612 +1,157 @@
-/**
- * investimentos/formularios.js — Janelas da aba Investimentos.
- *
- *  Fin.forms.inv.conta(id?)          corretora (Rico, Nomad) ou conta-saldo (reserva, previdência)
- *  Fin.forms.inv.mov({ id?, conta?, ativo?, tipo? })   compra, venda, provento, aporte…
- *  Fin.forms.inv.ativo(id)           ticker, classe, preço atual; excluir
- *  Fin.forms.inv.precos()            atualizar os preços de todos os ativos de uma vez
- *  Fin.forms.inv.carga(contaId)      posição inicial colando uma lista (TICKER QTD PREÇO)
- *  Fin.forms.inv.meta(id?)           metas (patrimônio, classes, proventos, conta)
- *  Fin.forms.inv.alocacao()          % ideal por classe
- *  Fin.forms.inv.foto(ym?)           patrimônio de um mês passado (ex.: copiado do Investidor 10)
- */
-window.Fin = window.Fin || {};
-Fin.forms = Fin.forms || {};
-
-Fin.forms.inv = (() => {
-  const fmt = Fin.fmt;
-  const esc = fmt.esc;
-  const S = Fin.storage;
-  const I = () => Fin.inv;
-
-  /** Número digitado (aceita "1.234,56", "0,0234", "12.5", "US$ 3,10"), sem arredondar. */
-  function num(v) {
-    if (v == null) return null;
-    let s = String(v).trim().replace(/US\$|R\$|\s| /g, '');
-    if (!s) return null;
-    if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
-    else if ((s.match(/\./g) || []).length > 1) s = s.replace(/\./g, '');
-    const n = Number(s);
-    return Number.isFinite(n) ? n : null;
-  }
-  const numInput = (v) => (v == null || v === '' ? '' : String(v).replace('.', ','));
-
-  function modal(titulo, corpo, { excluir = false, salvar = 'Salvar' } = {}) {
-    const panel = Fin.ui.openModal(`
+/*! © 2026 Valoris Financial Intelligence. Todos os direitos reservados. Software proprietário: proibido copiar, reutilizar ou criar obras derivadas (veja LICENSE e termos.html). */
+window.Fin=window.Fin||{},Fin.forms=Fin.forms||{},Fin.forms.inv=(()=>{const u=Fin.fmt,S=u.esc,E=Fin.storage,c=()=>Fin.inv;function x(t){if(t==null)return null;let a=String(t).trim().replace(/US\$|R\$|\s| /g,"");if(!a)return null;a.includes(",")?a=a.replace(/\./g,"").replace(",","."):(a.match(/\./g)||[]).length>1&&(a=a.replace(/\./g,""));const d=Number(a);return Number.isFinite(d)?d:null}const q=t=>t==null||t===""?"":String(t).replace(".",",");function L(t,a,{excluir:d=!1,salvar:n="Salvar"}={}){const o=Fin.ui.openModal(`
       <form novalidate class="inv-form">
         <div data-arrastar class="flex items-center justify-between gap-2 px-5 pt-5 pb-3 border-b border-slate-100 sticky top-0 bg-white z-10">
-          <h2 class="font-semibold text-lg">${titulo}</h2>
+          <h2 class="font-semibold text-lg">${t}</h2>
           <button type="button" data-close class="icon-btn" aria-label="Fechar">✕</button>
         </div>
-        <div class="px-5 py-4 space-y-4">${corpo}
+        <div class="px-5 py-4 space-y-4">${a}
           <p data-erro class="hidden text-sm text-rose-700 bg-rose-50 rounded-lg px-3 py-2" role="alert"></p>
         </div>
         <div class="flex items-center gap-2 px-5 py-4 border-t border-slate-100 sticky bottom-0 bg-white">
-          ${excluir ? '<button type="button" data-delete class="btn btn-danger-ghost">Excluir</button>' : ''}
+          ${d?'<button type="button" data-delete class="btn btn-danger-ghost">Excluir</button>':""}
           <span class="flex-1"></span>
           <button type="button" data-close class="btn btn-ghost">Cancelar</button>
-          <button type="submit" class="btn btn-primary">${salvar}</button>
+          <button type="submit" class="btn btn-primary">${n}</button>
         </div>
-      </form>`, titulo);
-    panel.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', Fin.ui.closeModal));
-    const form = panel.querySelector('form');
-    const erro = (msg) => { const e = form.querySelector('[data-erro]'); e.textContent = msg; e.classList.remove('hidden'); return false; };
-    return { panel, form, el: (n) => form.elements[n], erro };
-  }
-
-  const concluir = (msg) => { Fin.ui.closeModal(); Fin.ui.toast(msg); Fin.router.refresh(); };
-  const opt = (v, r, cur) => `<option value="${esc(v)}" ${String(v) === String(cur ?? '') ? 'selected' : ''}>${esc(r)}</option>`;
-  const classesOptions = (cur) => I().CLASSES.map((c) => opt(c.id, `${c.icone} ${c.nome}`, cur)).join('');
-
-  /* ---------------- Conta ---------------- */
-
-  /**
-   * Modo casal: "De quem é?" com as fotos (pessoas + "Dos dois"). Vazio com uma pessoa só.
-   * atual: id da pessoa ou 'casal'.
-   */
-  function donoCampo(rotulo, atual, rotCasal = 'Dos dois') {
-    if (!Fin.finance?.temCasal?.()) return '';
-    const M = Fin.membros;
-    const opcoes = [
-      ...Fin.cofre.pessoas().map((p) => ({ id: p.id, nome: M.primeiroNome(M.porId(p.id)) || p.usuario, av: M.avatar(M.porId(p.id), { tam: 'w-7 h-7', txt: 'text-[10px]' }) })),
-      { id: 'casal', nome: rotCasal, av: `<span class="w-7 h-7 rounded-full grid place-items-center bg-prim-600 text-white shrink-0">${Fin.icone('usuario', 'w-4 h-4')}</span>` },
-    ];
-    return `
-      <fieldset><legend class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">${rotulo}</legend>
-        <div class="grid grid-cols-3 gap-2">${opcoes.map((o) => `
-          <label class="quem-opcao"><input type="radio" name="dono" value="${esc(o.id)}" ${o.id === atual ? 'checked' : ''}><span>${o.av}<span class="truncate">${esc(o.nome)}</span></span></label>`).join('')}
-        </div></fieldset>`;
-  }
-  const donoEscolhido = (form, padrao) => form.querySelector('input[name="dono"]:checked')?.value || padrao;
-
-  function conta(id = null) {
-    const c = id ? I().conta(id) : null;
-    const usos = c ? I().movs().filter((m) => m.conta === c.id).length : 0;
-    const { panel, form, el, erro } = modal(c ? 'Editar conta' : 'Nova conta', `
+      </form>`,t);o.querySelectorAll("[data-close]").forEach(p=>p.addEventListener("click",Fin.ui.closeModal));const e=o.querySelector("form");return{panel:o,form:e,el:p=>e.elements[p],erro:p=>{const i=e.querySelector("[data-erro]");return i.textContent=p,i.classList.remove("hidden"),!1}}}const F=t=>{Fin.ui.closeModal(),Fin.ui.toast(t),Fin.router.refresh()},C=(t,a,d)=>`<option value="${S(t)}" ${String(t)===String(d??"")?"selected":""}>${S(a)}</option>`,w=t=>c().CLASSES.map(a=>C(a.id,`${a.icone} ${a.nome}`,t)).join("");function j(t,a,d="Dos dois"){if(!Fin.finance?.temCasal?.())return"";const n=Fin.membros,o=[...Fin.cofre.pessoas().map(e=>({id:e.id,nome:n.primeiroNome(n.porId(e.id))||e.usuario,av:n.avatar(n.porId(e.id),{tam:"w-7 h-7",txt:"text-[10px]"})})),{id:"casal",nome:d,av:`<span class="w-7 h-7 rounded-full grid place-items-center bg-prim-600 text-white shrink-0">${Fin.icone("usuario","w-4 h-4")}</span>`}];return`
+      <fieldset><legend class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">${t}</legend>
+        <div class="grid grid-cols-3 gap-2">${o.map(e=>`
+          <label class="quem-opcao"><input type="radio" name="dono" value="${S(e.id)}" ${e.id===a?"checked":""}><span>${e.av}<span class="truncate">${S(e.nome)}</span></span></label>`).join("")}
+        </div></fieldset>`}const V=(t,a)=>t.querySelector('input[name="dono"]:checked')?.value||a;function H(t=null){const a=t?c().conta(t):null,d=a?c().movs().filter(i=>i.conta===a.id).length:0,{panel:n,form:o,el:e,erro:r}=L(a?"Editar conta":"Nova conta",`
       <div class="grid grid-cols-[5rem_1fr] gap-3">
-        <label class="field"><span>Ícone</span><input name="icone" class="input text-center text-xl" maxlength="8" value="${esc(c?.icone || '')}" placeholder="🏦"></label>
-        <label class="field"><span>Nome *</span><input name="nome" class="input" maxlength="40" value="${esc(c?.nome || '')}" placeholder="Ex.: Rico, Nomad, Previdência"></label>
+        <label class="field"><span>Ícone</span><input name="icone" class="input text-center text-xl" maxlength="8" value="${S(a?.icone||"")}" placeholder="🏦"></label>
+        <label class="field"><span>Nome *</span><input name="nome" class="input" maxlength="40" value="${S(a?.nome||"")}" placeholder="Ex.: Rico, Nomad, Previdência"></label>
       </div>
-      ${donoCampo('De quem é a conta?', c ? I().donoDe(c) : Fin.cofre.membroId(), 'Conjunta')}
+      ${j("De quem é a conta?",a?c().donoDe(a):Fin.cofre.membroId(),"Conjunta")}
       <fieldset class="field"><legend class="text-sm font-medium text-slate-700 mb-1">Tipo</legend>
         <div class="seg">
-          <label><input type="radio" name="tipo" value="corretora" ${c?.tipo !== 'saldo' ? 'checked' : ''}><span>Corretora (ativos)</span></label>
-          <label><input type="radio" name="tipo" value="saldo" ${c?.tipo === 'saldo' ? 'checked' : ''}><span>Pelo saldo</span></label>
+          <label><input type="radio" name="tipo" value="corretora" ${a?.tipo!=="saldo"?"checked":""}><span>Corretora (ativos)</span></label>
+          <label><input type="radio" name="tipo" value="saldo" ${a?.tipo==="saldo"?"checked":""}><span>Pelo saldo</span></label>
         </div></fieldset>
       <p class="text-xs text-slate-500 -mt-2" data-dica></p>
       <label class="field" data-g="corretora"><span>Moeda dos ativos</span>
-        <select name="moeda" class="input">${opt('BRL', 'Real (R$) — B3', c?.moeda)}${opt('USD', 'Dólar (US$) — exterior', c?.moeda)}</select></label>
+        <select name="moeda" class="input">${C("BRL","Real (R$) — B3",a?.moeda)}${C("USD","Dólar (US$) — exterior",a?.moeda)}</select></label>
       <label class="field" data-g="saldo"><span>Classe</span>
-        <select name="classe" class="input">${classesOptions(c?.classe || 'reserva')}</select></label>
-      ${c && usos ? `<p class="text-xs text-slate-500">${usos} movimentações nesta conta.</p>` : ''}`, { excluir: !!c });
-    const sync = () => {
-      const t = form.querySelector('[name=tipo]:checked').value;
-      form.querySelectorAll('[data-g]').forEach((g) => g.classList.toggle('hidden', g.dataset.g !== t));
-      form.querySelector('[data-dica]').textContent = t === 'corretora'
-        ? 'Guarda ativos com quantidade e preço (ações, FIIs, stocks, ETFs…).'
-        : 'Você informa aportes, resgates e o saldo de tempos em tempos (reserva, previdência, CDB…).';
-    };
-    form.querySelectorAll('[name=tipo]').forEach((r) => r.addEventListener('change', sync));
-    sync();
-    panel.querySelector('[data-delete]')?.addEventListener('click', () => {
-      if (!confirm(`Excluir a conta “${c.nome}”${usos ? ` e as ${usos} movimentações dela` : ''}? Não dá para desfazer.`)) return;
-      I().excluirConta(c.id);
-      concluir('Conta excluída.');
-    });
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const nome = el('nome').value.trim();
-      if (!nome) return erro('Informe o nome.');
-      if (I().contas().some((k) => k.id !== c?.id && Fin.parsers.normalize(k.nome) === Fin.parsers.normalize(nome))) return erro('Já existe uma conta com esse nome.');
-      const tipo = form.querySelector('[name=tipo]:checked').value;
-      if (c && c.tipo !== tipo && usos) return erro('Esta conta já tem movimentações: não dá para trocar o tipo.');
-      S.upsert('invContas', {
-        ...(c ? { id: c.id } : {}), nome, icone: el('icone').value.trim() || null, tipo,
-        moeda: tipo === 'corretora' ? el('moeda').value : 'BRL',
-        classe: tipo === 'saldo' ? el('classe').value : null,
-        ...(Fin.finance.temCasal() ? { dono: donoEscolhido(form, c ? I().donoDe(c) : Fin.cofre.membroId()) } : {}),
-      });
-      concluir(c ? 'Conta atualizada.' : 'Conta criada.');
-    });
-  }
-
-  /* ---------------- Movimentação ---------------- */
-
-  const G = {
-    ativo: ['inicial', 'compra', 'venda', 'provento', 'desdobramento', 'grupamento', 'bonificacao'],
-    qtd: ['inicial', 'compra', 'venda', 'bonificacao'],
-    preco: ['inicial', 'compra', 'venda', 'bonificacao'],
-    taxas: ['compra', 'venda'],
-    valor: ['provento', 'aporte', 'resgate', 'saldo'],
-    fator: ['desdobramento', 'grupamento'],
-    subtipo: ['provento'],
-    cambio: ['inicial', 'compra', 'venda', 'provento', 'bonificacao'],
-  };
-  const TIPOS_CORRETORA = ['compra', 'venda', 'provento', 'inicial', 'desdobramento', 'grupamento', 'bonificacao'];
-  const TIPOS_SALDO = ['aporte', 'resgate', 'saldo'];
-
-  function mov({ id = null, conta: contaId = null, ativo: ativoId = null, tipo = null } = {}) {
-    const m = id ? I().movs().find((x) => x.id === id) : null;
-    const contas = I().contas();
-    if (!contas.length) return Fin.ui.toast('Crie uma conta primeiro (ex.: Rico ou Nomad).', 'error');
-    const a0 = I().ativo(m?.ativo || ativoId);
-    let cId = m?.conta || a0?.conta || contaId || contas[0].id;
-    const { panel, form, el, erro } = modal(m ? 'Editar movimentação' : 'Nova movimentação', `
+        <select name="classe" class="input">${w(a?.classe||"reserva")}</select></label>
+      ${a&&d?`<p class="text-xs text-slate-500">${d} movimentações nesta conta.</p>`:""}`,{excluir:!!a}),p=()=>{const i=o.querySelector("[name=tipo]:checked").value;o.querySelectorAll("[data-g]").forEach(l=>l.classList.toggle("hidden",l.dataset.g!==i)),o.querySelector("[data-dica]").textContent=i==="corretora"?"Guarda ativos com quantidade e preço (ações, FIIs, stocks, ETFs…).":"Você informa aportes, resgates e o saldo de tempos em tempos (reserva, previdência, CDB…)."};o.querySelectorAll("[name=tipo]").forEach(i=>i.addEventListener("change",p)),p(),n.querySelector("[data-delete]")?.addEventListener("click",()=>{confirm(`Excluir a conta “${a.nome}”${d?` e as ${d} movimentações dela`:""}? Não dá para desfazer.`)&&(c().excluirConta(a.id),F("Conta excluída."))}),o.addEventListener("submit",i=>{i.preventDefault();const l=e("nome").value.trim();if(!l)return r("Informe o nome.");if(c().contas().some(m=>m.id!==a?.id&&Fin.parsers.normalize(m.nome)===Fin.parsers.normalize(l)))return r("Já existe uma conta com esse nome.");const s=o.querySelector("[name=tipo]:checked").value;if(a&&a.tipo!==s&&d)return r("Esta conta já tem movimentações: não dá para trocar o tipo.");E.upsert("invContas",{...a?{id:a.id}:{},nome:l,icone:e("icone").value.trim()||null,tipo:s,moeda:s==="corretora"?e("moeda").value:"BRL",classe:s==="saldo"?e("classe").value:null,...Fin.finance.temCasal()?{dono:V(o,a?c().donoDe(a):Fin.cofre.membroId())}:{}}),F(a?"Conta atualizada.":"Conta criada.")})}const A={ativo:["inicial","compra","venda","provento","desdobramento","grupamento","bonificacao"],qtd:["inicial","compra","venda","bonificacao"],preco:["inicial","compra","venda","bonificacao"],taxas:["compra","venda"],valor:["provento","aporte","resgate","saldo"],fator:["desdobramento","grupamento"],subtipo:["provento"],cambio:["inicial","compra","venda","provento","bonificacao"]},Q=["compra","venda","provento","inicial","desdobramento","grupamento","bonificacao"],X=["aporte","resgate","saldo"];function K({id:t=null,conta:a=null,ativo:d=null,tipo:n=null}={}){const o=t?c().movs().find(f=>f.id===t):null,e=c().contas();if(!e.length)return Fin.ui.toast("Crie uma conta primeiro (ex.: Rico ou Nomad).","error");const r=c().ativo(o?.ativo||d);let p=o?.conta||r?.conta||a||e[0].id;const{panel:i,form:l,el:s,erro:m}=L(o?"Editar movimentação":"Nova movimentação",`
       <div class="grid grid-cols-2 gap-3">
-        <label class="field"><span>Conta</span><select name="conta" class="input">${contas.map((c) => opt(c.id, `${c.icone ? `${c.icone} ` : ''}${c.nome}`, cId)).join('')}</select></label>
+        <label class="field"><span>Conta</span><select name="conta" class="input">${e.map(f=>C(f.id,`${f.icone?`${f.icone} `:""}${f.nome}`,p)).join("")}</select></label>
         <label class="field"><span>Tipo</span><select name="tipo" class="input"></select></label>
       </div>
       <div data-g="ativo" class="grid grid-cols-2 gap-3">
         <label class="field col-span-2 sm:col-span-1"><span>Ativo (ticker) *</span>
-          <input name="ticker" class="input uppercase" list="inv-tickers" autocomplete="off" maxlength="16" value="${esc(a0?.ticker || '')}" placeholder="Ex.: MXRF11, VOO">
+          <input name="ticker" class="input uppercase" list="inv-tickers" autocomplete="off" maxlength="16" value="${S(r?.ticker||"")}" placeholder="Ex.: MXRF11, VOO">
           <datalist id="inv-tickers"></datalist></label>
-        <label class="field col-span-2 sm:col-span-1" data-novo><span>Classe do ativo novo</span><select name="classe" class="input">${classesOptions()}</select></label>
+        <label class="field col-span-2 sm:col-span-1" data-novo><span>Classe do ativo novo</span><select name="classe" class="input">${w()}</select></label>
       </div>
       <div class="grid grid-cols-2 gap-3">
-        <label class="field"><span data-rot-data>Data</span><input name="data" type="date" class="input" value="${m?.data || fmt.todayISO()}"></label>
+        <label class="field"><span data-rot-data>Data</span><input name="data" type="date" class="input" value="${o?.data||u.todayISO()}"></label>
         <label class="field" data-g="subtipo"><span>Provento</span><select name="subtipo" class="input">
-          ${opt('dividendo', 'Dividendo', m?.subtipo)}${opt('jcp', 'JCP', m?.subtipo)}${opt('rendimento', 'Rendimento (FII)', m?.subtipo)}${opt('outro', 'Outro', m?.subtipo)}</select></label>
-        <label class="field" data-g="fator"><span>Proporção: 1 para</span><input name="fator" class="input tabular-nums" inputmode="decimal" value="${numInput(m?.fator)}" placeholder="Ex.: 4"></label>
+          ${C("dividendo","Dividendo",o?.subtipo)}${C("jcp","JCP",o?.subtipo)}${C("rendimento","Rendimento (FII)",o?.subtipo)}${C("outro","Outro",o?.subtipo)}</select></label>
+        <label class="field" data-g="fator"><span>Proporção: 1 para</span><input name="fator" class="input tabular-nums" inputmode="decimal" value="${q(o?.fator)}" placeholder="Ex.: 4"></label>
       </div>
       <div class="grid grid-cols-3 gap-3">
-        <label class="field" data-g="qtd"><span>Quantidade *</span><input name="qtd" class="input tabular-nums" inputmode="decimal" value="${numInput(m?.qtd)}" placeholder="0"></label>
-        <label class="field" data-g="preco"><span data-rot-preco>Preço *</span><input name="preco" class="input tabular-nums" inputmode="decimal" value="${numInput(m?.preco)}" placeholder="0,00"></label>
-        <label class="field" data-g="taxas"><span>Taxas</span><input name="taxas" class="input tabular-nums" inputmode="decimal" value="${numInput(m?.taxas)}" placeholder="0,00"></label>
+        <label class="field" data-g="qtd"><span>Quantidade *</span><input name="qtd" class="input tabular-nums" inputmode="decimal" value="${q(o?.qtd)}" placeholder="0"></label>
+        <label class="field" data-g="preco"><span data-rot-preco>Preço *</span><input name="preco" class="input tabular-nums" inputmode="decimal" value="${q(o?.preco)}" placeholder="0,00"></label>
+        <label class="field" data-g="taxas"><span>Taxas</span><input name="taxas" class="input tabular-nums" inputmode="decimal" value="${q(o?.taxas)}" placeholder="0,00"></label>
       </div>
-      <label class="field" data-g="valor"><span data-rot-valor>Valor *</span><input name="valor" class="input tabular-nums" inputmode="decimal" value="${numInput(m?.valor)}" placeholder="0,00"></label>
+      <label class="field" data-g="valor"><span data-rot-valor>Valor *</span><input name="valor" class="input tabular-nums" inputmode="decimal" value="${q(o?.valor)}" placeholder="0,00"></label>
       <div data-g="cambio" class="bg-sky-50 rounded-xl p-3 space-y-1">
-        <label class="field"><span>Câmbio (R$ por US$)</span><input name="cambio" class="input tabular-nums" inputmode="decimal" value="${numInput(m?.cambio)}" placeholder="Buscando PTAX…"></label>
+        <label class="field"><span>Câmbio (R$ por US$)</span><input name="cambio" class="input tabular-nums" inputmode="decimal" value="${q(o?.cambio)}" placeholder="Buscando PTAX…"></label>
         <p class="text-xs text-slate-500" data-cambio-info>PTAX de venda do Banco Central na data (pode corrigir).</p>
       </div>
       <p class="text-sm text-slate-600 tabular-nums" data-total></p>
-      <label class="field"><span>Observação</span><input name="obs" class="input" maxlength="120" value="${esc(m?.obs || '')}" placeholder="Opcional"></label>
-      <p class="text-xs text-slate-500" data-dica-inicial>“Posição inicial”: o que você já tinha antes de usar o app — quantidade atual e preço médio. Não conta como aporte do mês.</p>`, { excluir: !!m });
-
-    const contaAtual = () => I().conta(el('conta').value);
-    const moeda = () => contaAtual()?.moeda || 'BRL';
-    const sigla = () => (moeda() === 'USD' ? 'US$' : 'R$');
-    let cambioManual = !!m?.cambio;
-
-    const preencherTipos = () => {
-      const c = contaAtual();
-      const lista = c?.tipo === 'saldo' ? TIPOS_SALDO : TIPOS_CORRETORA;
-      const atual = el('tipo').value || m?.tipo || tipo;
-      el('tipo').innerHTML = lista.map((t) => opt(t, `${I().TIPOS[t].icone} ${I().TIPOS[t].nome}`, lista.includes(atual) ? atual : lista[0])).join('');
-      panel.querySelector('#inv-tickers').innerHTML = I().ativos().filter((a) => a.conta === c?.id)
-        .sort((a, b) => a.ticker.localeCompare(b.ticker)).map((a) => `<option value="${esc(a.ticker)}"></option>`).join('');
-    };
-
-    const buscarCambio = async () => {
-      if (cambioManual || moeda() !== 'USD' || !G.cambio.includes(el('tipo').value)) return;
-      const d = el('data').value;
-      const info = form.querySelector('[data-cambio-info]');
-      if (!d) return;
-      info.textContent = 'Buscando a PTAX…';
-      try {
-        const v = await Fin.cotacoes.ptax(d);
-        if (cambioManual || el('data').value !== d) return;
-        el('cambio').value = numInput(v);
-        info.textContent = `PTAX de venda de ${fmt.date(d)} (ou último dia útil antes). Pode corrigir.`;
-      } catch {
-        const dol = I().dolarAtual();
-        if (dol && !el('cambio').value) el('cambio').value = numInput(dol);
-        info.textContent = 'Não consegui a PTAX agora (sem internet?). Informe o câmbio do dia.';
-      }
-      atualizar();
-    };
-
-    const atualizar = () => {
-      const t = el('tipo').value;
-      const c = contaAtual();
-      for (const [g, tipos] of Object.entries(G)) {
-        const vis = tipos.includes(t) && (g !== 'cambio' || moeda() === 'USD');
-        form.querySelectorAll(`[data-g="${g}"]`).forEach((x) => x.classList.toggle('hidden', !vis));
-      }
-      form.querySelector('[data-dica-inicial]').classList.toggle('hidden', t !== 'inicial');
-      const tk = el('ticker').value.trim().toUpperCase();
-      const existe = I().ativos().some((a) => a.conta === c?.id && a.ticker === tk);
-      form.querySelector('[data-novo]').classList.toggle('hidden', !tk || existe || c?.tipo === 'saldo');
-      if (tk && !existe) el('classe').value = el('classe').dataset.mexido ? el('classe').value : I().sugerirClasse(tk, c);
-      form.querySelector('[data-rot-preco]').textContent = `${t === 'inicial' ? 'Preço médio' : 'Preço'} (${sigla()}) *`;
-      form.querySelector('[data-rot-valor]').textContent = t === 'provento' ? `Valor líquido recebido (${sigla()}) *`
-        : t === 'saldo' ? 'Saldo na data (R$) *' : `Valor (R$) *`;
-      form.querySelector('[data-rot-data]').textContent = t === 'provento' ? 'Data do pagamento' : t === 'inicial' ? 'Data de referência' : 'Data';
-      // total
-      const q = num(el('qtd').value) || 0;
-      const p = num(el('preco').value) || 0;
-      const tx = num(el('taxas').value) || 0;
-      const cb = num(el('cambio').value) || 0;
-      let total = '';
-      if (G.qtd.includes(t) && q && p) {
-        const v = t === 'venda' ? q * p - tx : q * p + (G.taxas.includes(t) ? tx : 0);
-        total = `Total: <b>${fmt.moeda(v, moeda())}</b>${moeda() === 'USD' && cb ? ` ≈ ${fmt.brl(v * cb)}` : ''}`;
-      } else if (t === 'provento' && moeda() === 'USD' && cb && num(el('valor').value)) {
-        total = `≈ ${fmt.brl(num(el('valor').value) * cb)}`;
-      }
-      form.querySelector('[data-total]').innerHTML = total;
-    };
-
-    preencherTipos();
-    atualizar();
-    buscarCambio();
-    el('conta').addEventListener('change', () => { preencherTipos(); atualizar(); buscarCambio(); });
-    el('tipo').addEventListener('change', () => { atualizar(); buscarCambio(); });
-    el('data').addEventListener('change', () => { cambioManual = false; buscarCambio(); });
-    el('cambio').addEventListener('input', () => { cambioManual = true; atualizar(); });
-    el('classe').addEventListener('change', () => { el('classe').dataset.mexido = '1'; });
-    ['ticker', 'qtd', 'preco', 'taxas', 'valor'].forEach((n) => el(n).addEventListener('input', atualizar));
-
-    panel.querySelector('[data-delete]')?.addEventListener('click', () => {
-      if (!confirm('Excluir esta movimentação?')) return;
-      S.remove('invMovs', m.id);
-      concluir('Movimentação excluída.');
-    });
-
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const t = el('tipo').value;
-      const c = contaAtual();
-      const data = el('data').value;
-      if (!data) return erro('Informe a data.');
-      const d = { conta: c.id, tipo: t, data, obs: el('obs').value.trim() || null, ativo: null, qtd: null, preco: null, taxas: null, valor: null, fator: null, cambio: null, subtipo: null };
-      if (G.ativo.includes(t)) {
-        const tk = el('ticker').value.trim().toUpperCase();
-        if (!tk) return erro('Informe o ticker do ativo.');
-        if (!/^[A-Z0-9.\-^]{1,16}$/.test(tk)) return erro('Ticker inválido.');
-        if (t !== 'inicial' && t !== 'compra' && t !== 'bonificacao' && !I().ativos().some((a) => a.conta === c.id && a.ticker === tk)) {
-          return erro(`“${tk}” ainda não está nesta conta. Lance primeiro a compra ou a posição inicial.`);
-        }
-      }
-      if (G.qtd.includes(t)) {
-        d.qtd = num(el('qtd').value);
-        d.preco = num(el('preco').value);
-        if (!(d.qtd > 0)) return erro('Informe a quantidade.');
-        if (d.preco == null || d.preco < 0) return erro('Informe o preço.');
-      }
-      if (G.taxas.includes(t)) { d.taxas = num(el('taxas').value) || 0; if (d.taxas < 0) return erro('Taxas não podem ser negativas.'); }
-      if (G.valor.includes(t)) { d.valor = num(el('valor').value); if (d.valor == null || d.valor < 0 || (t !== 'saldo' && !(d.valor > 0))) return erro('Informe o valor.'); }
-      if (G.fator.includes(t)) { d.fator = num(el('fator').value); if (!(d.fator > 0)) return erro('Informe a proporção (ex.: 4 para “1 para 4”).'); }
-      if (G.subtipo.includes(t)) d.subtipo = el('subtipo').value;
-      if (G.cambio.includes(t) && moeda() === 'USD') { d.cambio = num(el('cambio').value); if (!(d.cambio > 0)) return erro('Informe o câmbio (R$ por US$).'); }
-      if (G.ativo.includes(t)) {
-        const a = I().obterAtivo(c.id, el('ticker').value, el('classe').value);
-        d.ativo = a.id;
-        if (t === 'venda') {
-          const p = I().posicoes(data).find((x) => x.ativo.id === a.id);
-          const qtdAntes = (p?.qtd || 0) + (m?.tipo === 'venda' && m.ativo === a.id ? m.qtd : 0);
-          if (d.qtd > qtdAntes + 1e-9) return erro(`Você tinha ${fmt.qtd(qtdAntes)} ${a.ticker} nessa data.`);
-        }
-        if (!(a.preco > 0) && d.preco > 0 && (t === 'compra' || t === 'inicial')) S.upsert('invAtivos', { id: a.id, preco: d.preco, precoEm: data });
-        // Desdobramento/grupamento novo: o preço guardado (de antes do evento) acompanha a proporção.
-        if (!m && (t === 'desdobramento' || t === 'grupamento') && a.preco > 0 && (a.precoEm || '') <= data) {
-          S.upsert('invAtivos', { id: a.id, preco: t === 'desdobramento' ? a.preco / d.fator : a.preco * d.fator });
-        }
-      }
-      S.upsert('invMovs', { ...(m ? { id: m.id } : {}), ...d, origem: m?.origem || 'manual' });
-      concluir(m ? 'Movimentação atualizada.' : `${I().TIPOS[t].nome} registrada.`);
-    });
-  }
-
-  /* ---------------- Ativo ---------------- */
-
-  function ativo(id) {
-    const a = I().ativo(id);
-    if (!a) return;
-    const c = I().conta(a.conta);
-    const p = I().posicoes().find((x) => x.ativo.id === id);
-    const n = I().movs().filter((m) => m.ativo === id).length;
-    const moeda = p?.moeda || 'BRL';
-    const { panel, form, el, erro } = modal(`${esc(a.ticker)} · ${esc(c?.nome || '')}`, `
+      <label class="field"><span>Observação</span><input name="obs" class="input" maxlength="120" value="${S(o?.obs||"")}" placeholder="Opcional"></label>
+      <p class="text-xs text-slate-500" data-dica-inicial>“Posição inicial”: o que você já tinha antes de usar o app — quantidade atual e preço médio. Não conta como aporte do mês.</p>`,{excluir:!!o}),g=()=>c().conta(s("conta").value),y=()=>g()?.moeda||"BRL",D=()=>y()==="USD"?"US$":"R$";let I=!!o?.cambio;const T=()=>{const f=g(),v=f?.tipo==="saldo"?X:Q,k=s("tipo").value||o?.tipo||n;s("tipo").innerHTML=v.map($=>C($,`${c().TIPOS[$].icone} ${c().TIPOS[$].nome}`,v.includes(k)?k:v[0])).join(""),i.querySelector("#inv-tickers").innerHTML=c().ativos().filter($=>$.conta===f?.id).sort(($,b)=>$.ticker.localeCompare(b.ticker)).map($=>`<option value="${S($.ticker)}"></option>`).join("")},z=async()=>{if(I||y()!=="USD"||!A.cambio.includes(s("tipo").value))return;const f=s("data").value,v=l.querySelector("[data-cambio-info]");if(f){v.textContent="Buscando a PTAX…";try{const k=await Fin.cotacoes.ptax(f);if(I||s("data").value!==f)return;s("cambio").value=q(k),v.textContent=`PTAX de venda de ${u.date(f)} (ou último dia útil antes). Pode corrigir.`}catch{const k=c().dolarAtual();k&&!s("cambio").value&&(s("cambio").value=q(k)),v.textContent="Não consegui a PTAX agora (sem internet?). Informe o câmbio do dia."}R()}},R=()=>{const f=s("tipo").value,v=g();for(const[M,aa]of Object.entries(A)){const ea=aa.includes(f)&&(M!=="cambio"||y()==="USD");l.querySelectorAll(`[data-g="${M}"]`).forEach(ta=>ta.classList.toggle("hidden",!ea))}l.querySelector("[data-dica-inicial]").classList.toggle("hidden",f!=="inicial");const k=s("ticker").value.trim().toUpperCase(),$=c().ativos().some(M=>M.conta===v?.id&&M.ticker===k);l.querySelector("[data-novo]").classList.toggle("hidden",!k||$||v?.tipo==="saldo"),k&&!$&&(s("classe").value=s("classe").dataset.mexido?s("classe").value:c().sugerirClasse(k,v)),l.querySelector("[data-rot-preco]").textContent=`${f==="inicial"?"Preço médio":"Preço"} (${D()}) *`,l.querySelector("[data-rot-valor]").textContent=f==="provento"?`Valor líquido recebido (${D()}) *`:f==="saldo"?"Saldo na data (R$) *":"Valor (R$) *",l.querySelector("[data-rot-data]").textContent=f==="provento"?"Data do pagamento":f==="inicial"?"Data de referência":"Data";const b=x(s("qtd").value)||0,h=x(s("preco").value)||0,O=x(s("taxas").value)||0,P=x(s("cambio").value)||0;let U="";if(A.qtd.includes(f)&&b&&h){const M=f==="venda"?b*h-O:b*h+(A.taxas.includes(f)?O:0);U=`Total: <b>${u.moeda(M,y())}</b>${y()==="USD"&&P?` ≈ ${u.brl(M*P)}`:""}`}else f==="provento"&&y()==="USD"&&P&&x(s("valor").value)&&(U=`≈ ${u.brl(x(s("valor").value)*P)}`);l.querySelector("[data-total]").innerHTML=U};T(),R(),z(),s("conta").addEventListener("change",()=>{T(),R(),z()}),s("tipo").addEventListener("change",()=>{R(),z()}),s("data").addEventListener("change",()=>{I=!1,z()}),s("cambio").addEventListener("input",()=>{I=!0,R()}),s("classe").addEventListener("change",()=>{s("classe").dataset.mexido="1"}),["ticker","qtd","preco","taxas","valor"].forEach(f=>s(f).addEventListener("input",R)),i.querySelector("[data-delete]")?.addEventListener("click",()=>{confirm("Excluir esta movimentação?")&&(E.remove("invMovs",o.id),F("Movimentação excluída."))}),l.addEventListener("submit",f=>{f.preventDefault();const v=s("tipo").value,k=g(),$=s("data").value;if(!$)return m("Informe a data.");const b={conta:k.id,tipo:v,data:$,obs:s("obs").value.trim()||null,ativo:null,qtd:null,preco:null,taxas:null,valor:null,fator:null,cambio:null,subtipo:null};if(A.ativo.includes(v)){const h=s("ticker").value.trim().toUpperCase();if(!h)return m("Informe o ticker do ativo.");if(!/^[A-Z0-9.\-^]{1,16}$/.test(h))return m("Ticker inválido.");if(v!=="inicial"&&v!=="compra"&&v!=="bonificacao"&&!c().ativos().some(O=>O.conta===k.id&&O.ticker===h))return m(`“${h}” ainda não está nesta conta. Lance primeiro a compra ou a posição inicial.`)}if(A.qtd.includes(v)){if(b.qtd=x(s("qtd").value),b.preco=x(s("preco").value),!(b.qtd>0))return m("Informe a quantidade.");if(b.preco==null||b.preco<0)return m("Informe o preço.")}if(A.taxas.includes(v)&&(b.taxas=x(s("taxas").value)||0,b.taxas<0))return m("Taxas não podem ser negativas.");if(A.valor.includes(v)&&(b.valor=x(s("valor").value),b.valor==null||b.valor<0||v!=="saldo"&&!(b.valor>0)))return m("Informe o valor.");if(A.fator.includes(v)&&(b.fator=x(s("fator").value),!(b.fator>0)))return m("Informe a proporção (ex.: 4 para “1 para 4”).");if(A.subtipo.includes(v)&&(b.subtipo=s("subtipo").value),A.cambio.includes(v)&&y()==="USD"&&(b.cambio=x(s("cambio").value),!(b.cambio>0)))return m("Informe o câmbio (R$ por US$).");if(A.ativo.includes(v)){const h=c().obterAtivo(k.id,s("ticker").value,s("classe").value);if(b.ativo=h.id,v==="venda"){const P=(c().posicoes($).find(U=>U.ativo.id===h.id)?.qtd||0)+(o?.tipo==="venda"&&o.ativo===h.id?o.qtd:0);if(b.qtd>P+1e-9)return m(`Você tinha ${u.qtd(P)} ${h.ticker} nessa data.`)}!(h.preco>0)&&b.preco>0&&(v==="compra"||v==="inicial")&&E.upsert("invAtivos",{id:h.id,preco:b.preco,precoEm:$}),!o&&(v==="desdobramento"||v==="grupamento")&&h.preco>0&&(h.precoEm||"")<=$&&E.upsert("invAtivos",{id:h.id,preco:v==="desdobramento"?h.preco/b.fator:h.preco*b.fator})}E.upsert("invMovs",{...o?{id:o.id}:{},...b,origem:o?.origem||"manual"}),F(o?"Movimentação atualizada.":`${c().TIPOS[v].nome} registrada.`)})}function Z(t){const a=c().ativo(t);if(!a)return;const d=c().conta(a.conta),n=c().posicoes().find(s=>s.ativo.id===t),o=c().movs().filter(s=>s.ativo===t).length,e=n?.moeda||"BRL",{panel:r,form:p,el:i,erro:l}=L(`${S(a.ticker)} · ${S(d?.nome||"")}`,`
       <div class="grid grid-cols-2 gap-3">
-        <label class="field"><span>Ticker</span><input name="ticker" class="input uppercase" maxlength="16" value="${esc(a.ticker)}"></label>
-        <label class="field"><span>Classe</span><select name="classe" class="input">${classesOptions(a.classe)}</select></label>
+        <label class="field"><span>Ticker</span><input name="ticker" class="input uppercase" maxlength="16" value="${S(a.ticker)}"></label>
+        <label class="field"><span>Classe</span><select name="classe" class="input">${w(a.classe)}</select></label>
       </div>
-      <label class="field"><span>Nome (opcional)</span><input name="nome" class="input" maxlength="60" value="${esc(a.nome || '')}" placeholder="Ex.: Vanguard S&P 500"></label>
+      <label class="field"><span>Nome (opcional)</span><input name="nome" class="input" maxlength="60" value="${S(a.nome||"")}" placeholder="Ex.: Vanguard S&P 500"></label>
       <div class="grid grid-cols-2 gap-3">
-        <label class="field"><span>Preço atual (${moeda === 'USD' ? 'US$' : 'R$'})</span><input name="preco" class="input tabular-nums" inputmode="decimal" value="${numInput(a.preco)}"></label>
-        <label class="field"><span>Data do preço</span><input name="precoEm" type="date" class="input" value="${a.precoEm || fmt.todayISO()}"></label>
+        <label class="field"><span>Preço atual (${e==="USD"?"US$":"R$"})</span><input name="preco" class="input tabular-nums" inputmode="decimal" value="${q(a.preco)}"></label>
+        <label class="field"><span>Data do preço</span><input name="precoEm" type="date" class="input" value="${a.precoEm||u.todayISO()}"></label>
       </div>
-      ${p ? `<div class="bg-slate-50 rounded-xl p-3 text-sm grid grid-cols-2 gap-x-3 gap-y-1 tabular-nums">
-        <span class="text-slate-500">Quantidade</span><span class="text-right">${fmt.qtd(p.qtd)}</span>
-        <span class="text-slate-500">Preço médio</span><span class="text-right">${fmt.moeda(p.pm, moeda)}</span>
-        <span class="text-slate-500">Custo</span><span class="text-right">${fmt.brl(p.custoBRL)}</span>
-        <span class="text-slate-500">Valor atual</span><span class="text-right">${fmt.brl(p.valor)}</span>
-        <span class="text-slate-500">Proventos</span><span class="text-right">${fmt.brl(p.proventos)}</span>
-        ${p.realizado ? `<span class="text-slate-500">Lucro realizado</span><span class="text-right">${fmt.brl(p.realizado)}</span>` : ''}
-      </div>` : ''}
+      ${n?`<div class="bg-slate-50 rounded-xl p-3 text-sm grid grid-cols-2 gap-x-3 gap-y-1 tabular-nums">
+        <span class="text-slate-500">Quantidade</span><span class="text-right">${u.qtd(n.qtd)}</span>
+        <span class="text-slate-500">Preço médio</span><span class="text-right">${u.moeda(n.pm,e)}</span>
+        <span class="text-slate-500">Custo</span><span class="text-right">${u.brl(n.custoBRL)}</span>
+        <span class="text-slate-500">Valor atual</span><span class="text-right">${u.brl(n.valor)}</span>
+        <span class="text-slate-500">Proventos</span><span class="text-right">${u.brl(n.proventos)}</span>
+        ${n.realizado?`<span class="text-slate-500">Lucro realizado</span><span class="text-right">${u.brl(n.realizado)}</span>`:""}
+      </div>`:""}
       <div class="flex flex-wrap gap-3 text-sm">
         <button type="button" data-novo-mov="compra" class="text-prim-700 font-semibold hover:underline">＋ Compra</button>
         <button type="button" data-novo-mov="venda" class="text-prim-700 font-semibold hover:underline">＋ Venda</button>
         <button type="button" data-novo-mov="provento" class="text-prim-700 font-semibold hover:underline">＋ Provento</button>
-        <button type="button" data-ver-movs class="text-slate-500 hover:underline ml-auto">${n} movimentações →</button>
-      </div>`, { excluir: true });
-    panel.querySelectorAll('[data-novo-mov]').forEach((b) => b.addEventListener('click', () => mov({ ativo: a.id, tipo: b.dataset.novoMov })));
-    panel.querySelector('[data-ver-movs]').addEventListener('click', () => {
-      Fin.state.invFiltroAtivo = a.id;
-      Fin.state.invAba = 'movs';
-      Fin.ui.closeModal();
-      if (Fin.router.current() === '/investimentos') Fin.router.refresh(); else Fin.router.go('/investimentos');
-    });
-    panel.querySelector('[data-delete]').addEventListener('click', () => {
-      if (!confirm(`Excluir ${a.ticker}${n ? ` e as ${n} movimentações dele` : ''}? Não dá para desfazer.`)) return;
-      I().excluirAtivo(a.id);
-      concluir('Ativo excluído.');
-    });
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const tk = el('ticker').value.trim().toUpperCase();
-      if (!/^[A-Z0-9.\-^]{1,16}$/.test(tk)) return erro('Ticker inválido.');
-      if (I().ativos().some((x) => x.id !== a.id && x.conta === a.conta && x.ticker === tk)) return erro('Já existe esse ticker nesta conta.');
-      const preco = num(el('preco').value);
-      if (preco != null && preco < 0) return erro('Preço inválido.');
-      S.upsert('invAtivos', { id: a.id, ticker: tk, classe: el('classe').value, nome: el('nome').value.trim() || null, preco, precoEm: preco != null ? el('precoEm').value || fmt.todayISO() : null });
-      concluir('Ativo atualizado.');
-    });
-  }
-
-  /* ---------------- Preços de todos os ativos ---------------- */
-
-  function precos() {
-    const pos = I().posicoes().filter((p) => p.qtd > 0).sort((a, b) => (a.conta?.nome || '').localeCompare(b.conta?.nome || '') || a.ativo.ticker.localeCompare(b.ativo.ticker));
-    if (!pos.length) return Fin.ui.toast('Nenhum ativo em carteira ainda.', 'error');
-    const { form, el } = modal('Atualizar preços', `
+        <button type="button" data-ver-movs class="text-slate-500 hover:underline ml-auto">${o} movimentações →</button>
+      </div>`,{excluir:!0});r.querySelectorAll("[data-novo-mov]").forEach(s=>s.addEventListener("click",()=>K({ativo:a.id,tipo:s.dataset.novoMov}))),r.querySelector("[data-ver-movs]").addEventListener("click",()=>{Fin.state.invFiltroAtivo=a.id,Fin.state.invAba="movs",Fin.ui.closeModal(),Fin.router.current()==="/investimentos"?Fin.router.refresh():Fin.router.go("/investimentos")}),r.querySelector("[data-delete]").addEventListener("click",()=>{confirm(`Excluir ${a.ticker}${o?` e as ${o} movimentações dele`:""}? Não dá para desfazer.`)&&(c().excluirAtivo(a.id),F("Ativo excluído."))}),p.addEventListener("submit",s=>{s.preventDefault();const m=i("ticker").value.trim().toUpperCase();if(!/^[A-Z0-9.\-^]{1,16}$/.test(m))return l("Ticker inválido.");if(c().ativos().some(y=>y.id!==a.id&&y.conta===a.conta&&y.ticker===m))return l("Já existe esse ticker nesta conta.");const g=x(i("preco").value);if(g!=null&&g<0)return l("Preço inválido.");E.upsert("invAtivos",{id:a.id,ticker:m,classe:i("classe").value,nome:i("nome").value.trim()||null,preco:g,precoEm:g!=null?i("precoEm").value||u.todayISO():null}),F("Ativo atualizado.")})}function _(){const t=c().posicoes().filter(n=>n.qtd>0).sort((n,o)=>(n.conta?.nome||"").localeCompare(o.conta?.nome||"")||n.ativo.ticker.localeCompare(o.ativo.ticker));if(!t.length)return Fin.ui.toast("Nenhum ativo em carteira ainda.","error");const{form:a,el:d}=L("Atualizar preços",`
       <div class="flex flex-wrap items-center gap-2 bg-emerald-50 rounded-xl p-3 text-sm">
-        <span class="flex-1 min-w-[12rem]">${Fin.cotacoes.temChaves() ? 'Cotações automáticas ligadas.' : 'Ligue as cotações automáticas (brapi para B3, Finnhub para EUA).'}</span>
-        <button type="button" data-auto class="btn btn-primary !py-1.5">${Fin.cotacoes.temChaves() ? '↻ Atualizar agora' : 'Configurar'}</button>
+        <span class="flex-1 min-w-[12rem]">${Fin.cotacoes.temChaves()?"Cotações automáticas ligadas.":"Ligue as cotações automáticas (brapi para B3, Finnhub para EUA)."}</span>
+        <button type="button" data-auto class="btn btn-primary !py-1.5">${Fin.cotacoes.temChaves()?"↻ Atualizar agora":"Configurar"}</button>
         <button type="button" data-chaves class="text-prim-700 font-medium hover:underline">⚙️ Chaves</button>
       </div>
       <p class="text-sm text-slate-500">Ou informe à mão o preço atual de cada ativo (fechamento do dia anterior serve). Campo vazio = mantém o preço guardado.</p>
-      <label class="field"><span>Data dos preços</span><input name="data" type="date" class="input" value="${fmt.todayISO()}"></label>
-      <ul class="divide-y divide-slate-100">${pos.map((p) => `
+      <label class="field"><span>Data dos preços</span><input name="data" type="date" class="input" value="${u.todayISO()}"></label>
+      <ul class="divide-y divide-slate-100">${t.map(n=>`
         <li class="flex items-center gap-3 py-2">
           <div class="flex-1 min-w-0">
-            <div class="font-medium">${esc(p.ativo.ticker)} <span class="text-xs text-slate-400">${esc(p.conta?.nome || '')}</span></div>
-            <div class="text-xs text-slate-500">${p.ativo.preco ? `${fmt.moeda(p.ativo.preco, p.moeda)} em ${fmt.date(p.ativo.precoEm)}` : 'sem preço'}</div>
+            <div class="font-medium">${S(n.ativo.ticker)} <span class="text-xs text-slate-400">${S(n.conta?.nome||"")}</span></div>
+            <div class="text-xs text-slate-500">${n.ativo.preco?`${u.moeda(n.ativo.preco,n.moeda)} em ${u.date(n.ativo.precoEm)}`:"sem preço"}</div>
           </div>
-          <span class="text-xs text-slate-500">${p.moeda === 'USD' ? 'US$' : 'R$'}</span>
-          <input data-preco="${p.ativo.id}" class="input !w-28 tabular-nums text-right" inputmode="decimal" aria-label="Preço de ${esc(p.ativo.ticker)}">
-        </li>`).join('')}</ul>`, { salvar: 'Salvar preços' });
-    form.querySelector('[data-auto]').addEventListener('click', () => { Fin.ui.closeModal(); atualizarAgora(); });
-    form.querySelector('[data-chaves]').addEventListener('click', () => { Fin.ui.closeModal(); cotacoes(); });
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const data = el('data').value || fmt.todayISO();
-      const mapa = new Map();
-      form.querySelectorAll('[data-preco]').forEach((i) => { const v = num(i.value); if (v > 0) mapa.set(i.dataset.preco, v); });
-      if (!mapa.size) return Fin.ui.closeModal();
-      S.set('invAtivos', I().ativos().map((a) => (mapa.has(a.id) ? { ...a, preco: mapa.get(a.id), precoEm: data } : a)));
-      concluir(`${mapa.size} ${mapa.size === 1 ? 'preço atualizado' : 'preços atualizados'}.`);
-    });
-  }
-
-  /* ---------------- Carga inicial (colar lista) ---------------- */
-
-  function carga(contaId = null) {
-    const corretoras = I().contas().filter((c) => c.tipo === 'corretora');
-    if (!corretoras.length) return Fin.ui.toast('Crie uma corretora primeiro.', 'error');
-    const { form, el, erro } = modal('Carregar posição atual', `
+          <span class="text-xs text-slate-500">${n.moeda==="USD"?"US$":"R$"}</span>
+          <input data-preco="${n.ativo.id}" class="input !w-28 tabular-nums text-right" inputmode="decimal" aria-label="Preço de ${S(n.ativo.ticker)}">
+        </li>`).join("")}</ul>`,{salvar:"Salvar preços"});a.querySelector("[data-auto]").addEventListener("click",()=>{Fin.ui.closeModal(),N()}),a.querySelector("[data-chaves]").addEventListener("click",()=>{Fin.ui.closeModal(),B()}),a.addEventListener("submit",n=>{n.preventDefault();const o=d("data").value||u.todayISO(),e=new Map;if(a.querySelectorAll("[data-preco]").forEach(r=>{const p=x(r.value);p>0&&e.set(r.dataset.preco,p)}),!e.size)return Fin.ui.closeModal();E.set("invAtivos",c().ativos().map(r=>e.has(r.id)?{...r,preco:e.get(r.id),precoEm:o}:r)),F(`${e.size} ${e.size===1?"preço atualizado":"preços atualizados"}.`)})}function G(t=null){const a=c().contas().filter(i=>i.tipo==="corretora");if(!a.length)return Fin.ui.toast("Crie uma corretora primeiro.","error");const{form:d,el:n,erro:o}=L("Carregar posição atual",`
       <p class="text-sm text-slate-600">Cole uma linha por ativo: <b>TICKER  QUANTIDADE  PREÇO MÉDIO</b> (separados por espaço, tab ou ponto e vírgula). Ex.:</p>
-      <pre class="bg-slate-50 rounded-lg p-2 text-xs">VOO 0,0147 679,00\nMSFT; 0,37; 410,50\nBBDC4 2 18,49</pre>
+      <pre class="bg-slate-50 rounded-lg p-2 text-xs">VOO 0,0147 679,00
+MSFT; 0,37; 410,50
+BBDC4 2 18,49</pre>
       <div class="grid grid-cols-2 gap-3">
-        <label class="field"><span>Corretora</span><select name="conta" class="input">${corretoras.map((c) => opt(c.id, c.nome, contaId || corretoras[0].id)).join('')}</select></label>
-        <label class="field"><span>Data de referência</span><input name="data" type="date" class="input" value="${fmt.todayISO()}"></label>
+        <label class="field"><span>Corretora</span><select name="conta" class="input">${a.map(i=>C(i.id,i.nome,t||a[0].id)).join("")}</select></label>
+        <label class="field"><span>Data de referência</span><input name="data" type="date" class="input" value="${u.todayISO()}"></label>
       </div>
       <label class="field" data-cambio><span>Câmbio médio (R$ por US$)</span><input name="cambio" class="input tabular-nums" inputmode="decimal" placeholder="Ex.: 5,40"></label>
       <p class="text-xs text-slate-500 -mt-2" data-cambio>Se não souber, use o dólar médio das suas compras; dá para corrigir depois em cada ativo.</p>
       <label class="field"><span>Lista</span><textarea name="lista" rows="8" class="input font-mono text-xs" placeholder="TICKER QTD PREÇO"></textarea></label>
-      <p class="text-sm text-slate-600" data-previa></p>`, { salvar: 'Carregar' });
-    const moeda = () => I().conta(el('conta').value)?.moeda || 'BRL';
-    const ler = () => el('lista').value.split(/\r?\n/).map((l) => l.trim()).filter(Boolean).map((l) => {
-      const p = l.split(/[;\t]+|\s+/).filter(Boolean);
-      return { linha: l, ticker: (p[0] || '').toUpperCase(), qtd: num(p[1]), preco: num(p[2]) };
-    });
-    const previa = () => {
-      const itens = ler();
-      const ok = itens.filter((i) => /^[A-Z0-9.\-^]{1,16}$/.test(i.ticker) && i.qtd > 0 && i.preco >= 0);
-      const ruins = itens.length - ok.length;
-      form.querySelector('[data-previa]').innerHTML = itens.length
-        ? `${ok.length} ativos prontos${ruins ? ` · <span class="text-rose-700">! ${ruins} linhas não entendidas</span>` : ''} · custo ${fmt.moeda(ok.reduce((s, i) => s + i.qtd * i.preco, 0), moeda())}` : '';
-      form.querySelectorAll('[data-cambio]').forEach((x) => x.classList.toggle('hidden', moeda() !== 'USD'));
-      return { ok, ruins };
-    };
-    el('lista').addEventListener('input', previa);
-    el('conta').addEventListener('change', previa);
-    previa();
-    if (Fin.inv.dolarAtual()) el('cambio').placeholder = `Ex.: ${numInput(Fin.inv.dolarAtual().toFixed(2))}`;
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const { ok, ruins } = previa();
-      if (!ok.length) return erro('Nenhuma linha válida. Formato: TICKER QUANTIDADE PREÇO');
-      if (ruins && !confirm(`${ruins} linhas não foram entendidas e serão ignoradas. Continuar?`)) return;
-      const cId = el('conta').value;
-      const cambio = moeda() === 'USD' ? num(el('cambio').value) : null;
-      if (moeda() === 'USD' && !(cambio > 0)) return erro('Informe o câmbio médio (R$ por US$).');
-      const data = el('data').value || fmt.todayISO();
-      const novos = [];
-      for (const i of ok) {
-        const a = I().obterAtivo(cId, i.ticker);
-        if (!(a.preco > 0)) S.upsert('invAtivos', { id: a.id, preco: i.preco, precoEm: data });
-        novos.push({ id: S.uid(), criadoEm: new Date().toISOString(), conta: cId, ativo: a.id, tipo: 'inicial', data, qtd: i.qtd, preco: i.preco, taxas: 0, cambio, origem: 'carga' });
-      }
-      S.set('invMovs', [...S.list('invMovs'), ...novos]);
-      concluir(`${novos.length} ativos carregados. Confira a classe de cada um em Ativos.`);
-    });
-  }
-
-  /* ---------------- Metas ---------------- */
-
-  function meta(id = null) {
-    const mt = id ? I().metas().find((x) => x.id === id) : null;
-    const contas = I().contas();
-    const sel = new Set(mt?.classes || ['stock', 'reit', 'etf']);
-    const { panel, form, el, erro } = modal(mt ? 'Editar meta' : 'Nova meta', `
-      <label class="field"><span>Nome *</span><input name="nome" class="input" maxlength="50" value="${esc(mt?.nome || '')}" placeholder="Ex.: Patrimônio de R$ 15 mil"></label>
-      ${donoCampo('Meta individual ou compartilhada?', mt ? I().donoMeta(mt) : 'casal', 'Dos dois')}
-      ${Fin.finance?.temCasal?.() ? '<p class="text-xs text-slate-500 -mt-2">Individual conta só a carteira da pessoa; “Dos dois” conta a carteira da casa inteira.</p>' : ''}
+      <p class="text-sm text-slate-600" data-previa></p>`,{salvar:"Carregar"}),e=()=>c().conta(n("conta").value)?.moeda||"BRL",r=()=>n("lista").value.split(/\r?\n/).map(i=>i.trim()).filter(Boolean).map(i=>{const l=i.split(/[;\t]+|\s+/).filter(Boolean);return{linha:i,ticker:(l[0]||"").toUpperCase(),qtd:x(l[1]),preco:x(l[2])}}),p=()=>{const i=r(),l=i.filter(m=>/^[A-Z0-9.\-^]{1,16}$/.test(m.ticker)&&m.qtd>0&&m.preco>=0),s=i.length-l.length;return d.querySelector("[data-previa]").innerHTML=i.length?`${l.length} ativos prontos${s?` · <span class="text-rose-700">! ${s} linhas não entendidas</span>`:""} · custo ${u.moeda(l.reduce((m,g)=>m+g.qtd*g.preco,0),e())}`:"",d.querySelectorAll("[data-cambio]").forEach(m=>m.classList.toggle("hidden",e()!=="USD")),{ok:l,ruins:s}};n("lista").addEventListener("input",p),n("conta").addEventListener("change",p),p(),Fin.inv.dolarAtual()&&(n("cambio").placeholder=`Ex.: ${q(Fin.inv.dolarAtual().toFixed(2))}`),d.addEventListener("submit",i=>{i.preventDefault();const{ok:l,ruins:s}=p();if(!l.length)return o("Nenhuma linha válida. Formato: TICKER QUANTIDADE PREÇO");if(s&&!confirm(`${s} linhas não foram entendidas e serão ignoradas. Continuar?`))return;const m=n("conta").value,g=e()==="USD"?x(n("cambio").value):null;if(e()==="USD"&&!(g>0))return o("Informe o câmbio médio (R$ por US$).");const y=n("data").value||u.todayISO(),D=[];for(const I of l){const T=c().obterAtivo(m,I.ticker);T.preco>0||E.upsert("invAtivos",{id:T.id,preco:I.preco,precoEm:y}),D.push({id:E.uid(),criadoEm:new Date().toISOString(),conta:m,ativo:T.id,tipo:"inicial",data:y,qtd:I.qtd,preco:I.preco,taxas:0,cambio:g,origem:"carga"})}E.set("invMovs",[...E.list("invMovs"),...D]),F(`${D.length} ativos carregados. Confira a classe de cada um em Ativos.`)})}function J(t=null){const a=t?c().metas().find(l=>l.id===t):null,d=c().contas(),n=new Set(a?.classes||["stock","reit","etf"]),{panel:o,form:e,el:r,erro:p}=L(a?"Editar meta":"Nova meta",`
+      <label class="field"><span>Nome *</span><input name="nome" class="input" maxlength="50" value="${S(a?.nome||"")}" placeholder="Ex.: Patrimônio de R$ 15 mil"></label>
+      ${j("Meta individual ou compartilhada?",a?c().donoMeta(a):"casal","Dos dois")}
+      ${Fin.finance?.temCasal?.()?'<p class="text-xs text-slate-500 -mt-2">Individual conta só a carteira da pessoa; “Dos dois” conta a carteira da casa inteira.</p>':""}
       <label class="field"><span>Acompanhar</span><select name="tipo" class="input">
-        ${opt('patrimonio', 'Patrimônio total', mt?.tipo)}${opt('classes', 'Algumas classes (ex.: exterior)', mt?.tipo)}
-        ${opt('proventos', 'Média mensal de proventos (12 meses)', mt?.tipo)}${opt('conta', 'Uma conta', mt?.tipo)}</select></label>
-      <fieldset data-g="classes" class="grid grid-cols-2 gap-1 text-sm">${I().CLASSES.map((c) => `
-        <label class="flex items-center gap-2"><input type="checkbox" name="cls" value="${c.id}" class="accent-prim-600" ${sel.has(c.id) ? 'checked' : ''}>${c.icone} ${c.nome}</label>`).join('')}</fieldset>
-      <label class="field" data-g="conta"><span>Conta</span><select name="conta" class="input">${contas.map((c) => opt(c.id, c.nome, mt?.conta)).join('')}</select></label>
+        ${C("patrimonio","Patrimônio total",a?.tipo)}${C("classes","Algumas classes (ex.: exterior)",a?.tipo)}
+        ${C("proventos","Média mensal de proventos (12 meses)",a?.tipo)}${C("conta","Uma conta",a?.tipo)}</select></label>
+      <fieldset data-g="classes" class="grid grid-cols-2 gap-1 text-sm">${c().CLASSES.map(l=>`
+        <label class="flex items-center gap-2"><input type="checkbox" name="cls" value="${l.id}" class="accent-prim-600" ${n.has(l.id)?"checked":""}>${l.icone} ${l.nome}</label>`).join("")}</fieldset>
+      <label class="field" data-g="conta"><span>Conta</span><select name="conta" class="input">${d.map(l=>C(l.id,l.nome,a?.conta)).join("")}</select></label>
       <div class="grid grid-cols-2 gap-3">
-        <label class="field"><span>Objetivo (R$) *</span><input name="alvo" class="input tabular-nums" inputmode="decimal" value="${numInput(mt?.alvo)}"></label>
-        <label class="field" data-g="aporte"><span>Aporte mensal (R$)</span><input name="aporte" class="input tabular-nums" inputmode="decimal" value="${numInput(mt?.aporteMensal)}" placeholder="Para prever a data"></label>
-      </div>`, { excluir: !!mt });
-    const sync = () => {
-      const t = el('tipo').value;
-      form.querySelector('[data-g=classes]').classList.toggle('hidden', t !== 'classes');
-      form.querySelector('[data-g=conta]').classList.toggle('hidden', t !== 'conta');
-      form.querySelector('[data-g=aporte]').classList.toggle('hidden', t === 'proventos');
-    };
-    el('tipo').addEventListener('change', sync);
-    sync();
-    panel.querySelector('[data-delete]')?.addEventListener('click', () => {
-      if (!confirm('Excluir esta meta?')) return;
-      S.remove('invMetas', mt.id);
-      concluir('Meta excluída.');
-    });
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const nome = el('nome').value.trim();
-      const alvo = num(el('alvo').value);
-      const t = el('tipo').value;
-      const classes = [...form.querySelectorAll('[name=cls]:checked')].map((x) => x.value);
-      if (!nome) return erro('Informe o nome.');
-      if (!(alvo > 0)) return erro('Informe o objetivo.');
-      if (t === 'classes' && !classes.length) return erro('Escolha ao menos uma classe.');
-      S.upsert('invMetas', { ...(mt ? { id: mt.id } : {}), nome, tipo: t, alvo, aporteMensal: t === 'proventos' ? null : num(el('aporte').value) || null, classes: t === 'classes' ? classes : null, conta: t === 'conta' ? el('conta').value : null,
-        ...(Fin.finance.temCasal() ? { dono: donoEscolhido(form, mt ? I().donoMeta(mt) : 'casal') } : {}) });
-      concluir(mt ? 'Meta atualizada.' : 'Meta criada.');
-    });
-  }
-
-  /* ---------------- Alocação ideal ---------------- */
-
-  function alocacao() {
-    const ideal = I().config('alocacao')?.ideal || {};
-    const r = I().resumo();
-    const { form, erro } = modal('Alocação ideal', `
+        <label class="field"><span>Objetivo (R$) *</span><input name="alvo" class="input tabular-nums" inputmode="decimal" value="${q(a?.alvo)}"></label>
+        <label class="field" data-g="aporte"><span>Aporte mensal (R$)</span><input name="aporte" class="input tabular-nums" inputmode="decimal" value="${q(a?.aporteMensal)}" placeholder="Para prever a data"></label>
+      </div>`,{excluir:!!a}),i=()=>{const l=r("tipo").value;e.querySelector("[data-g=classes]").classList.toggle("hidden",l!=="classes"),e.querySelector("[data-g=conta]").classList.toggle("hidden",l!=="conta"),e.querySelector("[data-g=aporte]").classList.toggle("hidden",l==="proventos")};r("tipo").addEventListener("change",i),i(),o.querySelector("[data-delete]")?.addEventListener("click",()=>{confirm("Excluir esta meta?")&&(E.remove("invMetas",a.id),F("Meta excluída."))}),e.addEventListener("submit",l=>{l.preventDefault();const s=r("nome").value.trim(),m=x(r("alvo").value),g=r("tipo").value,y=[...e.querySelectorAll("[name=cls]:checked")].map(D=>D.value);if(!s)return p("Informe o nome.");if(!(m>0))return p("Informe o objetivo.");if(g==="classes"&&!y.length)return p("Escolha ao menos uma classe.");E.upsert("invMetas",{...a?{id:a.id}:{},nome:s,tipo:g,alvo:m,aporteMensal:g==="proventos"?null:x(r("aporte").value)||null,classes:g==="classes"?y:null,conta:g==="conta"?r("conta").value:null,...Fin.finance.temCasal()?{dono:V(e,a?c().donoMeta(a):"casal")}:{}}),F(a?"Meta atualizada.":"Meta criada.")})}function Y(){const t=c().config("alocacao")?.ideal||{},a=c().resumo(),{form:d,erro:n}=L("Alocação ideal",`
       <p class="text-sm text-slate-500">Quanto você quer em cada classe (% do patrimônio). Deixe vazio as que não usa.</p>
-      <ul class="divide-y divide-slate-100">${I().CLASSES.map((c) => `
+      <ul class="divide-y divide-slate-100">${c().CLASSES.map(e=>`
         <li class="flex items-center gap-3 py-2">
-          <span class="flex-1">${c.icone} ${c.nome} <span class="text-xs text-slate-400">${r.patrimonio > 0 && r.porClasse[c.id] ? `hoje ${fmt.pct(r.porClasse[c.id] / r.patrimonio)}` : ''}</span></span>
-          <input data-ideal="${c.id}" class="input !w-20 tabular-nums text-right" inputmode="decimal" value="${numInput(ideal[c.id])}" aria-label="% ideal de ${c.nome}"><span class="text-sm text-slate-500">%</span>
-        </li>`).join('')}</ul>
-      <p class="text-sm font-medium" data-soma></p>`);
-    const soma = () => {
-      let s = 0;
-      form.querySelectorAll('[data-ideal]').forEach((i) => { s += num(i.value) || 0; });
-      const el = form.querySelector('[data-soma]');
-      el.textContent = `Total: ${String(Math.round(s * 100) / 100).replace('.', ',')}%${Math.abs(s - 100) > 0.01 && s > 0 ? ' — o ideal é somar 100%' : ''}`;
-      el.className = `text-sm font-medium ${Math.abs(s - 100) > 0.01 && s > 0 ? 'text-amber-800' : 'text-emerald-700'}`;
-      return s;
-    };
-    form.addEventListener('input', soma);
-    soma();
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const novo = {};
-      let invalido = false;
-      form.querySelectorAll('[data-ideal]').forEach((i) => { const v = num(i.value); if (v != null) { if (v < 0 || v > 100) invalido = true; if (v > 0) novo[i.dataset.ideal] = v; } });
-      if (invalido) return erro('Use valores entre 0 e 100.');
-      I().salvarConfig('alocacao', { ideal: novo });
-      concluir('Alocação ideal salva.');
-    });
-  }
-
-  /* ---------------- Patrimônio de um mês passado ---------------- */
-
-  function foto(ym = null) {
-    const h = ym ? S.list('invHist').find((x) => x.id === ym) : null;
-    const { panel, form, el, erro } = modal(h ? `Patrimônio de ${fmt.monthShort(ym)}` : 'Informar patrimônio de um mês', `
+          <span class="flex-1">${e.icone} ${e.nome} <span class="text-xs text-slate-400">${a.patrimonio>0&&a.porClasse[e.id]?`hoje ${u.pct(a.porClasse[e.id]/a.patrimonio)}`:""}</span></span>
+          <input data-ideal="${e.id}" class="input !w-20 tabular-nums text-right" inputmode="decimal" value="${q(t[e.id])}" aria-label="% ideal de ${e.nome}"><span class="text-sm text-slate-500">%</span>
+        </li>`).join("")}</ul>
+      <p class="text-sm font-medium" data-soma></p>`),o=()=>{let e=0;d.querySelectorAll("[data-ideal]").forEach(p=>{e+=x(p.value)||0});const r=d.querySelector("[data-soma]");return r.textContent=`Total: ${String(Math.round(e*100)/100).replace(".",",")}%${Math.abs(e-100)>.01&&e>0?" — o ideal é somar 100%":""}`,r.className=`text-sm font-medium ${Math.abs(e-100)>.01&&e>0?"text-amber-800":"text-emerald-700"}`,e};d.addEventListener("input",o),o(),d.addEventListener("submit",e=>{e.preventDefault();const r={};let p=!1;if(d.querySelectorAll("[data-ideal]").forEach(i=>{const l=x(i.value);l!=null&&((l<0||l>100)&&(p=!0),l>0&&(r[i.dataset.ideal]=l))}),p)return n("Use valores entre 0 e 100.");c().salvarConfig("alocacao",{ideal:r}),F("Alocação ideal salva.")})}function W(t=null){const a=t?E.list("invHist").find(r=>r.id===t):null,{panel:d,form:n,el:o,erro:e}=L(a?`Patrimônio de ${u.monthShort(t)}`:"Informar patrimônio de um mês",`
       <p class="text-sm text-slate-500">Para ter a evolução e a rentabilidade dos meses antes do app (ex.: copiando do Investidor 10 → Patrimônio).</p>
-      <label class="field"><span>Mês</span><input name="mes" type="month" class="input" max="${fmt.addMonths(fmt.currentYM(), -1)}" value="${ym || fmt.addMonths(fmt.currentYM(), -1)}" ${h ? 'readonly' : ''}></label>
+      <label class="field"><span>Mês</span><input name="mes" type="month" class="input" max="${u.addMonths(u.currentYM(),-1)}" value="${t||u.addMonths(u.currentYM(),-1)}" ${a?"readonly":""}></label>
       <div class="grid grid-cols-2 gap-3">
-        <label class="field"><span>Patrimônio no fim do mês (R$) *</span><input name="pat" class="input tabular-nums" inputmode="decimal" value="${numInput(h?.patrimonio)}"></label>
-        <label class="field"><span>Valor aplicado (R$)</span><input name="apl" class="input tabular-nums" inputmode="decimal" value="${numInput(h?.manual ? h.investido : null)}" placeholder="Opcional"></label>
+        <label class="field"><span>Patrimônio no fim do mês (R$) *</span><input name="pat" class="input tabular-nums" inputmode="decimal" value="${q(a?.patrimonio)}"></label>
+        <label class="field"><span>Valor aplicado (R$)</span><input name="apl" class="input tabular-nums" inputmode="decimal" value="${q(a?.manual?a.investido:null)}" placeholder="Opcional"></label>
       </div>
       <p class="text-xs text-slate-500">Valor aplicado = quanto você tinha investido do bolso (sem os ganhos). No Investidor 10 é a parte “Valor aplicado” do gráfico.</p>
-      <p class="text-xs text-amber-800 bg-amber-50 rounded-lg px-2 py-1.5">Some tudo o que o app acompanha (corretoras <b>e</b> contas por saldo, como a reserva). Se informar só a carteira do Investidor 10, cadastre a reserva com data a partir do mês seguinte — senão a rentabilidade daquele mês sai distorcida.</p>`, { excluir: !!h });
-    panel.querySelector('[data-delete]')?.addEventListener('click', () => {
-      if (!confirm(`Apagar o patrimônio de ${fmt.monthShort(ym)}?`)) return;
-      S.remove('invHist', ym);
-      concluir('Mês apagado.');
-    });
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const mes = el('mes').value;
-      const pat = num(el('pat').value);
-      const apl = num(el('apl').value);
-      if (!/^\d{4}-\d{2}$/.test(mes) || mes >= fmt.currentYM()) return erro('Escolha um mês anterior ao atual.');
-      if (!(pat >= 0) || pat == null) return erro('Informe o patrimônio.');
-      S.upsert('invHist', { id: mes, patrimonio: pat, investido: apl, manual: apl != null, em: fmt.todayISO(), informado: true });
-      concluir(`Patrimônio de ${fmt.monthShort(mes)} salvo.`);
-    });
-  }
-
-  /* ---------------- Chaves das cotações automáticas ---------------- */
-
-  function cotacoes() {
-    const c = I().config('cotacoes') || {};
-    const estado = (v) => (v ? '<span class="text-emerald-700">✓ configurada</span>' : '<span class="text-slate-500">○ não configurada</span>');
-    const { form, el, erro } = modal('Cotações automáticas', `
+      <p class="text-xs text-amber-800 bg-amber-50 rounded-lg px-2 py-1.5">Some tudo o que o app acompanha (corretoras <b>e</b> contas por saldo, como a reserva). Se informar só a carteira do Investidor 10, cadastre a reserva com data a partir do mês seguinte — senão a rentabilidade daquele mês sai distorcida.</p>`,{excluir:!!a});d.querySelector("[data-delete]")?.addEventListener("click",()=>{confirm(`Apagar o patrimônio de ${u.monthShort(t)}?`)&&(E.remove("invHist",t),F("Mês apagado."))}),n.addEventListener("submit",r=>{r.preventDefault();const p=o("mes").value,i=x(o("pat").value),l=x(o("apl").value);if(!/^\d{4}-\d{2}$/.test(p)||p>=u.currentYM())return e("Escolha um mês anterior ao atual.");if(!(i>=0)||i==null)return e("Informe o patrimônio.");E.upsert("invHist",{id:p,patrimonio:i,investido:l,manual:l!=null,em:u.todayISO(),informado:!0}),F(`Patrimônio de ${u.monthShort(p)} salvo.`)})}function B(){const t=c().config("cotacoes")||{},a=e=>e?'<span class="text-emerald-700">✓ configurada</span>':'<span class="text-slate-500">○ não configurada</span>',{form:d,el:n,erro:o}=L("Cotações automáticas",`
       <p class="text-sm text-slate-600">Com as chaves, o app busca sozinho o preço dos ativos ao abrir Investimentos (no máximo a cada 30 min por ativo).
         Elas ficam <b>cifradas</b> neste aparelho e no seu Drive, e vão só para o serviço de cotação.</p>
-      <label class="field"><span>B3 (ações, FIIs, ETFs, BDRs) — token da <b>brapi.dev</b> ${estado(c.brapiToken)}</span>
-        <input name="brapi" type="password" class="input font-mono" autocomplete="off" spellcheck="false" placeholder="${c.brapiToken ? 'manter o atual' : 'cole aqui o token'}"></label>
+      <label class="field"><span>B3 (ações, FIIs, ETFs, BDRs) — token da <b>brapi.dev</b> ${a(t.brapiToken)}</span>
+        <input name="brapi" type="password" class="input font-mono" autocomplete="off" spellcheck="false" placeholder="${t.brapiToken?"manter o atual":"cole aqui o token"}"></label>
       <p class="text-xs text-slate-500 -mt-2">brapi.dev → Dashboard → API Keys / Tokens. Grátis: 15 mil consultas/mês, preço com até 30 min de atraso.</p>
-      <label class="field"><span>EUA (Nomad) — chave da <b>Finnhub</b> ${estado(c.finnhubKey)}</span>
-        <input name="finnhub" type="password" class="input font-mono" autocomplete="off" spellcheck="false" placeholder="${c.finnhubKey ? 'manter a atual' : 'cole aqui a chave (opcional)'}"></label>
+      <label class="field"><span>EUA (Nomad) — chave da <b>Finnhub</b> ${a(t.finnhubKey)}</span>
+        <input name="finnhub" type="password" class="input font-mono" autocomplete="off" spellcheck="false" placeholder="${t.finnhubKey?"manter a atual":"cole aqui a chave (opcional)"}"></label>
       <p class="text-xs text-slate-500 -mt-2">finnhub.io → criar conta grátis → Dashboard → API key. Grátis: 60 consultas/min.</p>
       <div class="flex flex-wrap gap-3 text-sm">
-        ${c.brapiToken ? '<label class="inline-flex items-center gap-2"><input type="checkbox" name="tirarBrapi" class="accent-rose-600"> Remover token da brapi</label>' : ''}
-        ${c.finnhubKey ? '<label class="inline-flex items-center gap-2"><input type="checkbox" name="tirarFinnhub" class="accent-rose-600"> Remover chave da Finnhub</label>' : ''}
-      </div>`, { salvar: 'Salvar e atualizar preços' });
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const novo = { ...c };
-      const b = el('brapi').value.trim();
-      const f = el('finnhub').value.trim();
-      if (b) { if (!/^[A-Za-z0-9_\-.]{8,200}$/.test(b)) return erro('O token da brapi parece incompleto.'); novo.brapiToken = b; }
-      if (f) { if (!/^[A-Za-z0-9_\-.]{8,200}$/.test(f)) return erro('A chave da Finnhub parece incompleta.'); novo.finnhubKey = f; }
-      if (el('tirarBrapi')?.checked) delete novo.brapiToken;
-      if (el('tirarFinnhub')?.checked) delete novo.finnhubKey;
-      I().salvarConfig('cotacoes', { brapiToken: novo.brapiToken || null, finnhubKey: novo.finnhubKey || null });
-      Fin.ui.closeModal();
-      await atualizarAgora();
-    });
-  }
-
-  /** Busca os preços agora e mostra o resultado. */
-  async function atualizarAgora() {
-    if (!Fin.cotacoes.temChaves()) { cotacoes(); return; }
-    Fin.ui.toast('Buscando cotações…');
-    const r = await Fin.cotacoes.atualizarPrecos({ forcar: true, onProgress: (t) => Fin.ui.toast(t) });
-    const faltam = [r.semChave.b3 ? `${r.semChave.b3} da B3 sem token` : '', r.semChave.eua ? `${r.semChave.eua} dos EUA sem chave da Finnhub` : ''].filter(Boolean).join(' · ');
-    Fin.ui.toast(`${r.atualizados} preço(s) atualizado(s)${r.falhas.length ? ` · ${r.falhas.length} falha(s): ${r.falhas.slice(0, 2).join('; ')}` : ''}${faltam ? ` · ${faltam}` : ''}`, r.falhas.length && !r.atualizados ? 'error' : 'ok');
-    Fin.router.refresh();
-  }
-
-  return { conta, mov, ativo, precos, carga, meta, alocacao, foto, num, cotacoes, atualizarAgora };
-})();
+        ${t.brapiToken?'<label class="inline-flex items-center gap-2"><input type="checkbox" name="tirarBrapi" class="accent-rose-600"> Remover token da brapi</label>':""}
+        ${t.finnhubKey?'<label class="inline-flex items-center gap-2"><input type="checkbox" name="tirarFinnhub" class="accent-rose-600"> Remover chave da Finnhub</label>':""}
+      </div>`,{salvar:"Salvar e atualizar preços"});d.addEventListener("submit",async e=>{e.preventDefault();const r={...t},p=n("brapi").value.trim(),i=n("finnhub").value.trim();if(p){if(!/^[A-Za-z0-9_\-.]{8,200}$/.test(p))return o("O token da brapi parece incompleto.");r.brapiToken=p}if(i){if(!/^[A-Za-z0-9_\-.]{8,200}$/.test(i))return o("A chave da Finnhub parece incompleta.");r.finnhubKey=i}n("tirarBrapi")?.checked&&delete r.brapiToken,n("tirarFinnhub")?.checked&&delete r.finnhubKey,c().salvarConfig("cotacoes",{brapiToken:r.brapiToken||null,finnhubKey:r.finnhubKey||null}),Fin.ui.closeModal(),await N()})}async function N(){if(!Fin.cotacoes.temChaves()){B();return}Fin.ui.toast("Buscando cotações…");const t=await Fin.cotacoes.atualizarPrecos({forcar:!0,onProgress:d=>Fin.ui.toast(d)}),a=[t.semChave.b3?`${t.semChave.b3} da B3 sem token`:"",t.semChave.eua?`${t.semChave.eua} dos EUA sem chave da Finnhub`:""].filter(Boolean).join(" · ");Fin.ui.toast(`${t.atualizados} preço(s) atualizado(s)${t.falhas.length?` · ${t.falhas.length} falha(s): ${t.falhas.slice(0,2).join("; ")}`:""}${a?` · ${a}`:""}`,t.falhas.length&&!t.atualizados?"error":"ok"),Fin.router.refresh()}return{conta:H,mov:K,ativo:Z,precos:_,carga:G,meta:J,alocacao:Y,foto:W,num:x,cotacoes:B,atualizarAgora:N}})();

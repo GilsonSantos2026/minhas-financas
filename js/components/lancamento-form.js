@@ -1,135 +1,70 @@
-/**
- * components/lancamento-form.js — Formulário para criar, editar e excluir lançamentos.
- * Abre como janela no computador e como "bottom sheet" no celular.
- *
- * Uso: Fin.forms.lancamento.open()        → novo
- *      Fin.forms.lancamento.open(id)      → editar
- */
-window.Fin = window.Fin || {};
-Fin.forms = Fin.forms || {};
-
-Fin.forms.lancamento = (() => {
-  const fmt = Fin.fmt;
-  const esc = fmt.esc;
-  const F = Fin.finance;
-  const P = Fin.parsers;
-  const NOVA = '__nova__';
-
-  /** Opções do seletor de categoria (reaproveitado pelo formulário de compra no cartão). */
-  function categoriaOptions(tipo, atual) {
-    const cats = F.categorias(tipo);
-    const nomes = cats.map((c) => c.nome);
-    const extra = atual && !nomes.includes(atual) ? [{ nome: atual, icone: '' }] : [];
-    return `<option value="">Selecione…</option>` +
-      [...extra, ...cats].map((c) => `<option value="${esc(c.nome)}" ${c.nome === atual ? 'selected' : ''}>${c.icone ? c.icone + ' ' : ''}${esc(c.nome)}</option>`).join('') +
-      `<option value="${NOVA}">＋ Nova categoria…</option>`;
-  }
-
-  /**
-   * Modo casal: "Quem pagou?" (só despesas) com as fotos; receita = quem lançou recebeu.
-   * Some quando há uma pessoa só.
-   */
-  function quemHTML(l, v) {
-    if (!F.temCasal()) return '';
-    const M = Fin.membros;
-    const eu = Fin.cofre.membroId();
-    const atual = l ? F.pagador(l) : eu;
-    const autor = l ? M.porId(F.autor(l)) : null;
-    const opcoes = [
-      ...Fin.cofre.pessoas().map((p) => ({ id: p.id, nome: M.primeiroNome(M.porId(p.id)) || p.usuario, av: M.avatar(M.porId(p.id), { tam: 'w-7 h-7', txt: 'text-[10px]' }) })),
-      { id: F.CASAL, nome: 'Os dois', av: `<span class="w-7 h-7 rounded-full grid place-items-center bg-prim-600 text-white shrink-0">${Fin.icone('usuario', 'w-4 h-4')}</span>` },
-    ];
-    return `
-      <fieldset data-quem class="${v.tipo === 'receita' ? 'hidden' : ''}">
+/*! © 2026 Valoris Financial Intelligence. Todos os direitos reservados. Software proprietário: proibido copiar, reutilizar ou criar obras derivadas (veja LICENSE e termos.html). */
+window.Fin=window.Fin||{},Fin.forms=Fin.forms||{},Fin.forms.lancamento=(()=>{const c=Fin.fmt,x=c.esc,i=Fin.finance,y=Fin.parsers,w="__nova__";function R(p,a){const d=i.categorias(p),P=d.map(u=>u.nome);return'<option value="">Selecione…</option>'+[...a&&!P.includes(a)?[{nome:a,icone:""}]:[],...d].map(u=>`<option value="${x(u.nome)}" ${u.nome===a?"selected":""}>${u.icone?u.icone+" ":""}${x(u.nome)}</option>`).join("")+`<option value="${w}">＋ Nova categoria…</option>`}function Y(p,a){if(!i.temCasal())return"";const d=Fin.membros,P=Fin.cofre.membroId(),l=p?i.pagador(p):P,u=p?d.porId(i.autor(p)):null,q=[...Fin.cofre.pessoas().map(o=>({id:o.id,nome:d.primeiroNome(d.porId(o.id))||o.usuario,av:d.avatar(d.porId(o.id),{tam:"w-7 h-7",txt:"text-[10px]"})})),{id:i.CASAL,nome:"Os dois",av:`<span class="w-7 h-7 rounded-full grid place-items-center bg-prim-600 text-white shrink-0">${Fin.icone("usuario","w-4 h-4")}</span>`}];return`
+      <fieldset data-quem class="${a.tipo==="receita"?"hidden":""}">
         <legend class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Quem pagou?</legend>
         <div class="grid grid-cols-3 gap-2">
-          ${opcoes.map((o) => `
+          ${q.map(o=>`
             <label class="quem-opcao">
-              <input type="radio" name="pagoPor" value="${esc(o.id)}" ${o.id === atual ? 'checked' : ''} />
-              <span>${o.av}<span class="truncate">${esc(o.nome)}</span></span>
-            </label>`).join('')}
+              <input type="radio" name="pagoPor" value="${x(o.id)}" ${o.id===l?"checked":""} />
+              <span>${o.av}<span class="truncate">${x(o.nome)}</span></span>
+            </label>`).join("")}
         </div>
-        ${autor ? `<p class="text-xs text-slate-500 mt-1.5">Lançado por <b>${esc(M.nome(autor) || autor.usuario)}</b>.</p>` : ''}
+        ${u?`<p class="text-xs text-slate-500 mt-1.5">Lançado por <b>${x(d.nome(u)||u.usuario)}</b>.</p>`:""}
       </fieldset>
-      ${autor && v.tipo === 'receita' ? `<p data-quem-rec class="text-xs text-slate-500 -mt-2">Recebido por <b>${esc(M.nome(autor) || autor.usuario)}</b> (quem lançou).</p>` : ''}`;
-  }
-
-  /**
-   * Modo casal: lançamento feito pela OUTRA pessoa → salvar/excluir pede confirmação
-   * (barra que aparece no lugar dos botões, sem fechar o formulário). Vale nos dois sentidos.
-   */
-  const autorOutro = (l) => (l && F.temCasal() && F.autor(l) !== Fin.cofre.membroId() ? Fin.membros.porId(F.autor(l)) : null);
-  function deOutroHTML(l) {
-    const a = autorOutro(l);
-    if (!a) return '';
-    const nome = esc(Fin.membros.primeiroNome(a) || a.usuario);
-    return `
+      ${u&&a.tipo==="receita"?`<p data-quem-rec class="text-xs text-slate-500 -mt-2">Recebido por <b>${x(d.nome(u)||u.usuario)}</b> (quem lançou).</p>`:""}`}const A=p=>p&&i.temCasal()&&i.autor(p)!==Fin.cofre.membroId()?Fin.membros.porId(i.autor(p)):null;function J(p){const a=A(p);if(!a)return"";const d=x(Fin.membros.primeiroNome(a)||a.usuario);return`
       <div data-confirma-outro class="hidden px-5 py-4 border-t border-amber-200 bg-amber-50 sticky bottom-0 space-y-3" role="alertdialog" aria-live="assertive">
         <div class="flex items-start gap-2 text-sm text-amber-900">
-          ${Fin.membros.avatar(a, { tam: 'w-7 h-7', txt: 'text-[10px]' })}
-          <span><b>Este lançamento foi feito por ${nome}.</b> <span data-confirma-texto>Quer mesmo salvar a alteração?</span></span>
+          ${Fin.membros.avatar(a,{tam:"w-7 h-7",txt:"text-[10px]"})}
+          <span><b>Este lançamento foi feito por ${d}.</b> <span data-confirma-texto>Quer mesmo salvar a alteração?</span></span>
         </div>
         <div class="flex justify-end gap-2">
           <button type="button" data-confirma-nao class="btn btn-ghost !py-1.5">Voltar</button>
           <button type="button" data-confirma-sim class="btn btn-primary !py-1.5">Sim, salvar</button>
         </div>
-      </div>`;
-  }
-
-  function open(id = null) {
-    const l = id ? F.todos().find((x) => x.id === id) : null; // registro real (não a visão filtrada)
-    if (id && !l) return Fin.ui.toast('Lançamento não encontrado.', 'error');
-
-    const hoje = fmt.todayISO();
-    // Novo lançamento: data de hoje se o mês aberto é o atual; senão, dia 1 do mês aberto.
-    const dataPadrao = Fin.state.mes === fmt.currentYM() ? hoje : `${Fin.state.mes}-01`;
-    const v = l || { tipo: 'despesa', status: 'aberto', data: dataPadrao, vencimento: dataPadrao, competencia: Fin.state.mes };
-    const formas = F.formasPagamento();
-
-    const panel = Fin.ui.openModal(`
+      </div>`}function K(p=null){const a=p?i.todos().find(e=>e.id===p):null;if(p&&!a)return Fin.ui.toast("Lançamento não encontrado.","error");const d=c.todayISO(),P=Fin.state.mes===c.currentYM()?d:`${Fin.state.mes}-01`,l=a||{tipo:"despesa",status:"aberto",data:P,vencimento:P,competencia:Fin.state.mes},u=i.formasPagamento(),q=Fin.ui.openModal(`
       <form id="lanc-form" novalidate>
         <div data-arrastar class="flex items-center justify-between gap-2 px-5 pt-5 pb-3 border-b border-slate-100 sticky top-0 bg-white z-10">
-          <h2 class="font-semibold text-lg">${l ? 'Editar lançamento' : 'Novo lançamento'}</h2>
+          <h2 class="font-semibold text-lg">${a?"Editar lançamento":"Novo lançamento"}</h2>
           <button type="button" data-close class="icon-btn" aria-label="Fechar">✕</button>
         </div>
 
         <div class="px-5 py-4 space-y-4">
-          ${l?.grupo ? `
+          ${a?.grupo?`
             <div class="bg-slate-50 rounded-xl px-3 py-2.5 text-sm space-y-2">
-              <p><span aria-hidden="true">${l.recorrencia === 'fixo' ? '🔁' : '🧩'}</span>
-                ${l.recorrencia === 'fixo' ? `Recorrente · mês <b>${l.parcela?.atual}/${l.parcela?.total}</b>` : `Parcela <b>${l.parcela?.atual}/${l.parcela?.total}</b>`}</p>
+              <p><span aria-hidden="true">${a.recorrencia==="fixo"?"🔁":"🧩"}</span>
+                ${a.recorrencia==="fixo"?`Recorrente · mês <b>${a.parcela?.atual}/${a.parcela?.total}</b>`:`Parcela <b>${a.parcela?.atual}/${a.parcela?.total}</b>`}</p>
               <fieldset class="flex flex-wrap gap-x-4 gap-y-1">
                 <legend class="sr-only">Aplicar alterações a</legend>
                 <label class="inline-flex items-center gap-1.5"><input type="radio" name="escopo" value="este" checked class="accent-prim-600"> Só este</label>
                 <label class="inline-flex items-center gap-1.5"><input type="radio" name="escopo" value="proximos" class="accent-prim-600"> Este e os próximos</label>
               </fieldset>
-            </div>` : ''}
+            </div>`:""}
 
           <div class="seg" role="radiogroup" aria-label="Tipo">
-            <label><input type="radio" name="tipo" value="despesa" ${v.tipo !== 'receita' ? 'checked' : ''}><span>Despesa</span></label>
-            <label><input type="radio" name="tipo" value="receita" ${v.tipo === 'receita' ? 'checked' : ''}><span>Receita</span></label>
+            <label><input type="radio" name="tipo" value="despesa" ${l.tipo!=="receita"?"checked":""}><span>Despesa</span></label>
+            <label><input type="radio" name="tipo" value="receita" ${l.tipo==="receita"?"checked":""}><span>Receita</span></label>
           </div>
 
-          ${quemHTML(l, v)}
+          ${Y(a,l)}
 
           <label class="field"><span>Descrição *</span>
-            <input name="descricao" class="input" required maxlength="120" value="${esc(v.descricao)}" placeholder="Ex.: Conta de luz" /></label>
+            <input name="descricao" class="input" required maxlength="120" value="${x(l.descricao)}" placeholder="Ex.: Conta de luz" /></label>
 
           <div class="grid grid-cols-2 gap-3">
             <label class="field"><span id="lbl-valor">Valor lançado (R$) *</span>
-              <input name="valorPrevisto" class="input tabular-nums" inputmode="decimal" required value="${fmt.decimalInput(v.valorPrevisto)}" placeholder="0,00" /></label>
+              <input name="valorPrevisto" class="input tabular-nums" inputmode="decimal" required value="${c.decimalInput(l.valorPrevisto)}" placeholder="0,00" /></label>
             <label class="field"><span>Categoria *</span>
-              <select name="categoria" class="input" required>${categoriaOptions(v.tipo, v.categoria)}</select></label>
+              <select name="categoria" class="input" required>${R(l.tipo,l.categoria)}</select></label>
           </div>
 
           <div class="grid grid-cols-2 gap-3">
             <label class="field"><span>Vencimento *</span>
-              <input name="vencimento" type="date" class="input" required value="${v.vencimento || v.data || ''}" /></label>
+              <input name="vencimento" type="date" class="input" required value="${l.vencimento||l.data||""}" /></label>
             <label class="field"><span>Mês de competência</span>
-              <input name="competencia" type="month" class="input" value="${v.competencia || ''}" /></label>
+              <input name="competencia" type="month" class="input" value="${l.competencia||""}" /></label>
           </div>
 
-          ${l ? '' : `
+          ${a?"":`
           <!-- Recorrência (só em lançamento novo): aluguel, água, luz… -->
           <section class="rounded-2xl border border-slate-200 p-3 space-y-3" aria-labelledby="rec-titulo">
             <label class="flex items-center gap-3 cursor-pointer">
@@ -169,16 +104,16 @@ Fin.forms.lancamento = (() => {
               <span id="pg-situacao" class="text-xs text-right"></span>
             </div>
             <div class="seg seg-3" role="radiogroup" aria-label="Situação do pagamento">
-              <label><input type="radio" name="status" value="aberto" ${!['pago', 'parcial'].includes(v.status) ? 'checked' : ''}><span data-rot="aberto">Em aberto</span></label>
-              <label><input type="radio" name="status" value="pago" ${v.status === 'pago' ? 'checked' : ''}><span data-rot="pago">Pago</span></label>
-              <label><input type="radio" name="status" value="parcial" ${v.status === 'parcial' ? 'checked' : ''}><span>Parcial</span></label>
+              <label><input type="radio" name="status" value="aberto" ${["pago","parcial"].includes(l.status)?"":"checked"}><span data-rot="aberto">Em aberto</span></label>
+              <label><input type="radio" name="status" value="pago" ${l.status==="pago"?"checked":""}><span data-rot="pago">Pago</span></label>
+              <label><input type="radio" name="status" value="parcial" ${l.status==="parcial"?"checked":""}><span>Parcial</span></label>
             </div>
             <div id="pago-fields" class="space-y-3">
               <div class="grid grid-cols-2 gap-3">
                 <label class="field"><span data-rot="data">Data do pagamento</span>
-                  <input name="dataPagamento" type="date" class="input" value="${v.dataPagamento || ''}" /></label>
+                  <input name="dataPagamento" type="date" class="input" value="${l.dataPagamento||""}" /></label>
                 <label class="field"><span data-rot="valor">Valor pago (R$)</span>
-                  <input name="valorPago" class="input tabular-nums" inputmode="decimal" value="${fmt.decimalInput(v.valorPago)}" placeholder="0,00" /></label>
+                  <input name="valorPago" class="input tabular-nums" inputmode="decimal" value="${c.decimalInput(l.valorPago)}" placeholder="0,00" /></label>
               </div>
               <div class="flex flex-wrap items-center gap-2">
                 <button type="button" data-usar-lancado class="text-xs font-semibold text-prim-700 hover:underline">Usar o valor lançado</button>
@@ -187,336 +122,26 @@ Fin.forms.lancamento = (() => {
               <div id="pg-rotativo"></div>
             </div>
             <label class="field"><span>Forma de pagamento</span>
-              <input name="formaPagamento" class="input" list="formas-list" value="${esc(v.formaPagamento)}" placeholder="PIX, Boleto, Débito…" />
-              <datalist id="formas-list">${formas.map((f) => `<option value="${esc(f.nome)}"></option>`).join('')}</datalist></label>
+              <input name="formaPagamento" class="input" list="formas-list" value="${x(l.formaPagamento)}" placeholder="PIX, Boleto, Débito…" />
+              <datalist id="formas-list">${u.map(e=>`<option value="${x(e.nome)}"></option>`).join("")}</datalist></label>
           </section>
 
           <label class="field"><span>Data do lançamento</span>
-            <input name="data" type="date" class="input" value="${v.data || ''}" /></label>
+            <input name="data" type="date" class="input" value="${l.data||""}" /></label>
 
           <label class="field"><span>Observação</span>
-            <textarea name="observacao" rows="2" class="input" maxlength="500">${esc(v.observacao)}</textarea></label>
+            <textarea name="observacao" rows="2" class="input" maxlength="500">${x(l.observacao)}</textarea></label>
 
           <p id="form-erro" class="hidden text-sm text-rose-700 bg-rose-50 rounded-lg px-3 py-2" role="alert"></p>
         </div>
 
         <div data-rodape class="flex items-center gap-2 px-5 py-4 border-t border-slate-100 sticky bottom-0 bg-white">
-          ${l ? `<button type="button" data-delete class="btn btn-danger-ghost">${l.grupo ? 'Excluir…' : 'Excluir'}</button>` : ''}
+          ${a?`<button type="button" data-delete class="btn btn-danger-ghost">${a.grupo?"Excluir…":"Excluir"}</button>`:""}
           <span class="flex-1"></span>
           <button type="button" data-close class="btn btn-ghost">Cancelar</button>
           <button type="submit" class="btn btn-primary">Salvar</button>
         </div>
-        ${deOutroHTML(l)}
-      </form>`, l ? 'Editar lançamento' : 'Novo lançamento');
+        ${J(a)}
+      </form>`,a?"Editar lançamento":"Novo lançamento"),o=q.querySelector("#lanc-form"),t=e=>o.elements[e];let j=!!a;const Z=()=>o.querySelector('input[name="tipo"]:checked').value,V=(e,s)=>Math.round((new Date(`${s}T00:00`)-new Date(`${e}T00:00`))/864e5),k=()=>{const e=Z()==="receita",s=t("status").value;o.querySelector("[data-pg-titulo]").textContent=e?"Recebimento":"Pagamento",o.querySelector('[data-rot="aberto"]').textContent=e?"A receber":"Em aberto",o.querySelector('[data-rot="pago"]').textContent=e?"Recebido":"Pago",o.querySelector('[data-rot="data"]').textContent=e?"Data do recebimento":"Data do pagamento",o.querySelector('[data-rot="valor"]').textContent=e?"Valor recebido (R$)":"Valor pago (R$)",o.querySelector("#pago-fields").classList.toggle("hidden",s==="aberto");const r=y.toNumber(t("valorPrevisto").value),n=y.toNumber(t("valorPago").value),m=t("vencimento").value,b=t("dataPagamento").value,$=o.querySelector("#pg-situacao"),g=o.querySelector("#pg-diff");$.innerHTML="",g.innerHTML="";const f=!e&&i.isPagamentoFatura({tipo:"despesa",categoria:t("categoria").value}),F=f&&s!=="aberto"&&r>0&&n>0?i.faturaParcial({tipo:"despesa",categoria:t("categoria").value,status:s,valorPrevisto:r,valorPago:n}):null;if(o.querySelector("#pg-rotativo").innerHTML=F?Fin.ui.alertaRotativo(F,i.rotativo()):"",s==="aberto"){if(m){const v=V(d,m);$.innerHTML=v<0?`<span class="text-rose-700 font-medium">! vencido há ${-v} dia${v===-1?"":"s"}</span>`:v===0?'<span class="text-amber-800 font-medium">vence hoje</span>':`<span class="text-slate-500">vence em ${v} dia${v===1?"":"s"}</span>`}return}if(m&&b){const v=V(m,b);$.innerHTML=v>0?`<span class="text-amber-800 font-medium">◷ ${e?"recebido":"pago"} ${v} dia${v===1?"":"s"} após o vencimento</span>`:`<span class="text-emerald-800">✓ ${e?"recebido":"pago"} em dia</span>`}if(r==null||n==null)return;const h=Math.round((n-r)*100)/100;s==="parcial"?g.innerHTML=n<r?`<span class="text-amber-800">Falta ${c.brl(r-n)}</span>`:'<span class="text-rose-700">Valor ≥ lançado: marque “Pago”</span>':Math.abs(h)<.01?g.innerHTML='<span class="text-emerald-800">✓ igual ao lançado</span>':h>0?g.innerHTML=`<span class="text-amber-800">＋${c.brl(h)} ${e?"a mais":"a mais (juros/multa)"}</span>`:g.innerHTML=f?`<span class="text-rose-700 font-medium">−${c.brl(-h)} a menos (rotativo)</span>`:`<span class="text-emerald-800">−${c.brl(-h)} ${e?"a menos":"(desconto)"}</span>`},D=()=>{const e=t("status").value;e!=="aberto"&&(!t("valorPago").value&&e==="pago"&&(t("valorPago").value=t("valorPrevisto").value),t("dataPagamento").value||(t("dataPagamento").value=d)),k()};D(),o.addEventListener("input",e=>{["valorPrevisto","valorPago","dataPagamento","vencimento"].includes(e.target.name)&&k()}),o.querySelector("[data-usar-lancado]").addEventListener("click",()=>{t("valorPago").value=t("valorPrevisto").value,k()});const O=120,S=()=>t("competencia").value||(t("vencimento").value||"").slice(0,7),ee=(e,s)=>{const[r,n]=e.split("-").map(Number),[m,b]=s.split("-").map(Number);return(m-r)*12+(b-n)+1},N=e=>`${Number(e.slice(0,4))+(e.endsWith("-12")?1:0)}-12`,_=()=>{if(!t("recorrente")?.checked)return{modo:"nao"};const e=t("repeticao").value,s=S();let r;if(t("ateModo").value==="ate"){if(!t("ate").value)return{modo:e,erro:"Escolha até qual mês repetir."};if(!s)return{modo:e,erro:"Informe o vencimento."};if(r=ee(s,t("ate").value),r<2)return{modo:e,erro:`Escolha um mês depois de ${c.monthShort(s)}.`}}else if(r=Math.trunc(Number(t("vezes").value)),!(r>=2))return{modo:e,erro:"Repita pelo menos 2 vezes."};return r>O?{modo:e,n:r,erro:`Máximo de ${O} meses (10 anos).`}:{modo:e,n:r}},E=()=>{if(!t("recorrente"))return;const e=_(),s=e.modo!=="nao";o.querySelector("#rep-box").classList.toggle("hidden",!s),o.querySelector("#lbl-valor").textContent=e.modo==="parcelado"?"Valor total (R$) *":"Valor lançado (R$) *";const r=t("ateModo").value==="ate";if(o.querySelector('[data-ate="vezes"]').classList.toggle("hidden",r),o.querySelector('[data-ate="ate"]').classList.toggle("hidden",!r),S()&&(o.querySelector("[data-ate-fim-ano]").textContent=`Até ${c.monthShort(N(S()))}`),!s)return;const n=o.querySelector("#rep-resumo");if(n.classList.toggle("bg-emerald-50",!e.erro),n.classList.toggle("bg-rose-50",!!e.erro),n.classList.toggle("text-rose-700",!!e.erro),e.erro){n.textContent=`! ${e.erro}`;return}const m=y.toNumber(t("valorPrevisto").value),b=S();if(!m||!b){n.textContent="Informe valor e vencimento para ver o resumo.";return}const $=`de ${c.monthShort(b)} a ${c.monthShort(c.addMonths(b,e.n-1))}`,g=Number((t("vencimento").value||"").slice(8,10));n.innerHTML=e.modo==="parcelado"?`<b>${e.n}x</b> de ${c.brl(Math.trunc(m*100/e.n)/100)} — ${$}.`:`<b>${e.n} lançamentos</b> de ${c.brl(m)}, ${$}${g?`, vencendo todo dia ${g}`:""} (${c.brl(m*e.n)} no total).<br><span class="text-slate-500">Conta que muda de valor (água, luz): ajuste o mês quando ela chegar e escolha “Só este”.</span>`};o.addEventListener("input",E),o.querySelector("[data-ate-fim-ano]")?.addEventListener("click",()=>{const e=S();e&&(o.querySelector('input[name="ateModo"][value="ate"]').checked=!0,t("ate").value=N(e),E())}),o.querySelector("[data-ate-12]")?.addEventListener("click",()=>{o.querySelector('input[name="ateModo"][value="vezes"]').checked=!0,t("vezes").value=12,E()}),E(),o.addEventListener("change",e=>{const s=e.target.name;s==="ateModo"&&e.target.value==="ate"&&!t("ate").value&&S()&&(t("ate").value=N(S())),["recorrente","repeticao","ateModo","ate","vezes","vencimento","competencia"].includes(s)&&setTimeout(E),s==="tipo"&&(t("categoria").innerHTML=R(e.target.value,t("categoria").value),o.querySelector("[data-quem]")?.classList.toggle("hidden",e.target.value==="receita"),k()),s==="status"&&D(),(s==="vencimento"||s==="dataPagamento"||s==="categoria")&&k(),s==="competencia"&&(j=!0),s==="vencimento"&&!j&&e.target.value&&(t("competencia").value=e.target.value.slice(0,7)),s==="categoria"&&e.target.value===w&&H(t("categoria"),o.querySelector('input[name="tipo"]:checked').value)}),q.querySelectorAll("[data-close]").forEach(e=>e.addEventListener("click",Fin.ui.closeModal));const z=()=>o.querySelector('input[name="escopo"]:checked')?.value||"este",Q=A(a);let X=!1;const C=o.querySelector("[data-confirma-outro]"),B=o.querySelector("[data-rodape]"),G=(e,s,r)=>{C.querySelector("[data-confirma-texto]").textContent=e;const n=C.querySelector("[data-confirma-sim]");n.textContent=s,n.onclick=r,B.classList.add("hidden"),C.classList.remove("hidden"),n.focus()};C?.querySelector("[data-confirma-nao]").addEventListener("click",()=>{C.classList.add("hidden"),B.classList.remove("hidden")});const U=(e=!1)=>{const s=z()==="proximos",r=s?`“${a.descricao||a.categoria}” e os próximos meses deste grupo`:`“${a.descricao||a.categoria}”`;if(!e&&!confirm(`Excluir ${r}? Esta ação não pode ser desfeita.${a.grupo&&!s?`
 
-    const form = panel.querySelector('#lanc-form');
-    const el = (name) => form.elements[name];
-    let competenciaTocada = !!l;
-
-    const tipoAtual = () => form.querySelector('input[name="tipo"]:checked').value;
-    const dias = (a, b) => Math.round((new Date(`${b}T00:00`) - new Date(`${a}T00:00`)) / 86400000);
-
-    /** Textos de receita/despesa (Pago × Recebido) e situação/diferença ao vivo. */
-    const atualizarPagamento = () => {
-      const rec = tipoAtual() === 'receita';
-      const st = el('status').value;
-      form.querySelector('[data-pg-titulo]').textContent = rec ? 'Recebimento' : 'Pagamento';
-      form.querySelector('[data-rot="aberto"]').textContent = rec ? 'A receber' : 'Em aberto';
-      form.querySelector('[data-rot="pago"]').textContent = rec ? 'Recebido' : 'Pago';
-      form.querySelector('[data-rot="data"]').textContent = rec ? 'Data do recebimento' : 'Data do pagamento';
-      form.querySelector('[data-rot="valor"]').textContent = rec ? 'Valor recebido (R$)' : 'Valor pago (R$)';
-      form.querySelector('#pago-fields').classList.toggle('hidden', st === 'aberto');
-
-      const lancado = P.toNumber(el('valorPrevisto').value);
-      const pago = P.toNumber(el('valorPago').value);
-      const venc = el('vencimento').value;
-      const dpg = el('dataPagamento').value;
-      const sit = form.querySelector('#pg-situacao');
-      const diff = form.querySelector('#pg-diff');
-      sit.innerHTML = '';
-      diff.innerHTML = '';
-
-      // Fatura de cartão paga a menos → alerta de rotativo (juros altos).
-      const ehFatura = !rec && F.isPagamentoFatura({ tipo: 'despesa', categoria: el('categoria').value });
-      const parcialFatura = ehFatura && st !== 'aberto' && lancado > 0 && pago > 0
-        ? F.faturaParcial({ tipo: 'despesa', categoria: el('categoria').value, status: st, valorPrevisto: lancado, valorPago: pago })
-        : null;
-      form.querySelector('#pg-rotativo').innerHTML = parcialFatura ? Fin.ui.alertaRotativo(parcialFatura, F.rotativo()) : '';
-
-      if (st === 'aberto') {
-        if (venc) {
-          const d = dias(hoje, venc);
-          sit.innerHTML = d < 0 ? `<span class="text-rose-700 font-medium">! vencido há ${-d} dia${d === -1 ? '' : 's'}</span>`
-            : d === 0 ? '<span class="text-amber-800 font-medium">vence hoje</span>'
-            : `<span class="text-slate-500">vence em ${d} dia${d === 1 ? '' : 's'}</span>`;
-        }
-        return;
-      }
-      if (venc && dpg) {
-        const atraso = dias(venc, dpg);
-        sit.innerHTML = atraso > 0 ? `<span class="text-amber-800 font-medium">◷ ${rec ? 'recebido' : 'pago'} ${atraso} dia${atraso === 1 ? '' : 's'} após o vencimento</span>`
-          : `<span class="text-emerald-800">✓ ${rec ? 'recebido' : 'pago'} em dia</span>`;
-      }
-      if (lancado == null || pago == null) return;
-      const dif = Math.round((pago - lancado) * 100) / 100;
-      if (st === 'parcial') {
-        diff.innerHTML = pago < lancado ? `<span class="text-amber-800">Falta ${fmt.brl(lancado - pago)}</span>`
-          : '<span class="text-rose-700">Valor ≥ lançado: marque “Pago”</span>';
-      } else if (Math.abs(dif) < 0.01) {
-        diff.innerHTML = '<span class="text-emerald-800">✓ igual ao lançado</span>';
-      } else if (dif > 0) {
-        diff.innerHTML = `<span class="text-amber-800">＋${fmt.brl(dif)} ${rec ? 'a mais' : 'a mais (juros/multa)'}</span>`;
-      } else {
-        diff.innerHTML = ehFatura
-          ? `<span class="text-rose-700 font-medium">−${fmt.brl(-dif)} a menos (rotativo)</span>`
-          : `<span class="text-emerald-800">−${fmt.brl(-dif)} ${rec ? 'a menos' : '(desconto)'}</span>`;
-      }
-    };
-
-    const syncPago = () => {
-      const st = el('status').value;
-      if (st !== 'aberto') {
-        if (!el('valorPago').value && st === 'pago') el('valorPago').value = el('valorPrevisto').value;
-        if (!el('dataPagamento').value) el('dataPagamento').value = hoje;
-      }
-      atualizarPagamento();
-    };
-    syncPago();
-    form.addEventListener('input', (e) => {
-      if (['valorPrevisto', 'valorPago', 'dataPagamento', 'vencimento'].includes(e.target.name)) atualizarPagamento();
-    });
-    form.querySelector('[data-usar-lancado]').addEventListener('click', () => {
-      el('valorPago').value = el('valorPrevisto').value;
-      atualizarPagamento();
-    });
-
-    // Recorrência (só em lançamento novo): por nº de vezes ou até um mês/ano, com resumo ao vivo.
-    const MAX_MESES = 120;
-    const mesInicio = () => el('competencia').value || (el('vencimento').value || '').slice(0, 7);
-    const mesesAte = (a, b) => {
-      const [y1, m1] = a.split('-').map(Number);
-      const [y2, m2] = b.split('-').map(Number);
-      return (y2 - y1) * 12 + (m2 - m1) + 1;
-    };
-    const dezembro = (ini) => `${Number(ini.slice(0, 4)) + (ini.endsWith('-12') ? 1 : 0)}-12`;
-    /** { modo: 'nao'|'fixo'|'parcelado', n, erro } */
-    const recorrencia = () => {
-      if (!el('recorrente')?.checked) return { modo: 'nao' };
-      const modo = el('repeticao').value;
-      const ini = mesInicio();
-      let n;
-      if (el('ateModo').value === 'ate') {
-        if (!el('ate').value) return { modo, erro: 'Escolha até qual mês repetir.' };
-        if (!ini) return { modo, erro: 'Informe o vencimento.' };
-        n = mesesAte(ini, el('ate').value);
-        if (n < 2) return { modo, erro: `Escolha um mês depois de ${fmt.monthShort(ini)}.` };
-      } else {
-        n = Math.trunc(Number(el('vezes').value));
-        if (!(n >= 2)) return { modo, erro: 'Repita pelo menos 2 vezes.' };
-      }
-      if (n > MAX_MESES) return { modo, n, erro: `Máximo de ${MAX_MESES} meses (10 anos).` };
-      return { modo, n };
-    };
-
-    const syncRepeticao = () => {
-      if (!el('recorrente')) return;
-      const r = recorrencia();
-      const ligado = r.modo !== 'nao';
-      form.querySelector('#rep-box').classList.toggle('hidden', !ligado);
-      form.querySelector('#lbl-valor').textContent = r.modo === 'parcelado' ? 'Valor total (R$) *' : 'Valor lançado (R$) *';
-      const porAte = el('ateModo').value === 'ate';
-      form.querySelector('[data-ate="vezes"]').classList.toggle('hidden', porAte);
-      form.querySelector('[data-ate="ate"]').classList.toggle('hidden', !porAte);
-      if (mesInicio()) form.querySelector('[data-ate-fim-ano]').textContent = `Até ${fmt.monthShort(dezembro(mesInicio()))}`;
-      if (!ligado) return;
-      const resumo = form.querySelector('#rep-resumo');
-      resumo.classList.toggle('bg-emerald-50', !r.erro);
-      resumo.classList.toggle('bg-rose-50', !!r.erro);
-      resumo.classList.toggle('text-rose-700', !!r.erro);
-      if (r.erro) { resumo.textContent = `! ${r.erro}`; return; }
-      const valor = P.toNumber(el('valorPrevisto').value);
-      const ini = mesInicio();
-      if (!valor || !ini) { resumo.textContent = 'Informe valor e vencimento para ver o resumo.'; return; }
-      const de = `de ${fmt.monthShort(ini)} a ${fmt.monthShort(fmt.addMonths(ini, r.n - 1))}`;
-      const dia = Number((el('vencimento').value || '').slice(8, 10));
-      resumo.innerHTML = r.modo === 'parcelado'
-        ? `<b>${r.n}x</b> de ${fmt.brl(Math.trunc((valor * 100) / r.n) / 100)} — ${de}.`
-        : `<b>${r.n} lançamentos</b> de ${fmt.brl(valor)}, ${de}${dia ? `, vencendo todo dia ${dia}` : ''} (${fmt.brl(valor * r.n)} no total).`
-          + '<br><span class="text-slate-500">Conta que muda de valor (água, luz): ajuste o mês quando ela chegar e escolha “Só este”.</span>';
-    };
-    form.addEventListener('input', syncRepeticao);
-    form.querySelector('[data-ate-fim-ano]')?.addEventListener('click', () => {
-      const ini = mesInicio();
-      if (!ini) return;
-      form.querySelector('input[name="ateModo"][value="ate"]').checked = true;
-      el('ate').value = dezembro(ini);
-      syncRepeticao();
-    });
-    form.querySelector('[data-ate-12]')?.addEventListener('click', () => {
-      form.querySelector('input[name="ateModo"][value="vezes"]').checked = true;
-      el('vezes').value = 12;
-      syncRepeticao();
-    });
-    syncRepeticao();
-
-    form.addEventListener('change', (e) => {
-      const n = e.target.name;
-      if (n === 'ateModo' && e.target.value === 'ate' && !el('ate').value && mesInicio()) el('ate').value = dezembro(mesInicio());
-      if (['recorrente', 'repeticao', 'ateModo', 'ate', 'vezes', 'vencimento', 'competencia'].includes(n)) setTimeout(syncRepeticao);
-      if (n === 'tipo') {
-        el('categoria').innerHTML = categoriaOptions(e.target.value, el('categoria').value);
-        form.querySelector('[data-quem]')?.classList.toggle('hidden', e.target.value === 'receita');
-        atualizarPagamento();
-      }
-      if (n === 'status') syncPago();
-      if (n === 'vencimento' || n === 'dataPagamento' || n === 'categoria') atualizarPagamento();
-      if (n === 'competencia') competenciaTocada = true;
-      if (n === 'vencimento' && !competenciaTocada && e.target.value) el('competencia').value = e.target.value.slice(0, 7);
-      if (n === 'categoria' && e.target.value === NOVA) novaCategoria(el('categoria'), form.querySelector('input[name="tipo"]:checked').value);
-    });
-
-    panel.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', Fin.ui.closeModal));
-
-    const escopo = () => form.querySelector('input[name="escopo"]:checked')?.value || 'este';
-
-    // Lançamento da outra pessoa: barra de confirmação no lugar dos botões.
-    const outro = autorOutro(l);
-    let confirmadoOutro = false;
-    const barra = form.querySelector('[data-confirma-outro]');
-    const rodape = form.querySelector('[data-rodape]');
-    const mostrarConfirmacao = (texto, rotulo, aoConfirmar) => {
-      barra.querySelector('[data-confirma-texto]').textContent = texto;
-      const sim = barra.querySelector('[data-confirma-sim]');
-      sim.textContent = rotulo;
-      sim.onclick = aoConfirmar;
-      rodape.classList.add('hidden');
-      barra.classList.remove('hidden');
-      sim.focus();
-    };
-    barra?.querySelector('[data-confirma-nao]').addEventListener('click', () => {
-      barra.classList.add('hidden');
-      rodape.classList.remove('hidden');
-    });
-
-    const excluir = (jaConfirmado = false) => {
-      const proximos = escopo() === 'proximos';
-      const alvo = proximos ? `“${l.descricao || l.categoria}” e os próximos meses deste grupo` : `“${l.descricao || l.categoria}”`;
-      if (!jaConfirmado && !confirm(`Excluir ${alvo}? Esta ação não pode ser desfeita.${l.grupo && !proximos ? '\n\nDica: para excluir também os meses seguintes, marque “Este e os próximos”.' : ''}`)) return;
-      const qtd = F.excluirLancamento(l, escopo());
-      Fin.ui.closeModal();
-      Fin.ui.toast(qtd > 1 ? `${qtd} lançamentos excluídos.` : 'Lançamento excluído.');
-      Fin.router.refresh();
-    };
-    panel.querySelector('[data-delete]')?.addEventListener('click', () => {
-      if (!outro) return excluir();
-      const proximos = escopo() === 'proximos';
-      mostrarConfirmacao(`Quer mesmo excluir${proximos ? ' este e os próximos meses' : ''}? Não dá para desfazer.`, 'Sim, excluir', () => excluir(true));
-    });
-
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const erro = form.querySelector('#form-erro');
-      const tipo = form.querySelector('input[name="tipo"]:checked').value;
-      const valorPrevisto = P.toNumber(el('valorPrevisto').value);
-      const status = el('status').value;
-      const valorPago = status === 'aberto' ? (l?.valorPago ?? null) : P.toNumber(el('valorPago').value);
-      const vencimento = el('vencimento').value || null;
-      const categoria = el('categoria').value;
-
-      const problemas = [];
-      if (!el('descricao').value.trim()) problemas.push('a descrição');
-      if (valorPrevisto === null || valorPrevisto <= 0) problemas.push('um valor maior que zero');
-      if (!categoria || categoria === NOVA) problemas.push('a categoria');
-      if (!vencimento) problemas.push('o vencimento');
-      if (status !== 'aberto' && (valorPago === null || valorPago <= 0)) problemas.push('o valor pago');
-      if (status === 'parcial' && valorPago != null && valorPrevisto != null && valorPago >= valorPrevisto) {
-        problemas.push('um valor pago menor que o lançado (ou marque “Pago”)');
-      }
-      const rec = l ? { modo: 'nao' } : recorrencia();
-      const repeticao = rec.modo;
-      const vezes = rec.n;
-      if (rec.erro) problemas.push(`a recorrência (${rec.erro.replace(/\.$/, '').toLowerCase()})`);
-      if (problemas.length) {
-        erro.textContent = `Informe ${problemas.join(', ')}.`;
-        erro.classList.remove('hidden');
-        return;
-      }
-      // Lançamento da outra pessoa: confirma antes de salvar (nos dois sentidos).
-      if (outro && !confirmadoOutro) {
-        return mostrarConfirmacao(
-          `Quer mesmo salvar a alteração${escopo() === 'proximos' ? ' (neste e nos próximos meses)' : ''}?`,
-          'Sim, salvar',
-          () => { confirmadoOutro = true; form.requestSubmit(); },
-        );
-      }
-
-      const cat = F.categorias().find((c) => c.nome === categoria);
-      const forma = F.formasPagamento().find((f) => f.nome === el('formaPagamento').value.trim());
-      // Campos que fazem sentido repetir nos próximos meses de um grupo.
-      const comuns = {
-        tipo,
-        descricao: el('descricao').value.trim(),
-        categoria,
-        categoriaIcone: cat?.icone ?? l?.categoriaIcone ?? null,
-        valorPrevisto,
-        formaPagamento: el('formaPagamento').value.trim() || null,
-        formaPagamentoIcone: forma?.icone ?? null,
-        observacao: el('observacao').value.trim() || null,
-      };
-      // Modo casal: quem pagou (despesa). Receita não tem o campo (quem lançou recebeu).
-      if (F.temCasal()) {
-        comuns.pagoPor = tipo === 'despesa' ? form.querySelector('input[name="pagoPor"]:checked')?.value || Fin.cofre.membroId() : null;
-      }
-      const dados = {
-        ...(l ? { id: l.id } : { origem: 'app' }),
-        ...comuns,
-        valorPago,
-        status,
-        vencimento,
-        data: el('data').value || vencimento,
-        dataPagamento: status === 'aberto' ? (l?.dataPagamento ?? null) : el('dataPagamento').value || hoje,
-        competencia: el('competencia').value || vencimento.slice(0, 7),
-      };
-
-      let msg;
-      if (l) {
-        Fin.storage.upsert('lancamentos', dados);
-        if (l.grupo && escopo() === 'proximos') {
-          // Parcelado: o valor digitado é o da parcela; vale igual para as próximas.
-          F.atualizarProximos(l, comuns);
-          msg = 'Lançamento e próximos meses atualizados.';
-        } else msg = 'Lançamento atualizado.';
-      } else if (repeticao !== 'nao') {
-        F.criarRepetidos(dados, repeticao, vezes);
-        msg = repeticao === 'parcelado' ? `Criado em ${vezes} parcelas.`
-          : `Recorrente criado: ${vezes} meses, até ${fmt.monthShort(fmt.addMonths(dados.competencia, vezes - 1))}.`;
-      } else {
-        Fin.storage.upsert('lancamentos', dados);
-        msg = 'Lançamento criado.';
-      }
-
-      const rot = F.faturaParcial(dados);
-      Fin.ui.closeModal();
-      if (rot) Fin.ui.toast(`${msg} ⚠️ ${fmt.brl(rot.falta)} ficam no rotativo do cartão.`, 'erro');
-      else Fin.ui.toast(msg);
-      if (!l && dados.competencia !== Fin.state.mes) Fin.state.mes = dados.competencia;
-      Fin.router.refresh();
-    });
-  }
-
-  /** Pergunta o nome, cria a categoria e já a seleciona no <select>. */
-  function novaCategoria(sel, tipo) {
-    const nome = (prompt(`Nome da nova categoria de ${tipo}:`) || '').trim();
-    if (!nome) { sel.value = ''; return; }
-    const { icone, nome: limpo } = P.splitEmoji(nome);
-    const existe = F.categorias(tipo).find((c) => P.normalize(c.nome) === P.normalize(limpo));
-    if (!existe) Fin.storage.upsert('categorias', { nome: limpo, icone, tipo, classificacao: null, orcamentoMensal: 0 });
-    sel.innerHTML = categoriaOptions(tipo, existe ? existe.nome : limpo);
-  }
-
-  Fin.forms.categoriaOptions = categoriaOptions;
-  Fin.forms.novaCategoria = novaCategoria;
-  Fin.forms.NOVA_CATEGORIA = NOVA;
-
-  return { open };
-})();
+Dica: para excluir também os meses seguintes, marque “Este e os próximos”.`:""}`))return;const n=i.excluirLancamento(a,z());Fin.ui.closeModal(),Fin.ui.toast(n>1?`${n} lançamentos excluídos.`:"Lançamento excluído."),Fin.router.refresh()};q.querySelector("[data-delete]")?.addEventListener("click",()=>{if(!Q)return U();const e=z()==="proximos";G(`Quer mesmo excluir${e?" este e os próximos meses":""}? Não dá para desfazer.`,"Sim, excluir",()=>U(!0))}),o.addEventListener("submit",e=>{e.preventDefault();const s=o.querySelector("#form-erro"),r=o.querySelector('input[name="tipo"]:checked').value,n=y.toNumber(t("valorPrevisto").value),m=t("status").value,b=m==="aberto"?a?.valorPago??null:y.toNumber(t("valorPago").value),$=t("vencimento").value||null,g=t("categoria").value,f=[];t("descricao").value.trim()||f.push("a descrição"),(n===null||n<=0)&&f.push("um valor maior que zero"),(!g||g===w)&&f.push("a categoria"),$||f.push("o vencimento"),m!=="aberto"&&(b===null||b<=0)&&f.push("o valor pago"),m==="parcial"&&b!=null&&n!=null&&b>=n&&f.push("um valor pago menor que o lançado (ou marque “Pago”)");const F=a?{modo:"nao"}:_(),h=F.modo,v=F.n;if(F.erro&&f.push(`a recorrência (${F.erro.replace(/\.$/,"").toLowerCase()})`),f.length){s.textContent=`Informe ${f.join(", ")}.`,s.classList.remove("hidden");return}if(Q&&!X)return G(`Quer mesmo salvar a alteração${z()==="proximos"?" (neste e nos próximos meses)":""}?`,"Sim, salvar",()=>{X=!0,o.requestSubmit()});const ae=i.categorias().find(I=>I.nome===g),te=i.formasPagamento().find(I=>I.nome===t("formaPagamento").value.trim()),T={tipo:r,descricao:t("descricao").value.trim(),categoria:g,categoriaIcone:ae?.icone??a?.categoriaIcone??null,valorPrevisto:n,formaPagamento:t("formaPagamento").value.trim()||null,formaPagamentoIcone:te?.icone??null,observacao:t("observacao").value.trim()||null};i.temCasal()&&(T.pagoPor=r==="despesa"?o.querySelector('input[name="pagoPor"]:checked')?.value||Fin.cofre.membroId():null);const L={...a?{id:a.id}:{origem:"app"},...T,valorPago:b,status:m,vencimento:$,data:t("data").value||$,dataPagamento:m==="aberto"?a?.dataPagamento??null:t("dataPagamento").value||d,competencia:t("competencia").value||$.slice(0,7)};let M;a?(Fin.storage.upsert("lancamentos",L),a.grupo&&z()==="proximos"?(i.atualizarProximos(a,T),M="Lançamento e próximos meses atualizados."):M="Lançamento atualizado."):h!=="nao"?(i.criarRepetidos(L,h,v),M=h==="parcelado"?`Criado em ${v} parcelas.`:`Recorrente criado: ${v} meses, até ${c.monthShort(c.addMonths(L.competencia,v-1))}.`):(Fin.storage.upsert("lancamentos",L),M="Lançamento criado.");const W=i.faturaParcial(L);Fin.ui.closeModal(),W?Fin.ui.toast(`${M} ⚠️ ${c.brl(W.falta)} ficam no rotativo do cartão.`,"erro"):Fin.ui.toast(M),!a&&L.competencia!==Fin.state.mes&&(Fin.state.mes=L.competencia),Fin.router.refresh()})}function H(p,a){const d=(prompt(`Nome da nova categoria de ${a}:`)||"").trim();if(!d){p.value="";return}const{icone:P,nome:l}=y.splitEmoji(d),u=i.categorias(a).find(q=>y.normalize(q.nome)===y.normalize(l));u||Fin.storage.upsert("categorias",{nome:l,icone:P,tipo:a,classificacao:null,orcamentoMensal:0}),p.innerHTML=R(a,u?u.nome:l)}return Fin.forms.categoriaOptions=R,Fin.forms.novaCategoria=H,Fin.forms.NOVA_CATEGORIA=w,{open:K}})();
