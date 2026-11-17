@@ -164,4 +164,17 @@ window.Fin = window.Fin || {};
 
   // Mostra "Criar acesso" (primeiro uso) ou "Entrar".
   Fin.acesso.iniciar(aoDesbloquear);
+
+  // Abertura animada da marca (index.html #abertura): sai do caminho ao terminar; um toque pula.
+  const abertura = document.getElementById('abertura');
+  if (abertura) {
+    const tirar = () => abertura.remove();
+    abertura.addEventListener('animationend', (e) => { if (e.target === abertura && e.animationName === 'ab-some') tirar(); });
+    abertura.addEventListener('click', () => {
+      abertura.style.transition = 'opacity .2s';
+      abertura.style.opacity = '0';
+      setTimeout(tirar, 220);
+    });
+    setTimeout(tirar, 4000); // garantia, caso o navegador não dispare o fim da animação
+  }
 })();

@@ -11,8 +11,8 @@
 
   <!-- App instalável (PWA) -->
   <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png" />
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png?v=valoris2" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=valoris2" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -31,6 +31,19 @@
   <script src="js/tema.js"></script>
 </head>
 <body class="bg-[#F3F5F8] text-slate-800 antialiased">
+  <!-- Abertura animada da marca (só CSS; some sozinha em ~2,4 s; um toque pula — js/app.js) -->
+  <div id="abertura" aria-hidden="true">
+    <div class="ab-conteudo">
+      <svg class="ab-mono" viewBox="22 21 159 139">
+        <polygon class="ab-esq" points="24,23 55,23 89,100 74,131" fill="#F3F5F8"/>
+        <polygon class="ab-dir" points="147,23 179,23 119,158 87,158" fill="#C6A45C"/>
+        <rect class="ab-filete" x="102" y="23" width="46" height="2.6" fill="#C6A45C"/>
+        <g class="ab-seta"><line x1="90" y1="93" x2="101.3" y2="69.5" stroke="#C6A45C" stroke-width="3.5"/><polygon points="109.5,53 95,66.5 107.5,72" fill="#C6A45C"/></g>
+      </svg>
+      <div class="ab-nome">VALORIS</div>
+      <div class="ab-assinatura">Financial Intelligence</div>
+    </div>
+  </div>
 
   <div class="md:flex min-h-screen">
     <!-- Menu lateral (computador) -->
