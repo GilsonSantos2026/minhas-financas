@@ -121,6 +121,9 @@ Fin.acesso = (() => {
       try {
         const { codigoRecuperacao } = await Fin.cofre.criarConta(u, s);
         await Fin.storage.abrirCofre();
+        // Conta nova → depois da chave vem o passo "Guarde seus dados no Google Drive" (Etapa 4).
+        // Só quem cria conta a partir desta versão tem a marca: quem já usa o app nunca vê o passo.
+        if (Fin.drive?.configurado() && !Fin.drive.conectado()) Fin.storage.setPref('driveOnboarding', 'pendente');
         telaCodigo(codigoRecuperacao, 'Acesso criado!');
       } catch (err) {
         ocupado(form, false);
@@ -156,7 +159,151 @@ Fin.acesso = (() => {
         a2.click();
         setTimeout(() => URL.revokeObjectURL(a2.href), 1000);
       }
-      if (a === 'continuar') { root.removeEventListener('click', h); concluir(); }
+      if (a === 'continuar') {
+        root.removeEventListener('click', h);
+        if (precisaPassoDrive()) telaGuardarDrive();
+        else concluir();
+      }
+    });
+  }
+
+  const precisaPassoDrive = () => !!Fin.drive?.configurado() && !Fin.drive.conectado()
+    && Fin.storage.prefs().driveOnboarding === 'pendente';
+
+  /**
+   * Onboarding Etapa 4 (v2026-11-17.6): logo depois de criar o acesso, convida a guardar os dados
+   * no Google Drive — com progresso visível, sem duplicar (se o Drive já tem dados do app, pede a
+   * senha daquela conta e traz os dados) e com os erros do Google explicados. "Agora não" deixa
+   * um lembrete no sininho (avisos.js) até conectar.
+   */
+  function telaGuardarDrive() {
+    const PASSOS = [
+      ['autorizar', 'Autorizando no Google'],
+      ['procurar', 'Procurando dados do app no seu Drive'],
+      ['criar', 'Criando o arquivo cifrado'],
+      ['pronto', 'Pronto! Seus dados estão guardados'],
+    ];
+    const ORDEM = PASSOS.map(([id]) => id);
+    const beneficio = (ic, titulo, sub) => `
+      <li class="flex items-start gap-3">
+        <span class="w-9 h-9 shrink-0 rounded-xl bg-prim-50 text-prim-700 grid place-items-center">${Fin.icone(ic, 'w-5 h-5')}</span>
+        <span><span class="block text-sm font-semibold">${titulo}</span><span class="block text-xs text-slate-500 mt-0.5">${sub}</span></span>
+      </li>`;
+    casca(`
+      <h2 class="font-semibold text-lg">Guarde seus dados no Google Drive</h2>
+      <p class="text-sm text-slate-500 mt-1">Recomendado — leva menos de um minuto.</p>
+      <ul data-beneficios class="space-y-3 mt-4">
+        ${beneficio('escudo', 'Cópia de segurança automática', 'Trocou ou perdeu o celular? Seus dados continuam lá.')}
+        ${beneficio('celular', 'No celular e no computador', 'Os mesmos dados em todos os seus aparelhos.')}
+        ${beneficio('cadeado', 'Só você consegue ler', 'Vai cifrado para uma pasta oculta do Drive. O app não vê seus outros arquivos.')}
+      </ul>
+      <ol id="ac-passos" class="hidden space-y-2.5 mt-4" aria-live="polite">${PASSOS.map(([id, t]) => `
+        <li data-passo="${id}" class="flex items-center gap-2.5 text-sm text-slate-400">
+          <span data-marca class="w-5 h-5 shrink-0 grid place-items-center rounded-full border-2 border-slate-200"></span>
+          <span data-texto>${t}</span></li>`).join('')}</ol>
+      <form id="ac-achado-form" class="hidden space-y-3 mt-4" novalidate>
+        <p id="ac-achado" class="text-sm text-emerald-800 bg-emerald-50 rounded-lg px-3 py-2"></p>
+        <label class="field"><span>Usuário usado lá</span><input name="usuario" class="input" autocomplete="username" required /></label>
+        ${campoSenha('senha', 'Senha usada lá', 'current-password')}
+        <button type="submit" class="btn btn-primary w-full">Trazer meus dados</button>
+        <button type="button" data-acao="outra" class="w-full text-sm text-slate-500 hover:text-slate-800 hover:underline py-1">Usar outra conta Google</button>
+      </form>
+      <div class="mt-4">${erroBox}</div>
+      <div data-botoes class="mt-4 space-y-2">
+        <button type="button" data-acao="conectar" class="btn btn-primary w-full">${Fin.icone('nuvem', 'w-5 h-5')} <span>Conectar Google Drive</span></button>
+        <button type="button" data-acao="depois" class="w-full text-sm text-slate-500 hover:text-slate-800 hover:underline py-1">Agora não</button>
+      </div>
+      <p data-dica class="text-xs text-slate-500 mt-3">Na janela do Google, escolha sua conta e deixe <b>marcada</b> a permissão do Google Drive.</p>`);
+
+    const $ = (s) => root.querySelector(s);
+    const form = $('#ac-achado-form');
+    ligarOlhos();
+    let atual = null;
+
+    function marcar(id, estado) {
+      const li = $(`[data-passo="${id}"]`);
+      const m = li.querySelector('[data-marca]');
+      li.className = `flex items-center gap-2.5 text-sm ${estado === 'feito' ? 'text-emerald-800' : estado === 'ativo' ? 'text-slate-800 font-medium' : estado === 'erro' ? 'text-rose-700' : 'text-slate-400'}`;
+      m.className = `w-5 h-5 shrink-0 grid place-items-center rounded-full text-[11px] font-bold ${
+        estado === 'feito' ? 'bg-emerald-600 text-white' : estado === 'ativo' ? 'border-2 border-prim-600 border-t-transparent animate-spin'
+          : estado === 'erro' ? 'bg-rose-600 text-white' : 'border-2 border-slate-200'}`;
+      m.innerHTML = estado === 'feito' ? Fin.icone('check', 'w-3.5 h-3.5') : estado === 'erro' ? '!' : '';
+    }
+    function aoPasso(p) {
+      if (p === 'juntar') { $('[data-passo="criar"] [data-texto]').textContent = 'Conferindo os dados encontrados'; p = 'criar'; }
+      atual = p;
+      const i = ORDEM.indexOf(p);
+      ORDEM.forEach((id, j) => marcar(id, j < i || p === 'pronto' ? 'feito' : j === i ? 'ativo' : 'espera'));
+    }
+    const esconderErro = () => $('#ac-erro').classList.add('hidden');
+
+    function terminar(texto) {
+      aoPasso('pronto');
+      if (texto) $('[data-passo="pronto"] [data-texto]').textContent = texto;
+      form.classList.add('hidden');
+      $('[data-botoes]').classList.add('hidden');
+      $('[data-dica]').classList.add('hidden');
+      setTimeout(concluir, texto ? 3200 : 1600);
+    }
+
+    /** O Drive já tem dados do app com outra senha: pede usuário/senha de lá e traz os dados. */
+    function mostrarAchado(arq) {
+      marcar('procurar', 'feito');
+      marcar('criar', 'espera');
+      $('[data-botoes]').classList.add('hidden');
+      $('[data-dica]').classList.add('hidden');
+      $('[data-beneficios]').classList.add('hidden');
+      const quando = arq.atualizadoEm ? ` (atualizados em ${new Date(arq.atualizadoEm).toLocaleString('pt-BR')})` : '';
+      $('#ac-achado').textContent = `Encontrei dados do app neste Google Drive${quando}. Entre com o usuário e a senha usados lá para trazê-los para este aparelho.`;
+      form.elements.usuario.value = arq.conta?.usuario || '';
+      form.classList.remove('hidden');
+      setTimeout(() => (form.elements.usuario.value ? form.elements.senha : form.elements.usuario).focus(), 60);
+    }
+
+    // Chamado direto do clique: a janela do Google só abre a partir de um clique.
+    function conectar(btn) {
+      esconderErro();
+      btn.disabled = true;
+      btn.querySelector('span').textContent = 'Conectando…';
+      $('#ac-passos').classList.remove('hidden');
+      Fin.drive.conectar({ aoPasso }).then((r) => {
+        if (r?.conflito) return mostrarAchado(r.conflito);
+        if (r?.erro) throw new Error(r.erro);
+        terminar();
+      }).catch((err) => {
+        if (atual) marcar(atual, 'erro');
+        btn.disabled = false;
+        btn.querySelector('span').textContent = 'Tentar de novo';
+        mostrarErro(err.message);
+      });
+    }
+
+    root.querySelector('[data-acao="conectar"]').addEventListener('click', (e) => conectar(e.currentTarget));
+    root.querySelector('[data-acao="depois"]').addEventListener('click', () => {
+      Fin.storage.setPref('driveOnboarding', 'adiado');
+      concluir();
+      Fin.ui.toast('Tudo bem! Dá para conectar depois em Dados e backup.');
+    });
+    root.querySelector('[data-acao="outra"]').addEventListener('click', () => {
+      Fin.drive.estado.conflito = null;
+      Fin.drive.desconectar();
+      telaGuardarDrive();
+    });
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      esconderErro();
+      ocupado(form, true, 'Trazendo seus dados…');
+      aoPasso('juntar');
+      $('[data-passo="criar"] [data-texto]').textContent = 'Trazendo seus dados';
+      try {
+        await Fin.drive.resolverConflito(form.elements.usuario.value.trim(), form.elements.senha.value);
+        if (Fin.drive.estado.erro) throw new Error(Fin.drive.estado.erro);
+        terminar('Pronto! A partir de agora, entre com o usuário e a senha dessa conta (e use a chave de recuperação dela).');
+      } catch (err) {
+        ocupado(form, false);
+        marcar('criar', 'erro');
+        mostrarErro(err.message);
+      }
     });
   }
 
