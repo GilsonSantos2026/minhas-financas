@@ -49,13 +49,13 @@ Fin.pages.configuracoes = (() => {
     const t = Fin.tema.porId(atual);
     return card(`
       ${Fin.icones.titulo('paleta', 'prim', 'Cor do app', { cls: 'mb-1' })}
-      <p class="text-sm text-slate-500 mb-4">Toque em uma cor: botões, menu e destaques mudam na hora. As cores de significado
+      <p class="text-sm text-slate-500 mb-4">A primeira, <b>Valoris</b> (azul-marinho com dourado), é a cor da marca e o padrão. Toque em outra se preferir: botões, menu e destaques mudam na hora. As cores de significado
         (pago, atrasado, receitas e despesas nos gráficos) continuam as mesmas.</p>
       <div class="grid grid-cols-6 gap-3 sm:gap-4 max-w-md mx-auto" role="radiogroup" aria-label="Cor do app">
         ${Fin.tema.TEMAS.map((x) => `
           <button type="button" role="radio" aria-checked="${x.id === atual}" data-tema="${x.id}" title="${esc(x.nome)}"
             class="tema-bolinha aspect-square w-full max-w-[3.25rem] mx-auto rounded-full ${x.id === atual ? 'is-ativo' : ''}"
-            style="--cor:${x.cores[600]}"><span class="sr-only">${esc(x.nome)}</span></button>`).join('')}
+            style="--cor:${x.cores[x.id === 'valoris' ? 800 : 600]};${x.id === 'valoris' ? `background:linear-gradient(135deg, ${x.cores[800]} 58%, ${x.destaque.cor} 58%)` : ''}"><span class="sr-only">${esc(x.nome)}</span></button>`).join('')}
       </div>
       <p class="text-center font-semibold mt-3" id="tema-nome">${esc(t.nome)}</p>`);
   }

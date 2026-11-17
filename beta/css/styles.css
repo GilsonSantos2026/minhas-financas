@@ -251,6 +251,12 @@ details[open] .chev { transform: rotate(90deg); }
 
 /* Início: cartão "Resultado do mês" na cor do app */
 .hero-topo { position: relative; overflow: hidden; background: linear-gradient(135deg, rgb(var(--p-800)), rgb(var(--p-600))); }
+.hero-spark { color: #fff; }
+/* Tema Valoris: cartão principal em azul-marinho quase sólido, com rótulo e gráfico dourados. */
+.tema-valoris .hero-topo { background: linear-gradient(160deg, rgb(var(--p-800)) 55%, rgb(var(--p-700))); }
+.tema-valoris .hero-rotulo { color: rgb(var(--d)); letter-spacing: .14em; }
+.tema-valoris .hero-spark { color: rgb(var(--d)); }
+.tema-valoris .hero-topo::after { background: rgb(var(--d) / 0.08); }
 .hero-topo::after { content: ""; position: absolute; right: -2.5rem; top: -3rem; width: 9rem; height: 9rem; border-radius: 9999px; background: rgb(255 255 255 / 0.07); pointer-events: none; }
 .hero-topo > * { position: relative; z-index: 1; }
 
