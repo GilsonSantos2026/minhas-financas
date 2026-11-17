@@ -168,16 +168,17 @@ window.Fin = window.Fin || {};
   /*
    * Abertura animada da marca (index.html #abertura) — saída em duas fases:
    *  1) espera a entrada terminar (mín. ~1,7 s desde o início da página) E a tela de destino
-   *     (acesso ou Início) estar desenhada por baixo;
+   *     (acesso ou Início) estar desenhada por baixo E JÁ COM ESTILO (Tailwind aplicado — em
+   *     celular lento o estilo pode atrasar; sair antes mostrava a tela "desfigurada");
    *  2) crossfade (.saindo = só opacity) e remove do DOM ao acabar.
-   * Limite de 3 s para nunca prender a pessoa; um toque pula; "reduzir movimento" = mín. 0,5 s.
-   * Se este código nem rodar, a própria animação CSS some aos 4 s.
+   * Limite de 8 s para nunca prender a pessoa; um toque pula a animação (mas ainda espera o
+   * estilo); "reduzir movimento" = mín. 0,5 s. Se este código nem rodar, o CSS some aos 10 s.
    */
   const abertura = document.getElementById('abertura');
   if (abertura) {
     const reduz = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    const MIN = reduz ? 500 : 1700; // ms desde o início da navegação (performance.now())
-    const MAX = 3000;
+    let minimo = reduz ? 500 : 1700; // ms desde o início da navegação (performance.now())
+    const MAX = 8000;
     let saindo = false;
     const tirar = () => abertura.remove();
     const sair = () => {
@@ -186,14 +187,21 @@ window.Fin = window.Fin || {};
       abertura.classList.add('saindo');
     };
     abertura.addEventListener('animationend', (e) => { if (e.target === abertura && (e.animationName === 'ab-sai' || e.animationName === 'ab-some')) tirar(); });
-    abertura.addEventListener('click', sair);
-    const destinoPronto = () => iniciado || !!document.querySelector('#acesso-root > *');
+    // Estilo aplicado: o fundo do body (classe do Tailwind) e, se a tela de acesso estiver aberta,
+    // a camada dela já "fixed" (também classe do Tailwind).
+    const estiloPronto = () => {
+      if (getComputedStyle(document.body).backgroundColor !== 'rgb(243, 245, 248)') return false;
+      const acesso = document.querySelector('#acesso-root > div');
+      return !acesso || getComputedStyle(acesso).position === 'fixed';
+    };
+    const destinoPronto = () => (iniciado || !!document.querySelector('#acesso-root > *')) && estiloPronto();
     const checar = () => {
       if (saindo) return;
-      if (destinoPronto() || performance.now() >= MAX) sair();
+      if ((performance.now() >= minimo && destinoPronto()) || performance.now() >= MAX) sair();
       else setTimeout(checar, 100);
     };
-    setTimeout(checar, Math.max(0, MIN - performance.now()));
-    setTimeout(tirar, 4600); // garantia final, caso o fim da animação não dispare
+    abertura.addEventListener('click', () => { minimo = 0; checar(); });
+    setTimeout(checar, Math.max(0, minimo - performance.now()));
+    setTimeout(tirar, MAX + 2600); // garantia final, caso o fim da animação não dispare
   }
 })();
