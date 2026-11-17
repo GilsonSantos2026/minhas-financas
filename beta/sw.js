@@ -10,7 +10,7 @@
  * Ao publicar uma versão nova do app, troque VERSAO: o app mostra "Nova versão disponível".
  * Os DADOS não passam por aqui (ficam no LocalStorage do navegador).
  */
-const VERSAO = 'beta-2026-11-17.1002';
+const VERSAO = 'beta-2026-11-17.1029';
 // Canal beta (…/beta/sw.js): caches com outro prefixo — um canal nunca apaga o cache do outro.
 const BETA = self.location.pathname.includes('/beta/');
 const PFX = BETA ? 'financas-beta' : 'financas';
@@ -26,7 +26,7 @@ const ARQUIVOS_APP = [
   './js/components/lancamento-form.js', './js/components/compra-form.js', './js/components/cartao-form.js', './js/components/categoria-form.js',
   './js/pages/dashboard.js', './js/pages/lancamentos.js', './js/pages/cartoes.js', './js/pages/importar-fatura.js',
   './js/pages/categorias.js', './js/pages/orcamento.js', './js/pages/relatorios.js', './js/pages/conciliacao.js', './js/pages/planilha.js', './js/pages/investimentos.js',
-  './js/investimentos/cotacoes.js', './js/investimentos/carteira.js', './js/investimentos/reserva.js', './js/investimentos/formularios.js', './js/investimentos/nomad.js', './js/investimentos/rico.js', './js/investimentos/importar.js', './js/pages/mais.js', './js/pages/dados.js', './js/pages/configuracoes.js', './js/pages/educacao.js',
+  './js/investimentos/cotacoes.js', './js/investimentos/carteira.js', './js/investimentos/reserva.js', './js/investimentos/formularios.js', './js/investimentos/nomad.js', './js/investimentos/rico.js', './js/investimentos/importar.js', './js/pages/mais.js', './js/demo.js', './js/pages/dados.js', './js/pages/configuracoes.js', './js/pages/educacao.js',
   './js/fatura/leitor.js', './js/fatura/importador.js',
 ];
 
