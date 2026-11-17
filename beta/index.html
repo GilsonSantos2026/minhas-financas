@@ -23,7 +23,7 @@
        com o carregamento). A saída (crossfade) é disparada por js/app.js quando a tela de destino
        está pronta; se o JS falhar, a própria animação some aos 4 s. -->
   <style>
-    #abertura{position:fixed;inset:0;z-index:200;display:grid;place-items:center;background:#101D35;color:#F3F5F8;cursor:pointer;contain:strict;animation:ab-some .4s ease 4s forwards}
+    #abertura{position:fixed;inset:0;z-index:200;display:grid;place-items:center;background:#101D35;color:#F3F5F8;cursor:pointer;contain:strict;animation:ab-some .4s ease 10s forwards}
     #abertura.saindo{animation:ab-sai .45s ease forwards}
     #abertura::before{content:"";position:absolute;width:520px;height:520px;border-radius:50%;background:radial-gradient(circle,rgb(198 164 92/.16),transparent 62%);opacity:0;animation:ab-aparece .9s ease .5s forwards;will-change:opacity}
     #abertura .ab-conteudo{position:relative;display:flex;flex-direction:column;align-items:center}
@@ -49,7 +49,7 @@
     @keyframes ab-sai{from{opacity:1}to{opacity:0;visibility:hidden}}
     @media (prefers-reduced-motion:reduce){
       #abertura *,#abertura::before{animation-duration:.01s!important;animation-delay:0s!important}
-      #abertura{animation:ab-some .3s ease 1.5s forwards}
+      #abertura{animation:ab-some .3s ease 10s forwards}
       #abertura.saindo{animation:ab-sai .25s ease forwards}
     }
   </style>
@@ -58,10 +58,11 @@
        conferidas por hash) — nenhum script de terceiros roda com os dados abertos. -->
   <!-- Produção ou canal beta (define Fin.PREFIXO das chaves locais): antes de todos -->
   <script src="js/canal.js"></script>
-  <!-- Tailwind e SheetJS com "defer": não seguram a 1ª pintura (a abertura cobre a tela enquanto
-       o Tailwind gera o estilo; o SheetJS só é usado ao importar planilha). A ordem entre eles se mantém. -->
-  <script src="js/vendor/tailwind-3.4.16.js" defer></script>
-  <script src="js/tailwind-config.js" defer></script>
+  <!-- Tailwind SEM defer: o estilo precisa existir antes de a página aparecer. Com defer, em
+       celulares lentos a abertura saía antes do estilo e a tela aparecia "desfigurada" (v2026-11-17.4).
+       Só o SheetJS (pesado, usado só ao importar planilha) fica com defer. -->
+  <script src="js/vendor/tailwind-3.4.16.js"></script>
+  <script src="js/tailwind-config.js"></script>
   <!-- SheetJS: leitura de .xlsx / .xls / .csv / .ods (usado na tela "Dados") -->
   <script src="js/vendor/xlsx-0.20.3.full.min.js" defer></script>
 
