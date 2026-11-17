@@ -10,7 +10,7 @@
  * Ao publicar uma versão nova do app, troque VERSAO: o app mostra "Nova versão disponível".
  * Os DADOS não passam por aqui (ficam no LocalStorage do navegador).
  */
-const VERSAO = 'beta-2026-11-17.1609';
+const VERSAO = 'beta-2026-11-17.1936';
 // Canal beta (…/beta/sw.js): caches com outro prefixo — um canal nunca apaga o cache do outro.
 const BETA = self.location.pathname.includes('/beta/');
 const PFX = BETA ? 'financas-beta' : 'financas';

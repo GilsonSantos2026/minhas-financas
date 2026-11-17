@@ -213,7 +213,10 @@ Fin.acesso = (() => {
         <button type="button" data-acao="conectar" class="btn btn-primary w-full">${Fin.icone('nuvem', 'w-5 h-5')} <span>Conectar Google Drive</span></button>
         <button type="button" data-acao="depois" class="w-full text-sm text-slate-500 hover:text-slate-800 hover:underline py-1">Agora não</button>
       </div>
-      <p data-dica class="text-xs text-slate-500 mt-3">Na janela do Google, escolha sua conta e deixe <b>marcada</b> a permissão do Google Drive.</p>`);
+      <div data-dica class="text-xs text-slate-500 mt-3 space-y-1.5">
+        <p>Na janela do Google, escolha <b>o Gmail liberado para o teste</b> e deixe <b>marcada</b> a permissão do Google Drive.</p>
+        <p>Apareceu <b>“O Google não verificou este app”</b>? É normal enquanto o app está em teste: toque em <b>Avançado</b> e depois em <b>Acessar Valoris</b>.</p>
+      </div>`);
 
     const $ = (s) => root.querySelector(s);
     const form = $('#ac-achado-form');
@@ -388,6 +391,7 @@ Fin.acesso = (() => {
       <p class="text-sm text-slate-500 mt-1">Conecte o mesmo Google usado no outro aparelho e entre com o mesmo usuário e senha do app.</p>
       <button data-acao="google" class="btn btn-ghost w-full mt-4 border border-slate-200">
         <span aria-hidden="true">🔑</span> Conectar Google Drive</button>
+      <p data-dica class="text-xs text-slate-500 mt-2">Apareceu “O Google não verificou este app”? É normal enquanto o app está em teste: toque em <b>Avançado</b> e depois em <b>Acessar Valoris</b>.</p>
       <form id="ac-form" class="space-y-3 mt-4 hidden" novalidate>
         <p id="ac-achado" class="text-sm text-emerald-800 bg-emerald-50 rounded-lg px-3 py-2"></p>
         <label class="field"><span>Usuário</span><input name="usuario" class="input" autocomplete="username" required /></label>
@@ -407,6 +411,7 @@ Fin.acesso = (() => {
         remoto = await Fin.drive.baixarParaEntrar();
         if (!remoto) throw new Error('Nenhum dado do app foi encontrado neste Google Drive. Crie o acesso normalmente.');
         btn.classList.add('hidden');
+        root.querySelector('[data-dica]')?.classList.add('hidden');
         form.classList.remove('hidden');
         root.querySelector('#ac-achado').textContent = `Dados encontrados (atualizados em ${new Date(remoto.atualizadoEm).toLocaleString('pt-BR')}).`;
         form.elements.usuario.value = remoto.conta?.usuario || '';

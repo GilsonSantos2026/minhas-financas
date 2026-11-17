@@ -44,7 +44,7 @@ Fin.drive = (() => {
    * que a pessoa entende, com `codigo` para as telas decidirem o que oferecer.
    */
   const ERROS = {
-    'janela-fechada': 'A janela do Google foi fechada antes de terminar — é só tentar de novo. (Se o Google mostrou “Acesso bloqueado”, este Gmail ainda não foi liberado para testar o app — peça a liberação a quem te convidou.)',
+    'janela-fechada': 'A janela do Google foi fechada antes de terminar — é só tentar de novo. Se aparecer “O Google não verificou este app”, é normal enquanto o app está em teste: toque em “Avançado” e depois em “Acessar Valoris”. Se aparecer “Acesso bloqueado”, este Gmail ainda não foi liberado para testar o app — peça a liberação a quem te convidou.',
     'janela-bloqueada': 'O navegador bloqueou a janela do Google. Permita janelas (pop-ups) para este site e tente de novo.',
     negado: 'O Google não autorizou a conexão. Se apareceu “Acesso bloqueado”, este Gmail ainda não foi liberado para testar o app — peça a liberação a quem te convidou.',
     'sem-permissao': 'Faltou a permissão do Google Drive. Tente de novo e, na janela do Google, deixe MARCADA a caixa que fala dos “dados de configuração” do app no seu Google Drive.',
