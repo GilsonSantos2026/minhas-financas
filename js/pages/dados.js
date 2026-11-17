@@ -321,6 +321,16 @@ Fin.pages.dados = (() => {
     setTimeout(() => { if (!Fin.storage.prefs().tourVisto && !Fin.tour.ativo()) Fin.tour.iniciar(); }, 900);
   }
 
+  /**
+   * Conta ainda sem dados: o Drive também aparece aqui (o lembrete "dados só neste aparelho" e
+   * o "Conectar" levam a esta tela) — inclusive o pedido de senha se o Drive já tem dados.
+   */
+  function secaoDriveVazio() {
+    if (Fin.storage.hasData() || !Fin.drive.configurado() || (Fin.drive.conectado() && !Fin.drive.estado.conflito)) return '';
+    const s = secaoDrive();
+    return s ? `<div class="mt-4">${s}</div>` : '';
+  }
+
   function blocoRestaurarVazio() {
     return secao('Já tem um backup?', '♻️', `
       <p class="text-sm text-slate-600 mt-1">Em um aparelho novo, restaure o arquivo de backup baixado no outro aparelho.</p>
@@ -787,7 +797,7 @@ Fin.pages.dados = (() => {
     const mode = state.mode || (Fin.storage.hasData() ? null : 'upload');
     view.innerHTML = mode === 'review' ? renderReview()
       : mode === 'restore' ? renderRestore()
-      : mode === 'upload' ? (Fin.storage.hasData() ? '' : blocoComecarZero()) + renderUpload() + blocoRestaurarVazio()
+      : mode === 'upload' ? (Fin.storage.hasData() ? '' : blocoComecarZero()) + renderUpload() + secaoDriveVazio() + blocoRestaurarVazio()
       : renderImported();
     if (mode === 'review') renderTotals();
     if (mode === 'upload') bindDropzone();
@@ -845,7 +855,14 @@ Fin.pages.dados = (() => {
         if (act === 'trocar-senha') trocarSenha();
         if (act === 'nova-chave') novaChave();
         if (act === 'drive-conectar') {
-          try { await Fin.drive.conectar(); } catch (err) { Fin.ui.toast(err.message, 'error'); }
+          // Erros já vêm explicados (drive.js). Dados do app com outra senha no Drive → a seção
+          // "dados com outra senha" aparece no redesenho, pedindo a senha de lá (nunca duplica).
+          try {
+            const r = await Fin.drive.conectar();
+            if (r?.conflito) Fin.ui.toast('Encontrei dados do app no seu Drive. Entre com o usuário e a senha usados lá para juntar.');
+            else if (r?.erro) Fin.ui.toast(r.erro, 'error');
+            else Fin.ui.toast('Google Drive conectado. Seus dados estão guardados.');
+          } catch (err) { Fin.ui.toast(err.message, 'error'); }
           draw();
         }
         if (act === 'drive-sync') Fin.drive.sincronizar();

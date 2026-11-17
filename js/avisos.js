@@ -156,6 +156,11 @@ Fin.avisos = (() => {
     }
 
     const dv = Fin.drive?.estado;
+    // Conta nova que pulou o passo do Drive (onboarding Etapa 4): lembrete até conectar.
+    if (desbloqueado && dv && Fin.drive.configurado() && !Fin.drive.conectado()
+      && ['pendente', 'adiado'].includes(Fin.storage.prefs().driveOnboarding)) {
+      out.push({ id: 'drive:guardar', nivel: 'atencao', grupo: 'app', icone: '☁️', titulo: 'Seus dados estão só neste aparelho', sub: 'conecte o Google Drive para ter cópia automática', acao: { href: '#/dados', rotulo: 'Conectar' } });
+    }
     if (desbloqueado && dv && Fin.drive.conectado()) {
       if (dv.conflito) out.push({ id: 'drive:conflito', nivel: 'critico', grupo: 'app', icone: '☁️', titulo: 'Conflito no Google Drive', sub: 'os dados do Drive foram criados com outra senha', acao: { href: '#/dados', rotulo: 'Resolver' } });
       else if (dv.reconectar) out.push({ id: 'drive:reconectar', nivel: 'atencao', grupo: 'app', icone: '☁️', titulo: 'Reconectar o Google Drive', sub: 'a conexão expirou; os dados não estão sincronizando', acao: { drive: true } });

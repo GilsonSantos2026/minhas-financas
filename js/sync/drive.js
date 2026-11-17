@@ -39,6 +39,25 @@ Fin.drive = (() => {
   const temEscopoArquivo = () => !!adaptadorTeste || st.escopos.includes(ESC_ARQUIVO);
   const compartilhado = () => S.prefs().driveArquivo || null;
 
+  /*
+   * Erros explicados (onboarding Etapa 4, v2026-11-17.6): cada falha do Google vira uma frase
+   * que a pessoa entende, com `codigo` para as telas decidirem o que oferecer.
+   */
+  const ERROS = {
+    'janela-fechada': 'A janela do Google foi fechada antes de terminar — é só tentar de novo. (Se o Google mostrou “Acesso bloqueado”, este Gmail ainda não foi liberado para testar o app — peça a liberação a quem te convidou.)',
+    'janela-bloqueada': 'O navegador bloqueou a janela do Google. Permita janelas (pop-ups) para este site e tente de novo.',
+    negado: 'O Google não autorizou a conexão. Se apareceu “Acesso bloqueado”, este Gmail ainda não foi liberado para testar o app — peça a liberação a quem te convidou.',
+    'sem-permissao': 'Faltou a permissão do Google Drive. Tente de novo e, na janela do Google, deixe MARCADA a caixa que fala dos “dados de configuração” do app no seu Google Drive.',
+    'sem-internet': 'Sem internet agora. Conecte-se e tente de novo.',
+    'google-indisponivel': 'Não foi possível falar com o Google agora. Tente de novo em instantes.',
+  };
+  function erroGoogle(codigo, texto) {
+    const e = new Error(ERROS[codigo] || texto || ERROS['google-indisponivel']);
+    e.codigo = codigo;
+    return e;
+  }
+  const semRede = () => !navigator.onLine;
+
   /* ---------------- Token (Google Identity Services) ---------------- */
 
   let clienteToken = null;
@@ -46,7 +65,8 @@ Fin.drive = (() => {
 
   async function carregarGIS() {
     if (window.google?.accounts?.oauth2) return;
-    await Fin.faturaLeitor.loadScript(GIS);
+    if (semRede()) throw erroGoogle('sem-internet');
+    try { await Fin.faturaLeitor.loadScript(GIS); } catch { throw erroGoogle(semRede() ? 'sem-internet' : 'google-indisponivel'); }
   }
 
   function cliente() {
@@ -56,7 +76,10 @@ Fin.drive = (() => {
       scope: ESC_APPDATA,
       callback: (resp) => {
         const fila = esperando; esperando = [];
-        if (resp.error) return fila.forEach((p) => p.rej(new Error(resp.error_description || resp.error)));
+        if (resp.error) {
+          const e = resp.error === 'access_denied' ? erroGoogle('negado') : erroGoogle(null, resp.error_description || resp.error);
+          return fila.forEach((p) => p.rej(e));
+        }
         st.token = resp.access_token;
         st.expira = Date.now() + (Number(resp.expires_in || 3600) - 60) * 1000;
         st.escopos = String(resp.scope || '');
@@ -66,7 +89,8 @@ Fin.drive = (() => {
       error_callback: (err) => {
         const fila = esperando; esperando = [];
         st.reconectar = true;
-        fila.forEach((p) => p.rej(new Error(err?.type === 'popup_closed' ? 'Janela do Google fechada.' : 'Não foi possível falar com o Google.')));
+        const cod = err?.type === 'popup_closed' ? 'janela-fechada' : err?.type === 'popup_failed_to_open' ? 'janela-bloqueada' : semRede() ? 'sem-internet' : 'google-indisponivel';
+        fila.forEach((p) => p.rej(erroGoogle(cod)));
       },
     });
     return clienteToken;
@@ -81,6 +105,22 @@ Fin.drive = (() => {
     return st.pedido;
   }
 
+  /**
+   * Abre a janela do Google (chamar direto do clique) e confere se a permissão do Drive veio
+   * MARCADA — o Google deixa a pessoa desmarcar a caixa e mesmo assim "autoriza".
+   * Testes: o adaptador pode ter `token()` (devolve os escopos ou lança um erro).
+   */
+  async function autorizar(prompt, comArquivo) {
+    if (adaptadorTeste) {
+      if (!adaptadorTeste.token) return;
+      st.escopos = String(await adaptadorTeste.token(prompt, comArquivo) || '');
+    } else {
+      if (!window.google?.accounts?.oauth2) await carregarGIS();
+      await pedirToken(prompt, comArquivo);
+    }
+    if (!st.escopos.includes(ESC_APPDATA)) { st.token = null; throw erroGoogle('sem-permissao'); }
+  }
+
   async function garantirToken() {
     if (tokenValido()) return;
     if (st.pedido) return st.pedido; // já pedido (ex.: no clique de "Entrar")
@@ -91,7 +131,10 @@ Fin.drive = (() => {
   /* ---------------- Drive (REST) ---------------- */
 
   async function req(url, opts = {}) {
-    const r = await fetch(url, { ...opts, headers: { ...(opts.headers || {}), Authorization: `Bearer ${st.token}` } });
+    let r;
+    try {
+      r = await fetch(url, { ...opts, headers: { ...(opts.headers || {}), Authorization: `Bearer ${st.token}` } });
+    } catch { throw erroGoogle(semRede() ? 'sem-internet' : 'google-indisponivel'); }
     if (r.status === 401) { st.token = null; st.reconectar = true; throw new Error('Conexão com o Google expirou.'); }
     if (r.status === 404) { const e = new Error('Arquivo não encontrado no Drive (apagado ou sem acesso).'); e.status = 404; throw e; }
     if (!r.ok) throw new Error(`Google Drive respondeu ${r.status}.`);
@@ -273,6 +316,8 @@ Fin.drive = (() => {
       else agendar(); // mudou algo durante a sincronização
       S.setPref('driveUltimoSync', new Date().toISOString());
       st.conflito = null;
+      // Onboarding (Etapa 4): conta nova que conectou → some o lembrete "dados só neste aparelho".
+      if (p.driveOnboarding && p.driveOnboarding !== 'feito') S.setPref('driveOnboarding', 'feito');
     } catch (err) {
       console.warn('[drive]', err);
       st.erro = err.message;
@@ -298,17 +343,29 @@ Fin.drive = (() => {
     setTimeout(() => window.dispatchEvent(new CustomEvent('fin:drive-primeira-conexao')), 0);
   }
 
-  /** Botão "Conectar Google Drive" (Dados e backup). */
-  async function conectar() {
+  /**
+   * Botão "Conectar Google Drive" (Dados e backup e o passo do onboarding — chamar do clique).
+   * aoPasso(p) mostra o progresso: 'autorizar' → 'procurar' → 'criar' (ou 'juntar', se já há
+   * arquivo do app no Drive) → 'pronto'. Nunca cria um segundo arquivo: se o Drive já tem dados
+   * com outra senha, devolve { conflito } (a tela pede a senha de lá → resolverConflito).
+   * Devolve { ok } | { conflito } | { erro } (conectado, mas a 1ª sincronização falhou).
+   */
+  async function conectar({ aoPasso = () => {} } = {}) {
     const jaConectado = !!S.prefs().driveConectado;
-    if (!adaptadorTeste) {
-      if (!window.google?.accounts?.oauth2) { await carregarGIS(); }
-      await pedirToken('consent');
-    }
+    aoPasso('autorizar');
+    await autorizar('consent');
+    aoPasso('procurar');
+    let existe = null;
+    try { existe = await localizar(); } catch (e) { if (e.status !== 404) throw e; }
+    aoPasso(existe ? 'juntar' : 'criar');
     S.setPref('driveConectado', true);
     S.setPref('driveSujo', true);
     await sincronizar();
     avisarPrimeiraConexao(jaConectado);
+    if (st.conflito) return { conflito: st.conflito };
+    if (st.erro) return { erro: st.erro };
+    aoPasso('pronto');
+    return { ok: true };
   }
 
   async function reconectar() {
@@ -338,10 +395,7 @@ Fin.drive = (() => {
 
   /** Aparelho novo: baixa o arquivo do Drive para entrar com a mesma senha. */
   async function baixarParaEntrar() {
-    if (!adaptadorTeste) {
-      if (!window.google?.accounts?.oauth2) await carregarGIS();
-      await pedirToken('consent', true);
-    }
+    await autorizar('consent', true);
     let info = await drive().buscar();
     if (!info) return null;
     let arq = JSON.parse(await drive().baixar(info.id));
@@ -462,11 +516,8 @@ Fin.drive = (() => {
    * Devolve o arquivo baixado (com o envelope) para validar o código do convite.
    */
   async function escolherArquivoCompartilhado() {
-    if (!adaptadorTeste) {
-      if (!window.google?.accounts?.oauth2) await carregarGIS();
-      await pedirToken('consent', true);
-      if (!temEscopoArquivo()) throw new Error('Sem a permissão de arquivos do app no Drive. Marque a caixinha na janela do Google.');
-    }
+    await autorizar('consent', true);
+    if (!temEscopoArquivo()) throw erroGoogle(null, 'Faltou a permissão de arquivos do app no Drive. Tente de novo e, na janela do Google, deixe marcadas as duas caixas do Google Drive.');
     const id = await drive().escolher();
     if (!id) return null;
     const info = await drive().info(id);
@@ -545,7 +596,7 @@ Fin.drive = (() => {
     estado: st, configurado, conectado, compartilhado, sincronizar, conectar, reconectar, desconectar,
     aoEntrar, aposDesbloquear, baixarParaEntrar, entrarComRemoto, resolverConflito, desenharStatus,
     ativarCompartilhamento, compartilharCom, acessosDrive, removerAcessoDrive,
-    escolherArquivoCompartilhado, entrarPorConvite, PASTA, NOME,
+    escolherArquivoCompartilhado, entrarPorConvite, PASTA, NOME, erroGoogle,
     usarAdaptador: (a) => { adaptadorTeste = a; },
   };
 })();
