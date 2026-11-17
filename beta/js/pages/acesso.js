@@ -215,7 +215,7 @@ Fin.acesso = (() => {
       </div>
       <div data-dica class="text-xs text-slate-500 mt-3 space-y-1.5">
         <p>Na janela do Google, escolha <b>o Gmail liberado para o teste</b> e deixe <b>marcada</b> a permissão do Google Drive.</p>
-        <p>Apareceu <b>“O Google não verificou este app”</b>? É normal enquanto o app está em teste: toque em <b>Avançado</b> e depois em <b>Acessar Valoris</b>.</p>
+        <p>Apareceu <b>“O Google não verificou este app”</b>? É normal enquanto o app está em teste: toque no link <b>Avançado</b> e depois em <b>Acessar Valoris</b> (o botão azul “Voltar para a segurança” cancela a conexão).</p>
       </div>`);
 
     const $ = (s) => root.querySelector(s);
