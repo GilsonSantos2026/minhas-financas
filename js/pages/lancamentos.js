@@ -238,10 +238,10 @@ Fin.pages.lancamentos = (() => {
       <div class="space-y-4">
         ${Fin.ui.filtroPessoa()}
         ${multiMes()
-          ? `<div class="bg-white rounded-2xl shadow-sm px-4 py-3 flex items-center justify-between gap-3">
+          ? `<div class="barra-mes hero-topo text-white rounded-2xl shadow-sm px-4 py-3 flex items-center justify-between gap-3">
                <div><div class="font-semibold">${Fin.periodo.rotulo(filtros.periodo, ym)}</div>
-               <div class="text-xs text-slate-500">pelo mês de competência</div></div>
-               <button data-periodo="mes" class="text-xs font-semibold text-prim-700 hover:underline shrink-0">Ver por mês</button>
+               <div class="hero-rotulo text-[11px] font-semibold uppercase tracking-wider text-white/75">pelo mês de competência</div></div>
+               <button data-periodo="mes" class="text-xs font-semibold text-white bg-white/15 hover:bg-white/25 rounded-full px-3 py-1.5 shrink-0">Ver por mês</button>
              </div>`
           : Fin.ui.monthNav(ym)}
         <div id="lanc-resumo" class="grid grid-cols-3 gap-2"></div>
