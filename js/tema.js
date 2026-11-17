@@ -31,7 +31,15 @@ Fin.tema = (() => {
     ['indigo', 'Índigo', '#eef2ff', '#e0e7ff', '#c7d2fe', '#6366f1', '#4f46e5', '#4338ca', '#3730a3'],
     ['azul', 'Azul', '#eff6ff', '#dbeafe', '#bfdbfe', '#3b82f6', '#2563eb', '#1d4ed8', '#1e40af'],
   ];
-  const TEMAS = LISTA.map(([id, nome, ...hex]) => ({ id, nome, cores: Object.fromEntries(NIVEIS.map((n, i) => [n, hex[i]])) }));
+  // Cor de DESTAQUE de cada tema (botão "＋ Novo", rótulos e gráfico do cartão principal, anel da foto):
+  // [destaque, destaque para texto sobre fundo claro, texto por cima do destaque].
+  // Valoris = dourado da marca; os demais usam a própria cor do tema (visual de antes).
+  const DESTAQUE = { valoris: ['#C6A45C', '#8a6d2f', '#101D35'] };
+  const TEMAS = LISTA.map(([id, nome, ...hex]) => {
+    const cores = Object.fromEntries(NIVEIS.map((n, i) => [n, hex[i]]));
+    const [d, dTexto, dSobre] = DESTAQUE[id] || [cores[500], cores[700], '#ffffff'];
+    return { id, nome, cores, destaque: { cor: d, texto: dTexto, sobre: dSobre } };
+  });
   const PADRAO = 'valoris';
   const ANTIGO_PADRAO = 'esmeralda'; // verde de fábrica antes da marca Valoris
 
@@ -72,7 +80,13 @@ Fin.tema = (() => {
     const t = porId(id);
     const raiz = document.documentElement.style;
     for (const n of NIVEIS) raiz.setProperty(`--p-${n}`, rgb(t.cores[n]));
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', t.cores[600]);
+    raiz.setProperty('--d', rgb(t.destaque.cor));
+    raiz.setProperty('--d-texto', rgb(t.destaque.texto));
+    raiz.setProperty('--d-sobre', rgb(t.destaque.sobre));
+    // Ajustes finos só do visual da marca (rótulos e gráfico dourados no cartão principal…): styles.css
+    document.documentElement.classList.toggle('tema-valoris', t.id === 'valoris');
+    // Barra do navegador/celular na cor do topo do app (o topo usa o tom mais escuro do tema).
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', t.cores[800]);
     atual = t.id;
     if (guardar) gravarPref(t.id);
     window.dispatchEvent(new CustomEvent('fin:tema', { detail: t.id }));

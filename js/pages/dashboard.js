@@ -40,11 +40,12 @@ Fin.pages.dashboard = (() => {
     const pts = valores.map((v, i) => [p + (i * (w - 2 * p)) / (valores.length - 1), h - p - ((v - min) / amp) * (h - 2 * p)]);
     const zero = min < 0 && max > 0 ? h - p - ((0 - min) / amp) * (h - 2 * p) : null;
     const [lx, ly] = pts[pts.length - 1];
-    return `<svg viewBox="0 0 ${w} ${h}" class="w-24 h-11 sm:w-28 sm:h-12 shrink-0" aria-hidden="true" focusable="false">
+    // Cor da linha: branca; no tema Valoris, dourada (.hero-spark em styles.css).
+    return `<svg viewBox="0 0 ${w} ${h}" class="hero-spark w-24 h-11 sm:w-28 sm:h-12 shrink-0" aria-hidden="true" focusable="false">
       ${zero != null ? `<line x1="${p}" x2="${w - p}" y1="${zero}" y2="${zero}" stroke="rgba(255,255,255,.35)" stroke-dasharray="3 3"/>` : ''}
-      <polyline points="${pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ')}" fill="none" stroke="#fff" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
-      ${pts.slice(0, -1).map(([x, y]) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2" fill="#fff" opacity=".75"/>`).join('')}
-      <circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="3.6" fill="#fff"/>
+      <polyline points="${pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ')}" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+      ${pts.slice(0, -1).map(([x, y]) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2" fill="currentColor" opacity=".75"/>`).join('')}
+      <circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="3.6" fill="currentColor"/>
     </svg>`;
   }
 
@@ -86,7 +87,7 @@ Fin.pages.dashboard = (() => {
         <div class="hero-topo text-white px-4 sm:px-5 pt-4 pb-4">
           <div class="flex items-start gap-3">
             <div class="flex-1 min-w-0">
-              <div class="text-[11px] font-semibold uppercase tracking-wider text-white/75">Resultado do mês</div>
+              <div class="hero-rotulo text-[11px] font-semibold uppercase tracking-wider text-white/75">Resultado do mês</div>
               <div class="text-3xl sm:text-4xl font-semibold tracking-tight tabular-nums mt-0.5">${fmt.brl(r.saldo)}</div>
               <div class="flex flex-wrap items-center gap-x-2 gap-y-1 mt-2 text-xs">
                 ${negativo ? '<span class="inline-flex items-center gap-1 rounded-full bg-rose-500/90 px-2 py-0.5 font-medium">! saldo negativo</span>' : ''}
