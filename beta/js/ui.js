@@ -326,11 +326,11 @@ Fin.ui = (() => {
   function monthNav(ym) {
     const atual = fmt.currentYM();
     return `
-      <div class="flex items-center justify-between bg-white rounded-2xl shadow-sm px-2 py-2">
+      <div class="barra-mes hero-topo flex items-center justify-between rounded-2xl shadow-sm px-2 py-2 text-white">
         <button data-month="-1" class="icon-btn" aria-label="Mês anterior">‹</button>
         <div class="text-center">
           <div class="font-semibold">${fmt.monthLong(ym)}</div>
-          ${ym !== atual ? '<button data-month="0" class="text-xs text-prim-700 hover:underline">voltar para o mês atual</button>' : '<div class="text-xs text-slate-400">mês atual</div>'}
+          ${ym !== atual ? '<button data-month="0" class="hero-rotulo text-[11px] font-semibold uppercase tracking-wider text-white/80 hover:underline">voltar para o mês atual</button>' : '<div class="hero-rotulo text-[11px] font-semibold uppercase tracking-wider text-white/75">mês atual</div>'}
         </div>
         <button data-month="1" class="icon-btn" aria-label="Próximo mês">›</button>
       </div>`;

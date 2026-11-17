@@ -30,6 +30,10 @@
   display: grid; place-items: center; font-size: 1.4rem; color: #475569;
 }
 .icon-btn:hover { background: #f1f5f9; }
+/* Barra de troca de mês (todas as abas): mesma identidade do cartão "Resultado do mês" (.hero-topo). */
+.barra-mes .icon-btn { color: #fff; }
+.barra-mes .icon-btn:hover { background: rgb(255 255 255 / 0.12); }
+.tema-valoris .barra-mes .icon-btn { color: rgb(var(--d)); }
 
 /* Campos de formulário */
 .input {
