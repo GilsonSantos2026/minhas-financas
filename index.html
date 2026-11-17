@@ -18,28 +18,67 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="Valoris" />
 
+  <!-- Abertura animada: estilo embutido aqui (antes de qualquer script) para pintar já no 1º quadro.
+       Só transform/opacity (rodam no compositor/GPU, sem depender da thread principal ocupada
+       com o carregamento). A saída (crossfade) é disparada por js/app.js quando a tela de destino
+       está pronta; se o JS falhar, a própria animação some aos 4 s. -->
+  <style>
+    #abertura{position:fixed;inset:0;z-index:200;display:grid;place-items:center;background:#101D35;color:#F3F5F8;cursor:pointer;contain:strict;animation:ab-some .4s ease 4s forwards}
+    #abertura.saindo{animation:ab-sai .45s ease forwards}
+    #abertura::before{content:"";position:absolute;width:520px;height:520px;border-radius:50%;background:radial-gradient(circle,rgb(198 164 92/.16),transparent 62%);opacity:0;animation:ab-aparece .9s ease .5s forwards;will-change:opacity}
+    #abertura .ab-conteudo{position:relative;display:flex;flex-direction:column;align-items:center}
+    #abertura .ab-mono{position:relative;width:128px;height:112px}
+    #abertura .ab-peca,#abertura .ab-peca>div{position:absolute;inset:0;will-change:transform}
+    #abertura .ab-peca{overflow:hidden}
+    #abertura svg{display:block;width:100%;height:100%;overflow:visible}
+    /* "cortina": a janela (pai) e o desenho (filho) andam em sentidos opostos → o desenho fica parado e é revelado */
+    #abertura .ab-esq{transform:translateY(-100%);animation:ab-cortina .45s cubic-bezier(.2,.7,.2,1) .1s forwards}
+    #abertura .ab-esq>div{transform:translateY(100%);animation:ab-cortina .45s cubic-bezier(.2,.7,.2,1) .1s forwards}
+    #abertura .ab-dir{transform:translateY(100%);animation:ab-cortina .5s cubic-bezier(.2,.7,.2,1) .4s forwards}
+    #abertura .ab-dir>div{transform:translateY(-100%);animation:ab-cortina .5s cubic-bezier(.2,.7,.2,1) .4s forwards}
+    #abertura .ab-filete{transform:translateX(100%);animation:ab-cortina .3s ease-out .8s forwards}
+    #abertura .ab-filete>div{transform:translateX(-100%);animation:ab-cortina .3s ease-out .8s forwards}
+    #abertura .ab-seta{overflow:visible;opacity:0;transform:translate(-11px,22px);animation:ab-dispara .45s cubic-bezier(.2,.9,.25,1.25) 1s forwards;will-change:transform,opacity}
+    #abertura .ab-nome{margin:26px -.32em 0 0;font:600 30px/1 Montserrat,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;letter-spacing:.32em;opacity:0;transform:translateY(8px) scale(1.12);animation:ab-surge .6s cubic-bezier(.2,.7,.2,1) 1.05s forwards;will-change:transform,opacity}
+    #abertura .ab-assinatura{margin:10px -.44em 0 0;font:600 10px/1 "Segoe UI",Roboto,Arial,sans-serif;letter-spacing:.44em;text-transform:uppercase;color:#C6A45C;opacity:0;animation:ab-aparece .45s ease 1.35s forwards;will-change:opacity}
+    @keyframes ab-cortina{to{transform:none}}
+    @keyframes ab-dispara{60%{opacity:1}to{opacity:1;transform:none}}
+    @keyframes ab-surge{to{opacity:1;transform:none}}
+    @keyframes ab-aparece{to{opacity:1}}
+    @keyframes ab-some{to{opacity:0;visibility:hidden}}
+    @keyframes ab-sai{from{opacity:1}to{opacity:0;visibility:hidden}}
+    @media (prefers-reduced-motion:reduce){
+      #abertura *,#abertura::before{animation-duration:.01s!important;animation-delay:0s!important}
+      #abertura{animation:ab-some .3s ease 1.5s forwards}
+      #abertura.saindo{animation:ab-sai .25s ease forwards}
+    }
+  </style>
+
   <!-- Bibliotecas hospedadas no próprio site (js/vendor/, baixadas das fontes oficiais e
        conferidas por hash) — nenhum script de terceiros roda com os dados abertos. -->
   <!-- Produção ou canal beta (define Fin.PREFIXO das chaves locais): antes de todos -->
   <script src="js/canal.js"></script>
-  <script src="js/vendor/tailwind-3.4.16.js"></script>
-  <script src="js/tailwind-config.js"></script>
+  <!-- Tailwind e SheetJS com "defer": não seguram a 1ª pintura (a abertura cobre a tela enquanto
+       o Tailwind gera o estilo; o SheetJS só é usado ao importar planilha). A ordem entre eles se mantém. -->
+  <script src="js/vendor/tailwind-3.4.16.js" defer></script>
+  <script src="js/tailwind-config.js" defer></script>
   <!-- SheetJS: leitura de .xlsx / .xls / .csv / .ods (usado na tela "Dados") -->
-  <script src="js/vendor/xlsx-0.20.3.full.min.js"></script>
+  <script src="js/vendor/xlsx-0.20.3.full.min.js" defer></script>
 
   <link rel="stylesheet" href="css/styles.css" />
   <script src="js/tema.js"></script>
 </head>
 <body class="bg-[#F3F5F8] text-slate-800 antialiased">
-  <!-- Abertura animada da marca (só CSS; some sozinha em ~2,4 s; um toque pula — js/app.js) -->
+  <!-- Abertura animada da marca (estilo no <head>; saída por js/app.js; um toque pula).
+       Cada peça do monograma é um bloco HTML próprio: assim a animação roda no compositor (GPU). -->
   <div id="abertura" aria-hidden="true">
     <div class="ab-conteudo">
-      <svg class="ab-mono" viewBox="22 21 159 139">
-        <polygon class="ab-esq" points="24,23 55,23 89,100 74,131" fill="#F3F5F8"/>
-        <polygon class="ab-dir" points="147,23 179,23 119,158 87,158" fill="#C6A45C"/>
-        <rect class="ab-filete" x="102" y="23" width="46" height="2.6" fill="#C6A45C"/>
-        <g class="ab-seta"><line x1="90" y1="93" x2="101.3" y2="69.5" stroke="#C6A45C" stroke-width="3.5"/><polygon points="109.5,53 95,66.5 107.5,72" fill="#C6A45C"/></g>
-      </svg>
+      <div class="ab-mono">
+        <div class="ab-peca ab-esq"><div><svg viewBox="22 21 159 139"><polygon points="24,23 55,23 89,100 74,131" fill="#F3F5F8"/></svg></div></div>
+        <div class="ab-peca ab-dir"><div><svg viewBox="22 21 159 139"><polygon points="147,23 179,23 119,158 87,158" fill="#C6A45C"/></svg></div></div>
+        <div class="ab-peca ab-filete"><div><svg viewBox="22 21 159 139"><rect x="102" y="23" width="46" height="2.6" fill="#C6A45C"/></svg></div></div>
+        <div class="ab-peca ab-seta"><svg viewBox="22 21 159 139"><line x1="90" y1="93" x2="101.3" y2="69.5" stroke="#C6A45C" stroke-width="3.5"/><polygon points="109.5,53 95,66.5 107.5,72" fill="#C6A45C"/></svg></div>
+      </div>
       <div class="ab-nome">VALORIS</div>
       <div class="ab-assinatura">Financial Intelligence</div>
     </div>
@@ -185,6 +224,7 @@
   <script src="js/investimentos/importar.js"></script>
   <script src="js/pages/investimentos.js"></script>
   <script src="js/pages/mais.js"></script>
+  <script src="js/demo.js"></script>
   <script src="js/pages/dados.js"></script>
   <script src="js/pages/configuracoes.js"></script>
   <script src="js/pages/educacao.js"></script>
@@ -192,6 +232,7 @@
   <script src="js/sync/drive.js"></script>
   <script src="js/pages/acesso.js"></script>
   <script src="js/pwa.js"></script>
+  <script src="js/components/convite-app.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

@@ -289,8 +289,18 @@ Fin.drive = (() => {
 
   /* ---------------- Ações (chamadas pelas telas) ---------------- */
 
+  /**
+   * 1ª conexão bem-sucedida com o Drive NESTE aparelho → avisa o app (convite para instalar o
+   * app, components/convite-app.js). `jaConectado` = como estava antes desta conexão.
+   */
+  function avisarPrimeiraConexao(jaConectado) {
+    if (jaConectado) return;
+    setTimeout(() => window.dispatchEvent(new CustomEvent('fin:drive-primeira-conexao')), 0);
+  }
+
   /** Botão "Conectar Google Drive" (Dados e backup). */
   async function conectar() {
+    const jaConectado = !!S.prefs().driveConectado;
     if (!adaptadorTeste) {
       if (!window.google?.accounts?.oauth2) { await carregarGIS(); }
       await pedirToken('consent');
@@ -298,6 +308,7 @@ Fin.drive = (() => {
     S.setPref('driveConectado', true);
     S.setPref('driveSujo', true);
     await sincronizar();
+    avisarPrimeiraConexao(jaConectado);
   }
 
   async function reconectar() {
@@ -352,6 +363,7 @@ Fin.drive = (() => {
   }
 
   async function entrarComRemoto(arq, usuario, senha) {
+    const jaConectado = !!S.prefs().driveConectado;
     const planoAntes = S.modo() === 'plano' && S.hasData() ? S.exportarDados() : null; // dados soltos deste aparelho
     await Fin.cofre.adotarEnvelope(arq.conta, usuario, senha);
     prepararCofreRemoto(arq);
@@ -365,6 +377,7 @@ Fin.drive = (() => {
       const r = Fin.mesclar.mesclar(S.exportarDados(), planoAntes);
       if (r.mudouLocal) { S.substituirDados(r.dados); S.setPref('driveSujo', true); }
     }
+    avisarPrimeiraConexao(jaConectado);
   }
 
   /** Conflito: o Drive foi criado com outra senha (outro aparelho criou acesso separado). */
@@ -469,6 +482,7 @@ Fin.drive = (() => {
 
   /** Aceita o convite: cria o acesso desta pessoa e passa a usar os dados compartilhados. */
   async function entrarPorConvite(arq, codigo, usuario, senha) {
+    const jaConectado = !!S.prefs().driveConectado;
     const planoAntes = S.modo() === 'plano' && S.hasData() ? S.exportarDados() : null;
     await Fin.cofre.aceitarConvite(arq.conta, codigo, usuario, senha);
     prepararCofreRemoto(arq);
@@ -482,6 +496,7 @@ Fin.drive = (() => {
       const r = Fin.mesclar.mesclar(S.exportarDados(), planoAntes);
       if (r.mudouLocal) S.substituirDados(r.dados);
     }
+    avisarPrimeiraConexao(jaConectado);
   }
 
   /* ---------------- Indicador de status ---------------- */

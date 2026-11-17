@@ -285,15 +285,35 @@ Fin.pages.dados = (() => {
         <p class="text-sm text-slate-600 mt-1">Não tem planilha? Comece já com <b>${nD} categorias de despesa e ${nR} de receita</b> prontas — dá para renomear, apagar ou criar outras depois.</p>
         <p class="text-xs text-slate-500 mt-2 flex flex-wrap gap-1">${exemplos} <span class="px-1 py-0.5">e mais…</span></p>
         <button data-act="zero" class="btn btn-primary mt-4">Começar do zero</button>
+        ${Fin.ehBeta && Fin.demo ? `
+          <div class="mt-4 pt-4 border-t border-slate-100">
+            <p class="text-sm text-slate-600"><b>Canal beta:</b> quer ver o app cheio, para testar ou gravar vídeos? Carregue <b>dados de demonstração</b> (fictícios): 12 meses de lançamentos, cartões, investimentos e metas.</p>
+            <button data-act="demo" class="btn btn-ghost mt-3">🎬 Carregar dados de demonstração</button>
+          </div>` : ''}
       </section>
       <p class="text-xs font-semibold uppercase tracking-wide text-slate-400 text-center mb-4">ou, se já tem seus lançamentos numa planilha</p>`;
   }
 
+  const categoriasPadrao = () => ['despesa', 'receita'].flatMap((tipo) => CATEGORIAS_PADRAO[tipo].map(([nome, icone, classificacao, extra]) => ({
+    id: Fin.storage.uid(), nome, icone, tipo, classificacao, orcamentoMensal: 0, ...(extra || {}),
+  })));
+
+  /** Canal beta: conta cheia de dados fictícios (js/demo.js) para testar e gravar vídeos. */
+  function carregarDemo() {
+    try {
+      Fin.demo.carregar(categoriasPadrao());
+    } catch (e) {
+      console.error('[demo]', e);
+      return Fin.ui.toast('Não foi possível carregar a demonstração.', 'error');
+    }
+    Fin.state.mes = fmt.currentYM();
+    Fin.ui.toast('Dados de demonstração carregados (fictícios).');
+    location.hash = '#/dashboard';
+    setTimeout(() => { if (!Fin.storage.prefs().tourVisto && !Fin.tour.ativo()) Fin.tour.iniciar(); }, 900);
+  }
+
   function comecarDoZero() {
-    const cats = ['despesa', 'receita'].flatMap((tipo) => CATEGORIAS_PADRAO[tipo].map(([nome, icone, classificacao, extra]) => ({
-      id: Fin.storage.uid(), nome, icone, tipo, classificacao, orcamentoMensal: 0, ...(extra || {}),
-    })));
-    Fin.storage.comecarDoZero(cats);
+    Fin.storage.comecarDoZero(categoriasPadrao());
     Fin.state.mes = fmt.currentYM();
     Fin.ui.toast('Tudo pronto! Use o botão “＋” para o primeiro lançamento.');
     location.hash = '#/dashboard';
@@ -820,6 +840,7 @@ Fin.pages.dados = (() => {
         if (act === 'restore-cancel') { Object.assign(state, { mode: null, restore: null }); draw(); }
         if (act === 'apagar') onApagar();
         if (act === 'zero' && !Fin.storage.hasData()) comecarDoZero();
+        if (act === 'demo' && Fin.ehBeta && !Fin.storage.hasData()) carregarDemo();
         if (act === 'instalar') { await Fin.pwa.instalar(); draw(); }
         if (act === 'trocar-senha') trocarSenha();
         if (act === 'nova-chave') novaChave();
