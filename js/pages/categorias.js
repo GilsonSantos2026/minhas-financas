@@ -38,7 +38,7 @@ Fin.pages.categorias = (() => {
                 const u = F.usosCategoria(c.nome, c.tipo).total;
                 return `
                 <li class="lanc-item flex items-center gap-3 px-3 sm:px-4 py-3" data-cat="${c.id}" role="button" tabindex="0" aria-label="Editar ${esc(c.nome)}">
-                  <button type="button" data-ver-cat="${c.id}" class="rounded-full shrink-0 hover:ring-2 hover:ring-prim-300 focus-visible:ring-2 focus-visible:ring-prim-500 transition" title="Ver os lançamentos de ${esc(c.nome)}" aria-label="Ver os lançamentos de ${esc(c.nome)}">
+                  <button type="button" data-ver-cat="${c.id}" class="rounded-full shrink-0 hover:ring-2 hover:ring-prim-200 focus-visible:ring-2 focus-visible:ring-prim-500 transition" title="Ver os lançamentos de ${esc(c.nome)}" aria-label="Ver os lançamentos de ${esc(c.nome)}">
                     ${Fin.ui.catIcon(c.icone, c.nome, c.tipo)}</button>
                   <div class="flex-1 min-w-0">
                     <div class="text-sm font-medium truncate">${esc(c.nome)}</div>

@@ -58,15 +58,15 @@
        conferidas por hash) — nenhum script de terceiros roda com os dados abertos. -->
   <!-- Produção ou canal beta (define Fin.PREFIXO das chaves locais): antes de todos -->
   <script src="js/canal.js"></script>
-  <!-- Tailwind SEM defer: o estilo precisa existir antes de a página aparecer. Com defer, em
-       celulares lentos a abertura saía antes do estilo e a tela aparecia "desfigurada" (v2026-11-17.4).
-       Só o SheetJS (pesado, usado só ao importar planilha) fica com defer. -->
-  <script src="js/vendor/tailwind-3.4.16.js"></script>
-  <script src="js/tailwind-config.js"></script>
   <!-- SheetJS: leitura de .xlsx / .xls / .csv / .ods (usado na tela "Dados") -->
   <script src="js/vendor/xlsx-0.20.3.full.min.js" defer></script>
 
   <link rel="stylesheet" href="css/styles.css" />
+  <!-- Tailwind PRÉ-GERADO (v2026-11-17.5): CSS pronto, gerado por ferramentas/tailwind no publicar.ps1.
+       Fica DEPOIS do styles.css (mesma ordem de antes: o Tailwind "Play" injetava o estilo no fim do
+       <head>). Antes o CSS era montado no celular em tempo de execução (444 KB de JS; com defer a tela
+       aparecia "desfigurada" — v2026-11-17.4). Classes sempre escritas INTEIRAS no código. -->
+  <link rel="stylesheet" href="css/tailwind.css" />
   <script src="js/tema.js"></script>
 </head>
 <body class="bg-[#F3F5F8] text-slate-800 antialiased">
