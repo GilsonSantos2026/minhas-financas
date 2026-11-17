@@ -315,7 +315,13 @@ Fin.pages.configuracoes = (() => {
         <span class="flex-1 min-w-0"><span class="block text-sm font-medium">Rever tutorial</span>
           <span class="block text-xs text-slate-500">Balões que mostram como lançar receitas e despesas, marcar pago e usar os filtros</span></span>
         <span class="text-slate-300" aria-hidden="true">›</span>
-      </button>`);
+      </button>
+      ${Fin.novidadesTela ? `<button data-act="novidades" class="w-full flex items-center gap-3 -mx-1 px-1 py-2 rounded-xl hover:bg-slate-50 text-left">
+        ${Fin.icones.badge('alta', 'prim', 'w-10 h-10')}
+        <span class="flex-1 min-w-0"><span class="block text-sm font-medium">Novidades do app</span>
+          <span class="block text-xs text-slate-500">O que mudou em cada versão</span></span>
+        <span class="text-slate-300" aria-hidden="true">›</span>
+      </button>` : ''}`);
   }
 
   function atalhosHTML() {
@@ -417,6 +423,7 @@ Fin.pages.configuracoes = (() => {
       const alvo = e.target.closest('[data-act]');
       const act = alvo?.dataset.act;
       if (act === 'rever-tour') return Fin.tour.iniciar();
+      if (act === 'novidades') return Fin.novidadesTela.todas();
       const redesenharSug = () => { view.querySelector('#cfg-sugestoes').innerHTML = sugestoesHTML(); };
       const ver = e.target.closest('[data-sug-ver]');
       if (ver && Fin.cofre.ehPrincipal()) {
