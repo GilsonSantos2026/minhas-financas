@@ -172,7 +172,8 @@ Fin.pages.dados = (() => {
       return secao('Sincronizar com o Google Drive', '☁️', `
         <p class="text-sm text-slate-600 mt-1">Use os mesmos dados no celular e no computador. O app guarda um arquivo <b>cifrado</b>
           numa pasta oculta do seu Drive (o app não vê seus outros arquivos e o Google não consegue ler o conteúdo).</p>
-        <button data-act="drive-conectar" class="btn btn-primary mt-3">Conectar Google Drive</button>`);
+        <button data-act="drive-conectar" class="btn btn-primary mt-3">Conectar Google Drive</button>
+        <p class="text-xs text-slate-500 mt-2">Apareceu “O Google não verificou este app”? É normal enquanto o app está em teste: toque em <b>Avançado</b> e depois em <b>Acessar Valoris</b>.</p>`);
     }
     return secao('Google Drive', '☁️', `
       <div id="sync-status-dados" class="mt-2"></div>
