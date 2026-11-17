@@ -3,14 +3,14 @@
  *
  * - Arquivos do app (mesma origem): "rede primeiro" — online você sempre recebe a versão
  *   mais nova; offline, usa a cópia guardada.
- * - Bibliotecas (js/vendor/: Tailwind, SheetJS, PDF.js, OCR) e o núcleo/idioma do OCR
+ * - Bibliotecas (js/vendor/: SheetJS, PDF.js, OCR) e o núcleo/idioma do OCR
  *   (jsDelivr): "cache primeiro" — os nomes têm versão fixa, então a cópia guardada nunca
  *   fica velha. Trocar de versão = arquivo com nome novo.
  *
  * Ao publicar uma versão nova do app, troque VERSAO: o app mostra "Nova versão disponível".
  * Os DADOS não passam por aqui (ficam no LocalStorage do navegador).
  */
-const VERSAO = 'beta-2026-11-17.1512';
+const VERSAO = 'beta-2026-11-17.1527';
 // Canal beta (…/beta/sw.js): caches com outro prefixo — um canal nunca apaga o cache do outro.
 const BETA = self.location.pathname.includes('/beta/');
 const PFX = BETA ? 'financas-beta' : 'financas';
@@ -18,9 +18,9 @@ const CACHE_APP = `${PFX}-app-${VERSAO}`;
 const CACHE_CDN = `${PFX}-cdn-v1`;
 
 const ARQUIVOS_APP = [
-  './', './index.html', './privacidade.html', './termos.html', './manifest.webmanifest', './css/styles.css', './css/legal.css',
+  './', './index.html', './privacidade.html', './termos.html', './manifest.webmanifest', './css/styles.css', './css/tailwind.css', './css/legal.css',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/apple-touch-icon.png', './icons/favicon-32.png',
-  './js/config.js', './js/canal.js', './js/tailwind-config.js', './js/tema.js', './js/icones.js', './js/membros.js', './js/educacao.js', './js/sugestoes.js', './js/ia.js', './js/seguranca/cofre.js', './js/sync/mesclar.js', './js/sync/drive.js', './js/pages/acesso.js',
+  './js/config.js', './js/canal.js','./js/tema.js', './js/icones.js', './js/membros.js', './js/educacao.js', './js/sugestoes.js', './js/ia.js', './js/seguranca/cofre.js', './js/sync/mesclar.js', './js/sync/drive.js', './js/pages/acesso.js',
   './js/storage.js', './js/parsers.js', './js/column-map.js', './js/importer.js', './js/format.js', './js/finance.js',
   './js/periodo.js', './js/analise.js', './js/ui.js', './js/charts.js', './js/privacidade.js', './js/avisos.js', './js/tour.js', './js/puxar.js', './js/saude.js', './js/router.js', './js/pwa.js', './js/components/convite-app.js', './js/novidades.js', './js/components/novidades.js', './js/app.js',
   './js/components/lancamento-form.js', './js/components/compra-form.js', './js/components/cartao-form.js', './js/components/categoria-form.js',
@@ -31,9 +31,9 @@ const ARQUIVOS_APP = [
 ];
 
 // Bibliotecas do próprio site (js/vendor/, nome com versão → "cache primeiro").
-// Tailwind e SheetJS são carregadas sempre; as de PDF/OCR entram no cache no primeiro uso.
+// SheetJS é carregada sempre; as de PDF/OCR entram no cache no primeiro uso.
+// (O Tailwind agora é CSS pré-gerado — css/tailwind.css, entre os arquivos do app.)
 const CDN_ESSENCIAIS = [
-  './js/vendor/tailwind-3.4.16.js',
   './js/vendor/xlsx-0.20.3.full.min.js',
 ];
 const PASTA_VENDOR = '/js/vendor/';
