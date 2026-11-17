@@ -97,7 +97,11 @@ Fin.pwa = (() => {
         });
       });
       let recarregando = false;
+      // Recarrega só quando uma versão nova assume (atualização). Na 1ª visita o SW apenas passa a
+      // controlar a página já carregada (clients.claim): recarregar aí reiniciava a abertura à toa.
+      const tinhaControlador = !!navigator.serviceWorker.controller;
       navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!tinhaControlador && !st.novaVersao) return;
         if (recarregando) return;
         recarregando = true;
         location.reload();

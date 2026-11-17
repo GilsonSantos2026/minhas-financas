@@ -165,16 +165,35 @@ window.Fin = window.Fin || {};
   // Mostra "Criar acesso" (primeiro uso) ou "Entrar".
   Fin.acesso.iniciar(aoDesbloquear);
 
-  // Abertura animada da marca (index.html #abertura): sai do caminho ao terminar; um toque pula.
+  /*
+   * Abertura animada da marca (index.html #abertura) — saída em duas fases:
+   *  1) espera a entrada terminar (mín. ~1,7 s desde o início da página) E a tela de destino
+   *     (acesso ou Início) estar desenhada por baixo;
+   *  2) crossfade (.saindo = só opacity) e remove do DOM ao acabar.
+   * Limite de 3 s para nunca prender a pessoa; um toque pula; "reduzir movimento" = mín. 0,5 s.
+   * Se este código nem rodar, a própria animação CSS some aos 4 s.
+   */
   const abertura = document.getElementById('abertura');
   if (abertura) {
+    const reduz = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const MIN = reduz ? 500 : 1700; // ms desde o início da navegação (performance.now())
+    const MAX = 3000;
+    let saindo = false;
     const tirar = () => abertura.remove();
-    abertura.addEventListener('animationend', (e) => { if (e.target === abertura && e.animationName === 'ab-some') tirar(); });
-    abertura.addEventListener('click', () => {
-      abertura.style.transition = 'opacity .2s';
-      abertura.style.opacity = '0';
-      setTimeout(tirar, 220);
-    });
-    setTimeout(tirar, 4000); // garantia, caso o navegador não dispare o fim da animação
+    const sair = () => {
+      if (saindo) return;
+      saindo = true;
+      abertura.classList.add('saindo');
+    };
+    abertura.addEventListener('animationend', (e) => { if (e.target === abertura && (e.animationName === 'ab-sai' || e.animationName === 'ab-some')) tirar(); });
+    abertura.addEventListener('click', sair);
+    const destinoPronto = () => iniciado || !!document.querySelector('#acesso-root > *');
+    const checar = () => {
+      if (saindo) return;
+      if (destinoPronto() || performance.now() >= MAX) sair();
+      else setTimeout(checar, 100);
+    };
+    setTimeout(checar, Math.max(0, MIN - performance.now()));
+    setTimeout(tirar, 4600); // garantia final, caso o fim da animação não dispare
   }
 })();
