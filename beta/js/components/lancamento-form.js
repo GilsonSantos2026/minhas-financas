@@ -96,7 +96,7 @@ window.Fin=window.Fin||{},Fin.forms=Fin.forms||{},Fin.forms.lancamento=(()=>{con
           <label class="field"><span>Descrição <span class="font-normal text-slate-400">(opcional)</span></span>
             <input name="descricao" class="input" maxlength="120" value="${h(n.descricao)}" placeholder="Ex.: Conta de luz" /></label>
 
-          <details data-mais class="mais-opcoes border-t border-slate-100" ${a?"open":""}>
+          <details data-mais class="mais-opcoes border-t border-slate-100" ${a||Fin.modo?.completo?.()?"open":""}>
             <summary class="flex items-center gap-2 py-3 cursor-pointer">
               <span class="flex-1 min-w-0">
                 <span class="block text-sm font-semibold text-prim-700">Mais opções</span>

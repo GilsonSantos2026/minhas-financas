@@ -4,15 +4,19 @@ window.Fin=window.Fin||{},Fin.pages=Fin.pages||{},Fin.pages.mais=(()=>{const e=[
         <section class="mb-5" aria-label="${a}">
           <h2 class="text-xs font-semibold uppercase tracking-[.1em] text-slate-500 mb-2 px-1">${a}</h2>
           <ul class="bg-white rounded-2xl shadow-sm divide-y divide-slate-100 overflow-hidden">
-            ${o.map(([i,r,n,l,p,c])=>`
+            ${o.map(([i,n,r,l,p,c])=>`
               <li><a href="${i}" ${c||""} class="flex items-center gap-3 px-4 py-3.5 min-h-[64px] hover:bg-slate-50">
-                ${Fin.icones.badge(r,n,"w-10 h-10")}
+                ${Fin.icones.badge(n,r,"w-10 h-10")}
                 <span class="flex-1 min-w-0"><span class="block text-[15px] font-medium">${l}</span>
                   <span class="block text-[13px] text-slate-500">${p}</span></span>
                 <span class="text-slate-300" aria-hidden="true">›</span>
               </a></li>`).join("")}
           </ul>
         </section>`).join("")}
+      <section class="mb-5" aria-label="Exibição">
+        <h2 class="text-xs font-semibold uppercase tracking-[.1em] text-slate-500 mb-2 px-1">Exibição</h2>
+        <div class="bg-white rounded-2xl shadow-sm px-4 py-3.5 min-h-[64px]">${Fin.modo.interruptorHTML()}</div>
+      </section>
       <div id="sync-status-mais" class="mb-3"></div>
       <button data-bloquear class="w-full bg-white rounded-2xl shadow-sm flex items-center gap-3 px-4 py-3.5 min-h-[64px] text-left hover:bg-slate-50">
         ${Fin.icones.badge("sair","rose","w-10 h-10")}
