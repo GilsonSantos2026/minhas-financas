@@ -191,7 +191,7 @@ O código vale até ${new Date(n).toLocaleDateString("pt-BR")} e só pode ser us
           ${Fin.icones.titulo("engrenagem","prim","Configurações",{tag:"h1",cls:"text-xl hidden md:flex",tam:"w-9 h-9",ic:"w-5 h-5"})}
           <div id="cfg-perfil">${h(s,a)}</div>
           <div id="cfg-pessoas">${f()}</div>
-          ${Fin.plano.cartaoHTML()}
+          <div id="cfg-plano">${Fin.plano.cartaoHTML()}</div>
           ${w()}
           ${v(`${Fin.icones.titulo("barras","prim","Modo de exibição",{cls:"mb-2"})}
             <p class="text-sm text-slate-500 mb-3">No <b>Essencial</b>, o app mostra primeiro o que importa e deixa os detalhes a um toque. No <b>Completo</b>, tudo já vem aberto. Nenhuma função some.</p>
