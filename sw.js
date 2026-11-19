@@ -10,7 +10,7 @@
  * Ao publicar uma versão nova do app, troque VERSAO: o app mostra "Nova versão disponível".
  * Os DADOS não passam por aqui (ficam no LocalStorage do navegador).
  */
-const VERSAO = '2026-11-18.8';
+const VERSAO = '2026-11-19.1';
 // Canal beta (…/beta/sw.js): caches com outro prefixo — um canal nunca apaga o cache do outro.
 const BETA = self.location.pathname.includes('/beta/');
 const PFX = BETA ? 'financas-beta' : 'financas';
@@ -18,20 +18,22 @@ const CACHE_APP = `${PFX}-app-${VERSAO}`;
 const CACHE_CDN = `${PFX}-cdn-v1`;
 
 const ARQUIVOS_APP = [
+  './js/valoris-8c92093c43.min.js', // pacote com os scripts do app (ferramentas/minificar)
   './', './index.html', './privacidade.html', './termos.html', './manifest.webmanifest', './css/styles.css', './css/tailwind.css', './css/legal.css',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/apple-touch-icon.png', './icons/favicon-32.png',
-  './js/config.js', './js/canal.js','./js/tema.js', './js/icones.js', './js/membros.js', './js/plano.js', './js/educacao.js', './js/sugestoes.js', './js/ia.js', './js/seguranca/cofre.js', './js/sync/mesclar.js', './js/sync/drive.js', './js/pages/acesso.js',
-  './js/storage.js', './js/parsers.js', './js/column-map.js', './js/importer.js', './js/format.js', './js/finance.js',
-  './js/periodo.js', './js/analise.js', './js/ui.js', './js/charts.js', './js/privacidade.js', './js/avisos.js', './js/tour.js', './js/puxar.js', './js/saude.js', './js/router.js', './js/pwa.js', './js/components/convite-app.js', './js/novidades.js', './js/components/novidades.js', './js/app.js',
-  './js/components/lancamento-form.js', './js/components/compra-form.js', './js/components/cartao-form.js', './js/components/categoria-form.js',
-  './js/pages/dashboard.js', './js/pages/lancamentos.js', './js/pages/cartoes.js', './js/pages/importar-fatura.js',
-  './js/pages/categorias.js', './js/pages/orcamento.js', './js/pages/relatorios.js', './js/pages/conciliacao.js', './js/pages/planilha.js', './js/pages/investimentos.js',
-  './js/investimentos/cotacoes.js', './js/investimentos/carteira.js', './js/investimentos/reserva.js', './js/investimentos/formularios.js', './js/investimentos/nomad.js', './js/investimentos/rico.js', './js/investimentos/importar.js', './js/pages/mais.js', './js/demo.js', './js/pages/dados.js', './js/pages/configuracoes.js', './js/pages/educacao.js',
-  './js/fatura/leitor.js', './js/fatura/importador.js',
+   './js/canal.js','./js/tema.js',          
+       
+                
+     
+     
+       
+             
+   
 ];
 
 // Bibliotecas do próprio site (js/vendor/, nome com versão → "cache primeiro").
-// SheetJS é carregada sempre; as de PDF/OCR entram no cache no primeiro uso.
+// SheetJS fica guardada já na instalação (para importar planilha sem internet), mas só é carregada
+// na página ao importar (js/importer.js); as de PDF/OCR entram no cache no primeiro uso.
 // (O Tailwind agora é CSS pré-gerado — css/tailwind.css, entre os arquivos do app.)
 const CDN_ESSENCIAIS = [
   './js/vendor/xlsx-0.20.3.full.min.js',
