@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; img-src 'self' data:; script-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'" />
   <title>Política de privacidade · Valoris</title>
-  <meta name="description" content="Como o app Valoris trata os seus dados: tudo fica cifrado no seu aparelho e, se você quiser, no seu Google Drive. Não há servidor, anúncios nem rastreamento." />
+  <meta name="description" content="Como o app Valoris trata os seus dados: tudo fica cifrado no seu aparelho e, se você quiser, no seu Google Drive. Nenhum dado financeiro vai para servidor; sem anúncios nem rastreamento." />
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png" />
   <link rel="stylesheet" href="css/legal.css" />
 </head>
@@ -22,7 +22,9 @@
     <section class="resumo" aria-label="Resumo">
       <b>Em poucas palavras</b>
       <ul>
-        <li>O app <b>não tem servidor</b>: não coletamos, não guardamos e não vemos os seus dados financeiros.</li>
+        <li><b>Seus dados financeiros não vão para servidor nenhum</b>: não coletamos, não guardamos e não vemos o que você registra.</li>
+        <li>Para usar todas as funções é preciso uma <b>conta Google (Gmail)</b> com o Google Drive conectado (item 3).</li>
+        <li>Com o Google Drive conectado, um <b>cadastro mínimo</b> (e-mail da conta Google e plano) fica num servidor nosso, só para saber o seu plano e o seu convite (item 4).</li>
         <li>Seus dados ficam <b>cifrados no seu aparelho</b> e, se você ligar, numa cópia também cifrada no <b>seu</b> Google Drive.</li>
         <li><b>Sem anúncios, sem rastreamento, sem estatísticas de uso</b> e sem venda de dados — de ninguém, para ninguém.</li>
         <li>Você pode exportar ou apagar tudo a qualquer momento, pelo próprio app.</li>
@@ -30,7 +32,7 @@
     </section>
 
     <h2>1. Quem é o responsável</h2>
-    <p>O <b>Valoris Financial Intelligence</b> (“Valoris”) é um aplicativo gratuito de organização financeira pessoal, em fase de testes (Beta), desenvolvido por pessoa física no Brasil.</p>
+    <p>O <b>Valoris Financial Intelligence</b> (“Valoris”) é um aplicativo de organização financeira pessoal, em fase de testes (Beta) e hoje gratuito, desenvolvido por pessoa física no Brasil.</p>
     <p>Contato do responsável: <a href="mailto:suporte@valoris.net.br"><b>suporte@valoris.net.br</b></a>.</p>
 
     <h2>2. Que dados o app usa e onde eles ficam</h2>
@@ -41,20 +43,29 @@
       <li>Depois de um tempo sem uso (10 minutos, ajustável em Dados e backup), o app se bloqueia sozinho e a chave sai da memória.</li>
     </ul>
 
-    <h2>3. Google (login e Google Drive) — opcional</h2>
-    <p>Se você escolher <b>conectar o Google Drive</b> (para ter backup automático, usar em mais de um aparelho ou dividir as finanças com outra pessoa), o app pede ao Google acesso limitado à sua conta:</p>
+    <h2>3. Google (login e Google Drive) — necessário para todas as funções</h2>
+    <p>Para o app funcionar por completo é preciso uma <b>conta Google (Gmail)</b> com o <b>Google Drive conectado</b>: é ela que garante o backup automático, o uso em mais de um aparelho, as finanças da casa com outra pessoa e o reconhecimento do seu plano. <b>Durante o teste fechado</b>, a conta Google convidada é obrigatória para entrar no app. Ao conectar, o app pede ao Google acesso limitado à sua conta:</p>
     <ul>
       <li><code>drive.appdata</code> — uma <b>pasta oculta exclusiva do app</b> no seu Drive, onde fica o arquivo de dados <b>já cifrado</b>. O app não vê os seus outros arquivos.</li>
       <li><code>drive.file</code> — só no <b>modo casal</b>: o app cria uma pasta e um arquivo próprios e os compartilha com o Gmail que <b>você</b> indicar. O app só acessa arquivos que ele mesmo criou ou que você escolheu na janela do Google.</li>
     </ul>
-    <p>Para isso o Google informa ao app um código de acesso temporário, que fica <b>só na memória</b> do aparelho. Os dados do Google são usados <b>exclusivamente</b> para guardar e sincronizar o seu arquivo cifrado: não são usados para publicidade, não são vendidos nem transferidos a terceiros e nenhuma pessoa os lê.</p>
+    <p>Para isso o Google informa ao app um código de acesso temporário, que fica <b>só na memória</b> do aparelho. De tempos em tempos, o app também mostra esse código ao nosso servidor de contas, que o usa <b>uma única vez</b> para confirmar com o Google qual é a sua conta (o e-mail e o identificador dela) e saber o seu plano (item 4); o código <b>não fica guardado</b> lá. Os dados do Google são usados <b>exclusivamente</b> para guardar e sincronizar o seu arquivo cifrado e para identificar o seu plano: não são usados para publicidade, não são vendidos nem transferidos a terceiros e nenhuma pessoa os lê.</p>
     <p class="aviso">O uso e a transferência de informações recebidas das APIs do Google pelo Valoris seguem a <a href="https://developers.google.com/terms/api-services-user-data-policy" rel="noopener">Política de dados do usuário dos serviços de API do Google</a>, incluindo os requisitos de Uso Limitado.</p>
     <p>Você pode desconectar o Drive no app (Dados e backup) e revogar o acesso a qualquer momento em <a href="https://myaccount.google.com/permissions" rel="noopener">myaccount.google.com/permissions</a>.</p>
 
-    <h2>4. Modo casal (compartilhar com outra pessoa)</h2>
+    <h2>4. Plano do app (cadastro mínimo)</h2>
+    <p>Para saber qual é o seu plano (fase Beta, teste grátis, Gratuito, Premium ou Fundador — veja os Termos de uso, item 3), o Valoris tem um pequeno servidor de contas próprio, no Cloudflare (contas.valoris.net.br). Ele só entra em ação se você <b>conectar o Google Drive</b> e guarda <b>apenas</b>:</p>
+    <ul>
+      <li>o <b>identificador</b> e o <b>e-mail</b> da sua conta Google;</li>
+      <li>a <b>data</b> em que a conta apareceu pela primeira vez e a da última visita;</li>
+      <li>o <b>plano</b>, a validade do Premium (quando houver), se você é <b>Fundador</b> e, durante o teste fechado, se a sua conta é <b>convidada</b>.</li>
+    </ul>
+    <p><b>Nenhum dado financeiro</b> vai para esse servidor: receitas, despesas, cartões, investimentos e metas continuam só no seu aparelho e no seu Google Drive, cifrados. A resposta do servidor é assinada digitalmente e o app a guarda por até 7 dias, para funcionar sem internet. Esses dados são usados só para liberar o seu plano, ficam guardados enquanto você usar o app e são apagados quando você pedir (contato do item 1). Quando houver planos pagos, o pagamento será feito pela Google Play ou por outro meio de pagamento indicado na contratação; o Valoris não recebe nem guarda dados de cartão.</p>
+
+    <h2>5. Modo casal (compartilhar com outra pessoa)</h2>
     <p>Se você convidar alguém, essa pessoa passa a ver e editar <b>todas</b> as finanças da casa. Cada pessoa tem usuário e senha próprios; o convite vale 7 dias e só pode ser usado uma vez. Você pode remover o acesso a qualquer momento em Configurações → Pessoas.</p>
 
-    <h2>5. Serviços externos que o app consulta</h2>
+    <h2>6. Serviços externos que o app consulta</h2>
     <p>O app conversa diretamente do seu aparelho com alguns serviços públicos, <b>sem enviar os seus dados financeiros</b>:</p>
     <ul>
       <li><b>Cotação do dólar:</b> AwesomeAPI (economia.awesomeapi.com.br) e Banco Central do Brasil (PTAX).</li>
@@ -64,29 +75,29 @@
     </ul>
     <p>Como em qualquer acesso à internet, esses serviços recebem o endereço IP do seu aparelho.</p>
 
-    <h2>6. Recursos com inteligência artificial</h2>
+    <h2>7. Recursos com inteligência artificial</h2>
     <p>“Perguntar à IA” e “Ler com ajuda da IA” <b>não enviam nada</b>: o app só monta um texto que <b>você</b> copia e cola, se quiser, no serviço de IA da sua escolha (como ChatGPT ou Gemini). O texto vai sem nomes de pessoas, contas ou cartões, e números longos (como os de cartão e CPF) são escondidos. A partir daí vale a política de privacidade do serviço que você usar.</p>
 
-    <h2>7. Sugestões e relatos de problemas</h2>
+    <h2>8. Sugestões e relatos de problemas</h2>
     <p>Ao tocar em <b>Enviar</b> em Configurações → Sugestões, a sua mensagem vai na hora, por e-mail, para a equipe do Valoris, por meio de um pequeno serviço nosso no Cloudflare que <b>apenas repassa</b> a mensagem e não guarda nada. Vai só o que está no relatório: tipo, tela, título e descrição que você escreveu, seu nome e usuário no app, a data e — se você deixar marcado — a versão do app e o tipo de aparelho; e o e-mail para resposta, se você informar. <b>Nenhum lançamento, valor ou dado financeiro é enviado.</b></p>
     <p>Se o envio direto não funcionar (por exemplo, sem internet), a mensagem fica guardada no app e você pode mandá-la pelo seu WhatsApp ou e-mail, ou copiar o relatório. Usamos as sugestões só para corrigir e melhorar o app.</p>
 
-    <h2>8. Seus direitos (LGPD)</h2>
+    <h2>9. Seus direitos (LGPD)</h2>
     <p>Como os dados ficam com você, você mesmo exerce os direitos da Lei Geral de Proteção de Dados (Lei 13.709/2018) diretamente no app:</p>
     <ul>
       <li><b>Acessar e corrigir:</b> tudo pode ser consultado e editado nas telas do app.</li>
       <li><b>Portabilidade:</b> Dados e backup → Fazer backup gera um arquivo com todos os seus dados.</li>
-      <li><b>Eliminar:</b> Dados e backup → Apagar todos os dados remove tudo do aparelho. Se usou o Drive, apague também o arquivo no seu Google Drive e revogue o acesso (item 3).</li>
+      <li><b>Eliminar:</b> Dados e backup → Apagar todos os dados remove tudo do aparelho. Se usou o Drive, apague também o arquivo no seu Google Drive e revogue o acesso (item 3). O cadastro do plano (item 4) é apagado a pedido, pelo contato do item 1.</li>
     </ul>
     <p>Para qualquer dúvida, use o contato do item 1.</p>
 
-    <h2>9. Público</h2>
+    <h2>10. Público</h2>
     <p>O app é pensado para adultos que cuidam das próprias finanças e não é direcionado a crianças.</p>
 
-    <h2>10. Segurança</h2>
+    <h2>11. Segurança</h2>
     <p>Usamos criptografia forte, bibliotecas hospedadas no próprio site (baixadas das fontes oficiais e conferidas) e uma política de segurança que impede o navegador de rodar código de terceiros. Mesmo assim, nenhum sistema é 100% seguro: proteja o seu aparelho com senha e não compartilhe a senha do app.</p>
 
-    <h2>11. Mudanças nesta política</h2>
+    <h2>12. Mudanças nesta política</h2>
     <p>Se esta política mudar, a data no topo será atualizada e mudanças importantes serão avisadas dentro do app.</p>
   </main>
 

@@ -31,6 +31,7 @@ window.Fin=window.Fin||{},Fin.acesso=(()=>{const g=t=>Fin.fmt.esc(t);let F=()=>{
         ${m("senha2","Repita a senha","new-password")}
         ${f}
         <button type="submit" class="btn btn-primary w-full">Criar acesso</button>
+        <p class="text-xs text-slate-600 text-center bg-slate-50 rounded-lg px-3 py-2">Você vai precisar de uma <b>conta Google (Gmail)</b> para usar todas as funções. No teste fechado, use o Gmail que recebeu o convite.</p>
         <p class="text-xs text-slate-500 text-center">Ao criar o acesso, você concorda com os <a href="termos.html" target="_blank" rel="noopener" class="text-prim-700 underline">Termos de uso</a> e a <a href="privacidade.html" target="_blank" rel="noopener" class="text-prim-700 underline">Política de privacidade</a>.</p>
       </form>
       <p class="text-xs text-slate-500 mt-4">Se esquecer a senha, só a <b>chave de recuperação</b> (mostrada a seguir) devolve o acesso.</p>
