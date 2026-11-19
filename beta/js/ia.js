@@ -68,7 +68,7 @@ ${s}`}async function F(s){try{return await navigator.clipboard.writeText(s),!0}c
         <button type="button" data-ia-copiar class="btn btn-primary !px-2">Copiar</button>
         ${f.map(([r,n])=>`<a href="${n}" target="_blank" rel="noopener" class="btn btn-ghost !px-2">Abrir ${r}</a>`).join("")}
       </div>
-      <p class="text-[11px] text-slate-400">Dica: toque em Copiar, abra o ChatGPT ou o Gemini e cole (segure o dedo na caixa de mensagem → Colar).</p>`}function A(s){s.querySelector("[data-ia-copiar]")?.addEventListener("click",async()=>{const a=await F(s.querySelector("[data-ia-texto]").value);Fin.ui.toast(a?"Copiado! Agora cole no ChatGPT ou no Gemini.":"Não deu para copiar: selecione o texto e copie.",a?"ok":"error")})}function M(s="mes"){const a=Fin.ui.openModal(`
+      <p class="text-[11px] text-slate-400">Dica: toque em Copiar, abra o ChatGPT ou o Gemini e cole (segure o dedo na caixa de mensagem → Colar).</p>`}function A(s){s.querySelector("[data-ia-copiar]")?.addEventListener("click",async()=>{const a=await F(s.querySelector("[data-ia-texto]").value);Fin.ui.toast(a?"Copiado! Agora cole no ChatGPT ou no Gemini.":"Não deu para copiar: selecione o texto e copie.",a?"ok":"error")})}function M(s="mes"){if(!Fin.plano.exigir("ia"))return;const a=Fin.ui.openModal(`
       <div class="p-5 space-y-4">
         <div data-arrastar class="flex items-center justify-between gap-2">
           <h2 class="font-semibold text-lg flex items-center gap-2">${Fin.icones.badge("mensagem","violet","w-8 h-8","w-[18px] h-[18px]")} Perguntar à IA</h2>
