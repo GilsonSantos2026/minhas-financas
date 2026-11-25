@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "br.net.valoris.app",
+      "sha256_cert_fingerprints": [
+        "89:DB:5D:83:12:1D:87:18:7D:98:7B:AC:35:1C:85:CA:17:0D:C4:5C:C2:28:9F:27:B6:A7:D2:B4:34:A2:B5:EA"
+      ]
+    }
+  }
+]

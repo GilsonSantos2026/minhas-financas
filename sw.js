@@ -10,7 +10,7 @@
  * Ao publicar uma versão nova do app, troque VERSAO: o app mostra "Nova versão disponível".
  * Os DADOS não passam por aqui (ficam no LocalStorage do navegador).
  */
-const VERSAO = '2026-11-24.2';
+const VERSAO = '2026-11-25.1';
 // Canal beta (…/beta/sw.js): caches com outro prefixo — um canal nunca apaga o cache do outro.
 const BETA = self.location.pathname.includes('/beta/');
 const PFX = BETA ? 'financas-beta' : 'financas';
@@ -18,7 +18,7 @@ const CACHE_APP = `${PFX}-app-${VERSAO}`;
 const CACHE_CDN = `${PFX}-cdn-v1`;
 
 const ARQUIVOS_APP = [
-  './js/valoris-a7417941ef.min.js', // pacote com os scripts do app (ferramentas/minificar)
+  './js/valoris-73e4a35249.min.js', // pacote com os scripts do app (ferramentas/minificar)
   './', './index.html', './privacidade.html', './termos.html', './manifest.webmanifest', './css/styles.css', './css/tailwind.css', './css/legal.css',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/apple-touch-icon.png', './icons/favicon-32.png',
    './js/canal.js','./js/tema.js',          
