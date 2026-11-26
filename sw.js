@@ -3,14 +3,14 @@
  *
  * - Arquivos do app (mesma origem): "rede primeiro" — online você sempre recebe a versão
  *   mais nova; offline, usa a cópia guardada.
- * - Bibliotecas (js/vendor/: SheetJS, PDF.js, OCR) e o núcleo/idioma do OCR
- *   (jsDelivr): "cache primeiro" — os nomes têm versão fixa, então a cópia guardada nunca
- *   fica velha. Trocar de versão = arquivo com nome novo.
+ * - Bibliotecas (js/vendor/: SheetJS, PDF.js, OCR com núcleo e idioma): "cache primeiro" —
+ *   os nomes têm versão fixa, então a cópia guardada nunca fica velha. Trocar de versão =
+ *   arquivo (ou pasta) com nome novo.
  *
  * Ao publicar uma versão nova do app, troque VERSAO: o app mostra "Nova versão disponível".
  * Os DADOS não passam por aqui (ficam no LocalStorage do navegador).
  */
-const VERSAO = '2026-11-25.2';
+const VERSAO = '2026-11-26.1';
 // Canal beta (…/beta/sw.js): caches com outro prefixo — um canal nunca apaga o cache do outro.
 const BETA = self.location.pathname.includes('/beta/');
 const PFX = BETA ? 'financas-beta' : 'financas';
@@ -18,7 +18,7 @@ const CACHE_APP = `${PFX}-app-${VERSAO}`;
 const CACHE_CDN = `${PFX}-cdn-v1`;
 
 const ARQUIVOS_APP = [
-  './js/valoris-73e4a35249.min.js', // pacote com os scripts do app (ferramentas/minificar)
+  './js/valoris-79b81334da.min.js', // pacote com os scripts do app (ferramentas/minificar)
   './', './index.html', './privacidade.html', './termos.html', './manifest.webmanifest', './css/styles.css', './css/tailwind.css', './css/legal.css',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/apple-touch-icon.png', './icons/favicon-32.png',
    './js/canal.js','./js/tema.js',          
@@ -39,8 +39,6 @@ const CDN_ESSENCIAIS = [
   './js/vendor/xlsx-0.20.3.full.min.js',
 ];
 const PASTA_VENDOR = '/js/vendor/';
-// Só o núcleo do OCR e o idioma português ainda vêm de fora (rodam isolados no worker).
-const HOSTS_CDN = ['cdn.jsdelivr.net', 'tessdata.projectnaptha.com'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
@@ -104,5 +102,4 @@ self.addEventListener('fetch', (event) => {
   if (!BETA && url.origin === self.location.origin && url.pathname.includes('/beta/')) return; // o beta tem o próprio SW
   if (url.origin === self.location.origin && url.pathname.includes(PASTA_VENDOR)) event.respondWith(cachePrimeiro(req));
   else if (url.origin === self.location.origin) event.respondWith(redePrimeiro(req));
-  else if (HOSTS_CDN.includes(url.hostname)) event.respondWith(cachePrimeiro(req));
 });
