@@ -19,8 +19,18 @@ window.Fin=window.Fin||{},Fin.pages=Fin.pages||{},Fin.pages.importarFatura=(()=>
         </label>
         <ul class="text-xs text-slate-500 mt-4 space-y-1 list-disc pl-5">
           <li>Testado com faturas do Sicoob, Banco do Brasil (Ourocard) e Mercado Pago. PDF com senha: o app pede a senha.</li>
-          <li>Foto ou print usa reconhecimento de texto (OCR): é mais lento e pode errar — revise com atenção.</li>
+          <li>Foto, print ou PDF escaneado usam reconhecimento de texto (OCR): é mais lento e pode errar — revise com atenção.</li>
         </ul>
+        <details class="mt-3 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
+          <summary class="cursor-pointer font-medium text-slate-700">Como tirar uma boa foto da fatura</summary>
+          <ul class="mt-2 space-y-1 list-disc pl-5">
+            <li>Prefira o <b>PDF baixado no app do banco</b>: é muito mais preciso que foto.</li>
+            <li>Luz clara e por igual, sem a sua sombra e sem reflexo.</li>
+            <li>Papel reto e esticado, com o celular de frente (não inclinado).</li>
+            <li>Chegue perto: os lançamentos devem encher a foto e dar para ler.</li>
+            <li>Uma página por foto. Se a fatura tiver várias, use o PDF.</li>
+          </ul>
+        </details>
       </section>
       <section class="bg-white rounded-2xl shadow-sm p-5 mt-4">
         <div class="flex items-start gap-3">
@@ -33,12 +43,12 @@ window.Fin=window.Fin||{},Fin.pages=Fin.pages||{},Fin.pages.importarFatura=(()=>
             <input id="fat-input-ia" type="file" class="sr-only" accept="application/pdf,.pdf,image/*" />
           </div>
         </div>
-      </section>`}function E(){return`
+      </section>`}function L(){return`
       <section class="bg-white rounded-2xl shadow-sm p-8 text-center">
         <span class="spinner inline-block" aria-hidden="true"></span>
         <p class="mt-3 font-medium">${i(t.arquivo?.name||"")}</p>
         <p id="fat-prog" class="text-sm text-slate-500 mt-1">${i(t.progresso||"Lendo a fatura…")}</p>
-      </section>`}const g=()=>t.linhas.filter(a=>a.incluir);function L(){const{info:a,conferencia:o}=t.leitura,s=g().reduce((r,p)=>r+p.valor,0),e=(r,p)=>`<div class="flex justify-between gap-3"><span class="text-slate-500">${r}</span><span class="tabular-nums font-medium">${p}</span></div>`;let n="";return o.esperado!=null&&(n=o.ok?'<p class="mt-2 text-sm text-emerald-800 bg-emerald-50 rounded-lg px-3 py-2"><span aria-hidden="true">✓</span> Leitura conferida: os lançamentos somam exatamente o esperado pela fatura.</p>':`<p class="mt-2 text-sm text-amber-800 bg-amber-50 rounded-lg px-3 py-2"><span aria-hidden="true">!</span> Diferença de ${c.brl(o.esperado-o.lido)} entre o lido (${c.brl(o.lido)}) e o esperado (${c.brl(o.esperado)}). Confira se faltou algum item.</p>`),`
+      </section>`}const g=()=>t.linhas.filter(a=>a.incluir);function E(){const{info:a,conferencia:o}=t.leitura,s=g().reduce((r,p)=>r+p.valor,0),e=(r,p)=>`<div class="flex justify-between gap-3"><span class="text-slate-500">${r}</span><span class="tabular-nums font-medium">${p}</span></div>`;let n="";return o.esperado!=null&&(n=o.ok?'<p class="mt-2 text-sm text-emerald-800 bg-emerald-50 rounded-lg px-3 py-2"><span aria-hidden="true">✓</span> Leitura conferida: os lançamentos somam exatamente o esperado pela fatura.</p>':`<p class="mt-2 text-sm text-amber-800 bg-amber-50 rounded-lg px-3 py-2"><span aria-hidden="true">!</span> Diferença de ${c.brl(o.esperado-o.lido)} entre o lido (${c.brl(o.lido)}) e o esperado (${c.brl(o.esperado)}). Confira se faltou algum item.</p>`),`
       <div class="text-sm space-y-1">
         ${a.total!=null?e("Total da fatura",c.brl(a.total)):""}
         ${a.saldoAnterior?e("Saldo da fatura anterior",c.brl(a.saldoAnterior)):""}
@@ -57,7 +67,7 @@ window.Fin=window.Fin||{},Fin.pages=Fin.pages||{},Fin.pages.importarFatura=(()=>
         <p class="font-semibold"><span aria-hidden="true">≠</span> ${a.resumo.length>1?`Esta fatura tem compras de ${a.resumo.length} cartões diferentes.`:`Esta fatura é de um cartão ${a.resumo[0].via}.`}</p>
         <p class="mt-0.5 text-xs">Cada compra é marcada como <b>principal</b>, <b>adicional</b> ou <b>virtual</b> ao importar, e a marca fica nos lançamentos do cartão.</p>
         <ul class="mt-1 divide-y divide-amber-200/60">${o}</ul>
-      </div>`}function S(a){const[o,s]=q[a.tipo],e=f.categorias("despesa").map(r=>`<option ${r.nome===a.categoria?"selected":""}>${i(r.nome)}</option>`).join(""),n=f.categorias("despesa").some(r=>r.nome===a.categoria)?"":`<option selected>${i(a.categoria)}</option>`;return`
+      </div>`}function P(a){const[o,s]=q[a.tipo],e=f.categorias("despesa").map(r=>`<option ${r.nome===a.categoria?"selected":""}>${i(r.nome)}</option>`).join(""),n=f.categorias("despesa").some(r=>r.nome===a.categoria)?"":`<option selected>${i(a.categoria)}</option>`;return`
       <li class="px-3 sm:px-4 py-3 ${a.incluir?"":"bg-slate-50"}" data-n="${a.n}">
         <div class="flex items-start gap-3">
           <input type="checkbox" data-f="incluir" class="mt-1 w-5 h-5 accent-prim-600 shrink-0" ${a.incluir?"checked":""}
@@ -78,7 +88,7 @@ window.Fin=window.Fin||{},Fin.pages=Fin.pages||{},Fin.pages.importarFatura=(()=>
             ${a.incluir?`<select data-f="categoria" class="input !py-1 !text-xs !w-auto max-w-full" aria-label="Categoria">${n}${e}</select>`:""}
           </div>
         </div>
-      </li>`}function P(){const{info:a}=t.leitura,o=f.cartoes(),s=u().parcelasFuturas(t.linhas,t.cartao,t.fatura),e=g(),n=t.linhas.filter(r=>r.duplicada).length;return`
+      </li>`}function S(){const{info:a}=t.leitura,o=f.cartoes(),s=u().parcelasFuturas(t.linhas,t.cartao,t.fatura),e=g(),n=t.linhas.filter(r=>r.duplicada).length;return`
       <div class="space-y-4 pb-24">
         <section class="bg-white rounded-2xl shadow-sm p-4 sm:p-5 space-y-4">
           <div class="flex items-start justify-between gap-3">
@@ -99,7 +109,7 @@ window.Fin=window.Fin||{},Fin.pages=Fin.pages||{},Fin.pages.importarFatura=(()=>
               <input id="fat-mes" type="month" class="input" value="${t.fatura}" /></label>
           </div>
 
-          ${L()}
+          ${E()}
 
           <label class="flex items-start gap-2 text-sm">
             <input id="fat-futuras" type="checkbox" class="mt-0.5 w-4 h-4 accent-prim-600" ${t.futuras?"checked":""} />
@@ -116,7 +126,7 @@ window.Fin=window.Fin||{},Fin.pages=Fin.pages||{},Fin.pages.importarFatura=(()=>
             <button data-act="nenhum" class="text-slate-500 hover:underline">Desmarcar todos</button>
           </div>
         </div>
-        <ul id="fat-lista" class="bg-white rounded-2xl shadow-sm divide-y divide-slate-100 overflow-hidden">${t.linhas.map(S).join("")}</ul>
+        <ul id="fat-lista" class="bg-white rounded-2xl shadow-sm divide-y divide-slate-100 overflow-hidden">${t.linhas.map(P).join("")}</ul>
       </div>
 
       <div class="fixed inset-x-0 bottom-16 md:bottom-0 md:left-60 z-20 bg-white/95 backdrop-blur border-t border-slate-200">
@@ -127,7 +137,7 @@ window.Fin=window.Fin||{},Fin.pages=Fin.pages||{},Fin.pages.importarFatura=(()=>
           </p>
           <button data-act="importar" class="btn btn-primary shrink-0" ${e.length?"":"disabled"}>Importar</button>
         </div>
-      </div>`}let d=null;function l(){if(!d)return;const a=window.scrollY;d.innerHTML=t.etapa==="revisao"?P():t.etapa==="processando"?E():C(),t.etapa==="upload"&&D(),t.etapa==="revisao"&&window.scrollTo(0,a)}function $(a,o){return new Promise(s=>{let e=!1;const n=x=>{e||(e=!0,p.disconnect(),Fin.ui.closeModal(),s(x))},r=Fin.ui.openModal(`
+      </div>`}let d=null;function l(){if(!d)return;const a=window.scrollY;d.innerHTML=t.etapa==="revisao"?S():t.etapa==="processando"?L():C(),t.etapa==="upload"&&T(),t.etapa==="revisao"&&window.scrollTo(0,a)}function $(a,o){return new Promise(s=>{let e=!1;const n=x=>{e||(e=!0,p.disconnect(),Fin.ui.closeModal(),s(x))},r=Fin.ui.openModal(`
         <form class="p-5 space-y-4" novalidate autocomplete="off">
           <div class="flex items-start gap-3">
             ${Fin.icones.badge("cadeado","amber","w-10 h-10","w-5 h-5")}
@@ -164,4 +174,4 @@ window.Fin=window.Fin||{},Fin.pages=Fin.pages||{},Fin.pages.importarFatura=(()=>
           <p data-ia-erro class="hidden text-sm text-rose-700 bg-rose-50 rounded-lg px-3 py-2" role="alert"></p>
           <button type="button" data-ia-conferir class="btn btn-primary w-full">Conferir lançamentos</button>
         </section>
-      </div>`,"Ler a fatura com a IA");Fin.ia.ligarCopia(e),e.querySelector("[data-close]").addEventListener("click",()=>Fin.ui.closeModal()),e.querySelector("[data-ia-conferir]").addEventListener("click",()=>{const n=Fin.faturaLeitor.deTexto(e.querySelector("[data-ia-resposta]").value,s.info),r=e.querySelector("[data-ia-erro]");if(!n.itens.length){r.textContent="Não achei nenhuma linha no formato DD/MM;DESCRIÇÃO;VALOR. Confira se colou a resposta inteira.",r.classList.remove("hidden");return}Fin.ui.closeModal(),t.arquivo=a,y(n),Fin.ui.toast(`${n.itens.length} lançamentos lidos pela IA. Confira antes de importar.`)})}async function v(a,o=null){if(a){if(!/pdf$|^image\//i.test(a.type)&&!/\.(pdf|png|jpe?g|webp)$/i.test(a.name)){Fin.ui.toast("Envie um PDF ou uma imagem (JPG/PNG).","error");return}if(!f.cartoes().length)return Fin.ui.toast("Cadastre o cartão antes de importar a fatura.","error"),Fin.forms.cartao.open();Object.assign(t,{arquivo:a,etapa:"processando",progresso:""}),l();try{const s=await Fin.faturaLeitor.ler(a,e=>{t.progresso=e;const n=document.getElementById("fat-prog");n&&(n.textContent=e)},{senha:o});if(o=null,!s.itens.length)throw new Error("Não encontrei lançamentos nesta fatura. Tente “Ler com ajuda da IA”, logo abaixo.");y(s)}catch(s){if(o=null,s?.senha){t.etapa="upload",l();const e=await $(a.name,s.incorreta);return e?v(a,e):Fin.ui.toast("Importação cancelada.")}console.error(s),t.etapa="upload",l(),Fin.ui.toast(s.message||"Não foi possível ler a fatura.","error")}}}function T(){const a=u().salvar(t.linhas,{cartao:t.cartao,fatura:t.fatura,futuras:t.futuras,arquivo:t.arquivo.name});Fin.plano.marcarMes("importarFatura"),Fin.state.cartao=t.cartao,Fin.state.mes=t.fatura,b(),Fin.ui.toast(`${a.qtd} ${a.qtd===1?"item importado":"itens importados"}${a.futuras?` + ${a.futuras} parcelas futuras`:""}.`),Fin.router.go("/cartoes")}function D(){const a=d.querySelector("#fat-drop");d.querySelector("#fat-input").addEventListener("change",o=>v(o.target.files[0])),d.querySelector("#fat-input-ia")?.addEventListener("change",o=>w(o.target.files[0])),["dragenter","dragover"].forEach(o=>a.addEventListener(o,s=>{s.preventDefault(),a.classList.add("is-dragging")})),["dragleave","drop"].forEach(o=>a.addEventListener(o,s=>{s.preventDefault(),a.classList.remove("is-dragging")})),a.addEventListener("drop",o=>v(o.dataTransfer.files[0]))}function A(a,{signal:o}){if(!Fin.plano.pode("importarFatura")){a.innerHTML=Fin.plano.bloqueioHTML("importarFatura");return}d=a,t.etapa==="processando"&&!t.leitura&&(t.etapa="upload"),l(),d.addEventListener("click",s=>{const e=s.target.closest("[data-act]")?.dataset.act;e==="cancelar"&&(b(),l()),e==="importar"&&T(),(e==="todos"||e==="nenhum")&&(t.linhas.forEach(n=>n.incluir=e==="todos"),l())},{signal:o}),d.addEventListener("change",s=>{const e=s.target;if(e.id==="fat-cartao"||e.id==="fat-mes")return e.id==="fat-cartao"&&(t.cartao=e.value),e.id==="fat-mes"&&e.value&&(t.fatura=e.value),u().remarcarDuplicados(t.linhas,t.cartao,t.fatura),l();if(e.id==="fat-futuras")return t.futuras=e.checked,l();const n=e.closest("[data-n]");if(!n)return;const r=t.linhas[Number(n.dataset.n)];e.dataset.f==="incluir"&&(r.incluir=e.checked,l()),e.dataset.f==="categoria"&&(r.categoria=e.value),e.dataset.f==="descricao"&&(r.descricao=e.value.trim()||r.descricao)},{signal:o})}return{title:"Importar fatura",render:A,processar:v,estado:t}})();
+      </div>`,"Ler a fatura com a IA");Fin.ia.ligarCopia(e),e.querySelector("[data-close]").addEventListener("click",()=>Fin.ui.closeModal()),e.querySelector("[data-ia-conferir]").addEventListener("click",()=>{const n=Fin.faturaLeitor.deTexto(e.querySelector("[data-ia-resposta]").value,s.info),r=e.querySelector("[data-ia-erro]");if(!n.itens.length){r.textContent="Não achei nenhuma linha no formato DD/MM;DESCRIÇÃO;VALOR. Confira se colou a resposta inteira.",r.classList.remove("hidden");return}Fin.ui.closeModal(),t.arquivo=a,y(n),Fin.ui.toast(`${n.itens.length} lançamentos lidos pela IA. Confira antes de importar.`)})}async function v(a,o=null){if(a){if(!/pdf$|^image\//i.test(a.type)&&!/\.(pdf|png|jpe?g|webp)$/i.test(a.name)){Fin.ui.toast("Envie um PDF ou uma imagem (JPG/PNG).","error");return}if(!f.cartoes().length)return Fin.ui.toast("Cadastre o cartão antes de importar a fatura.","error"),Fin.forms.cartao.open();Object.assign(t,{arquivo:a,etapa:"processando",progresso:""}),l();try{const s=await Fin.faturaLeitor.ler(a,e=>{t.progresso=e;const n=document.getElementById("fat-prog");n&&(n.textContent=e)},{senha:o});if(o=null,!s.itens.length)throw new Error("Não encontrei lançamentos nesta fatura. Tente “Ler com ajuda da IA”, logo abaixo.");y(s)}catch(s){if(o=null,s?.senha){t.etapa="upload",l();const e=await $(a.name,s.incorreta);return e?v(a,e):Fin.ui.toast("Importação cancelada.")}console.error(s),t.etapa="upload",l(),Fin.ui.toast(s.message||"Não foi possível ler a fatura.","error")}}}function D(){const a=u().salvar(t.linhas,{cartao:t.cartao,fatura:t.fatura,futuras:t.futuras,arquivo:t.arquivo.name});Fin.plano.marcarMes("importarFatura"),Fin.state.cartao=t.cartao,Fin.state.mes=t.fatura,b(),Fin.ui.toast(`${a.qtd} ${a.qtd===1?"item importado":"itens importados"}${a.futuras?` + ${a.futuras} parcelas futuras`:""}.`),Fin.router.go("/cartoes")}function T(){const a=d.querySelector("#fat-drop");d.querySelector("#fat-input").addEventListener("change",o=>v(o.target.files[0])),d.querySelector("#fat-input-ia")?.addEventListener("change",o=>w(o.target.files[0])),["dragenter","dragover"].forEach(o=>a.addEventListener(o,s=>{s.preventDefault(),a.classList.add("is-dragging")})),["dragleave","drop"].forEach(o=>a.addEventListener(o,s=>{s.preventDefault(),a.classList.remove("is-dragging")})),a.addEventListener("drop",o=>v(o.dataTransfer.files[0]))}function A(a,{signal:o}){if(!Fin.plano.pode("importarFatura")){a.innerHTML=Fin.plano.bloqueioHTML("importarFatura");return}d=a,t.etapa==="processando"&&!t.leitura&&(t.etapa="upload"),l(),d.addEventListener("click",s=>{const e=s.target.closest("[data-act]")?.dataset.act;e==="cancelar"&&(b(),l()),e==="importar"&&D(),(e==="todos"||e==="nenhum")&&(t.linhas.forEach(n=>n.incluir=e==="todos"),l())},{signal:o}),d.addEventListener("change",s=>{const e=s.target;if(e.id==="fat-cartao"||e.id==="fat-mes")return e.id==="fat-cartao"&&(t.cartao=e.value),e.id==="fat-mes"&&e.value&&(t.fatura=e.value),u().remarcarDuplicados(t.linhas,t.cartao,t.fatura),l();if(e.id==="fat-futuras")return t.futuras=e.checked,l();const n=e.closest("[data-n]");if(!n)return;const r=t.linhas[Number(n.dataset.n)];e.dataset.f==="incluir"&&(r.incluir=e.checked,l()),e.dataset.f==="categoria"&&(r.categoria=e.value),e.dataset.f==="descricao"&&(r.descricao=e.value.trim()||r.descricao)},{signal:o})}return{title:"Importar fatura",render:A,processar:v,estado:t}})();
