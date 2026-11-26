@@ -64,7 +64,7 @@ window.Fin=window.Fin||{},Fin.pages=Fin.pages||{},Fin.pages.cartoes=(()=>{const 
             </div>
           </li>`).join("")}
         </ul>
-      </section>`).join("")}function k(d,{signal:r}){const e=o.cartoes();if(!e.length)d.innerHTML=Fin.ui.emptyState("💳","Nenhum cartão cadastrado","Cadastre seus cartões para acompanhar faturas, parcelas e limite.",'<button data-act="novo-cartao" class="btn btn-primary">＋ Cadastrar cartão</button>');else{if(!e.some(c=>c.nome===Fin.state.cartao)){const c=e.map(v=>[v.nome,o.soma(o.comprasDaFatura(v.nome,Fin.state.mes))]);Fin.state.cartao=c.sort((v,S)=>S[1]-v[1])[0][0]}const a=e.find(c=>c.nome===Fin.state.cartao),t=Fin.state.mes,n=o.comprasDaFatura(a.nome,t),i=o.soma(n),l=o.vencimentoFatura(a,t),p=t>=s.currentYM(),b=o.faturaPorCategoria(a.nome,t),h=n.filter(c=>c.parcela&&c.parcela.total>1).length,y=Fin.storage.list("cartaoCompras").filter(c=>c.cartao===a.nome).length,M=o.pagamentoDaFatura(a,t),$=M?o.statusEfetivo(M):null,A=i?$==="pago"?'<span class="rounded-full bg-emerald-400/20 text-emerald-100 px-2.5 py-0.5 text-xs font-semibold">✓ Paga</span>':$==="parcial"?'<span class="rounded-full bg-amber-400/25 text-amber-100 px-2.5 py-0.5 text-xs font-semibold">Paga em parte</span>':$==="atrasado"?'<span class="rounded-full bg-rose-400/25 text-rose-100 px-2.5 py-0.5 text-xs font-semibold">! Atrasada</span>':'<span class="rounded-full bg-white/15 px-2.5 py-0.5 text-xs font-semibold">Em aberto</span>':"",x=o.soma(o.comprasDaFatura(a.nome,s.addMonths(t,-1))),f=x>0?(i-x)/x:null,C=f==null||Math.abs(f)<.05?x>0?`Parecida com a fatura de ${s.monthShort(s.addMonths(t,-1))}`:"":`${Math.round(Math.abs(f)*100)}% ${f>0?"maior":"menor"} que a fatura de ${s.monthShort(s.addMonths(t,-1))}`,g=a.limite?o.limiteUsado(a.nome):0,u=a.limite?Math.min(100,g/a.limite*100):0,E=u>=90?"#fb7185":u>=70?"#fbbf24":"#c6a45c",F=b.length?b[0]:null,D=F&&i>0?`Maior gasto: ${m(F.categoria)} (${Math.round(F.total/i*100)}%)`:"";d.innerHTML=`
+      </section>`).join("")}function k(d,{signal:r}){const e=o.cartoes();if(!e.length)d.innerHTML=Fin.ui.emptyState("💳","Nenhum cartão cadastrado","Cadastre seus cartões para acompanhar faturas, parcelas e limite.",'<button data-act="novo-cartao" class="btn btn-primary">＋ Cadastrar cartão</button>');else{if(!e.some(c=>c.nome===Fin.state.cartao)){const c=e.map(v=>[v.nome,o.soma(o.comprasDaFatura(v.nome,Fin.state.mes))]);Fin.state.cartao=c.sort((v,z)=>z[1]-v[1])[0][0]}const a=e.find(c=>c.nome===Fin.state.cartao),t=Fin.state.mes,n=o.comprasDaFatura(a.nome,t),i=o.soma(n),l=o.vencimentoFatura(a,t),{diaFechamento:p}=o.diasDaFatura(a,t),A=t>=s.currentYM(),b=o.faturaPorCategoria(a.nome,t),h=n.filter(c=>c.parcela&&c.parcela.total>1).length,y=Fin.storage.list("cartaoCompras").filter(c=>c.cartao===a.nome).length,M=o.pagamentoDaFatura(a,t),$=M?o.statusEfetivo(M):null,E=i?$==="pago"?'<span class="rounded-full bg-emerald-400/20 text-emerald-100 px-2.5 py-0.5 text-xs font-semibold">✓ Paga</span>':$==="parcial"?'<span class="rounded-full bg-amber-400/25 text-amber-100 px-2.5 py-0.5 text-xs font-semibold">Paga em parte</span>':$==="atrasado"?'<span class="rounded-full bg-rose-400/25 text-rose-100 px-2.5 py-0.5 text-xs font-semibold">! Atrasada</span>':'<span class="rounded-full bg-white/15 px-2.5 py-0.5 text-xs font-semibold">Em aberto</span>':"",x=o.soma(o.comprasDaFatura(a.nome,s.addMonths(t,-1))),f=x>0?(i-x)/x:null,C=f==null||Math.abs(f)<.05?x>0?`Parecida com a fatura de ${s.monthShort(s.addMonths(t,-1))}`:"":`${Math.round(Math.abs(f)*100)}% ${f>0?"maior":"menor"} que a fatura de ${s.monthShort(s.addMonths(t,-1))}`,g=a.limite?o.limiteUsado(a.nome):0,u=a.limite?Math.min(100,g/a.limite*100):0,D=u>=90?"#fb7185":u>=70?"#fbbf24":"#c6a45c",F=b.length?b[0]:null,S=F&&i>0?`Maior gasto: ${m(F.categoria)} (${Math.round(F.total/i*100)}%)`:"";d.innerHTML=`
         <div class="space-y-4">
           ${P(e,a.nome)}
           ${Fin.ui.monthNav(t)}
@@ -78,14 +78,14 @@ window.Fin=window.Fin||{},Fin.pages=Fin.pages||{},Fin.pages.cartoes=(()=>{const 
               <button data-act="config" class="icon-btn shrink-0 !text-white hover:!bg-white/10" aria-label="Configurar cartão" title="Configurar cartão">${Fin.icone("engrenagem","w-5 h-5")}</button>
             </div>
             <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-white/85">
-              ${A}
-              <span>${l?`Vence ${s.date(l)}`:"Vencimento não configurado"}${a.diaFechamento?` · fecha dia ${a.diaFechamento}`:""}</span>
+              ${E}
+              <span>${l?`Vence ${s.date(l)}`:"Vencimento não configurado"}${p?` · fecha dia ${p}`:""}</span>
             </div>
-            <p class="text-[13px] text-white/75">${n.length} ${n.length===1?"compra":"compras"}${h?` (${h} parcelada${h>1?"s":""})`:""}${C?` · ${C}`:""}${p?"":" · fatura passada"}</p>
+            <p class="text-[13px] text-white/75">${n.length} ${n.length===1?"compra":"compras"}${h?` (${h} parcelada${h>1?"s":""})`:""}${C?` · ${C}`:""}${A?"":" · fatura passada"}</p>
             ${a.limite?`
               <div class="pt-1">
                 <div class="flex justify-between text-[12px] text-white/75 mb-1"><span>Limite usado${u>=90?' · <b class="text-rose-200">quase esgotado</b>':u>=70?' · <b class="text-amber-200">atenção</b>':""}</span><span class="tabular-nums">${s.brl(g)} de ${s.brl(a.limite)}</span></div>
-                <div class="h-2 rounded-full bg-white/15 overflow-hidden" role="meter" aria-valuemin="0" aria-valuemax="${a.limite}" aria-valuenow="${g}" aria-label="Limite usado"><div class="h-full rounded-full" style="width:${u}%;background:${E}"></div></div>
+                <div class="h-2 rounded-full bg-white/15 overflow-hidden" role="meter" aria-valuemin="0" aria-valuemax="${a.limite}" aria-valuenow="${g}" aria-label="Limite usado"><div class="h-full rounded-full" style="width:${u}%;background:${D}"></div></div>
                 <div class="text-[12px] text-white/70 mt-1">Disponível <b class="text-white tabular-nums">${s.brl(Math.max(0,a.limite-g))}</b> · inclui parcelas futuras</div>
               </div>`:""}
           </section>
@@ -99,7 +99,7 @@ window.Fin=window.Fin||{},Fin.pages=Fin.pages||{},Fin.pages.cartoes=(()=>{const 
             <a href="#/importar-fatura" class="btn btn-ghost min-h-[48px] bg-white shadow-sm">${Fin.icone("upload","w-5 h-5")} Importar fatura</a>
           </div>
 
-          ${b.length?Fin.ui.dobra({grupo:"cartoes",id:"cats",icone:"pizza",cor:"orange",titulo:"Gastos por categoria",resumo:D,corpo:()=>Fin.charts.hbars(b.map(c=>({label:c.categoria,icone:c.icone,total:c.total})),{total:Math.max(i,.01)})}):""}
+          ${b.length?Fin.ui.dobra({grupo:"cartoes",id:"cats",icone:"pizza",cor:"orange",titulo:"Gastos por categoria",resumo:S,corpo:()=>Fin.charts.hbars(b.map(c=>({label:c.categoria,icone:c.icone,total:c.total})),{total:Math.max(i,.01)})}):""}
 
           ${n.length||y?`
             <div class="flex items-center justify-between gap-3 px-1 pt-1">
